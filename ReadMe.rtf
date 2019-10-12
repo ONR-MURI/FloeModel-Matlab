@@ -1,0 +1,46 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1671\cocoasubrtf600
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fswiss\fcharset0 Helvetica-Bold;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+{\*\listtable{\list\listtemplateid1\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{disc\}}{\leveltext\leveltemplateid1\'01\uc0\u8226 ;}{\levelnumbers;}\fi-360\li720\lin720 }{\listname ;}\listid1}
+{\list\listtemplateid2\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{disc\}}{\leveltext\leveltemplateid101\'01\uc0\u8226 ;}{\levelnumbers;}\fi-360\li720\lin720 }{\listname ;}\listid2}}
+{\*\listoverridetable{\listoverride\listid1\listoverridecount0\ls1}{\listoverride\listid2\listoverridecount0\ls2}}
+\margl1440\margr1440\vieww12320\viewh7920\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 Thoughts and updates regarding the Floe model development.\
+\
+Sep 14.\
+\
+\pard\tx220\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\li720\fi-720\pardirnatural\partightenfactor0
+\ls1\ilvl0\cf0 {\listtext	\uc0\u8226 	}The model has 2nd order time stepping (not Runge-Kutta!)\
+{\listtext	\uc0\u8226 	}Interaction forces are proportional to the area, not length\
+{\listtext	\uc0\u8226 	}Interaction forces are made using only local data, not involving center of mass\
+{\listtext	\uc0\u8226 	}Force_factor is made variable, increasing for floes that are too close (potentially change this criteria to use a comparison between overlap area and floe area)\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+Things that I need to do:\
+\
+\pard\tx220\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\li720\fi-720\pardirnatural\partightenfactor0
+\ls2\ilvl0\cf0 {\listtext	\uc0\u8226 	}Store contours in Floe variable and update their coordinates with a rotation/translation matrix; use Floe.A_alpha only for mapping to eulerian coordinates for coupling with the ocean. This way floe interactions will be accurate and not subject to image rotation from imrot function\
+{\listtext	\uc0\u8226 	}Floe_interactions_all needs to be parallelized, so far this can take 1.2 sec out of 2 sec, some issues are here too.\
+\pard\tx220\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\li720\fi-720\pardirnatural\partightenfactor0
+\ls2\ilvl0
+\f1\b \cf0 {\listtext	\uc0\u8226 	}Check to identify that appropriate pairs of contact points are chosen from the set of all overlapped points. Likely, the go one after another, but could also go in reverse direction! This causes some weird floe collisions!!!\
+\pard\tx220\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\li720\fi-720\pardirnatural\partightenfactor0
+\ls2\ilvl0
+\f0\b0 \cf0 {\listtext	\uc0\u8226 	}need to test this on 20 core cpu going towards O(1000) floes.\
+{\listtext	\uc0\u8226 	}add friction between floes; could be linear simply proportional to length and speed difference at the contact point.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+\
+I changed the floes to be evolving according to their contour rotations and translations. Eliminated A_alpha but it didn\'92t lead to any speed up (I thought that I am saving on data communications but not a lot). However, I figured that the function imrotate is much faster if used on uinit8. Since I am rotating binary data it is much faster now. Also collisions must be more accurate as the original floe contour shapes do not change under the rotation/translations and are not subject to imrotate artifacts. However, imrotate is still necessary for the ocean/atm coupling.\
+\
+\
+Sep 15.\
+\
+
+\f1\b InterX function that calculates intersections of two contours needs to be modified to output points that are ordered in such a way that they go along the floe contour (without jumping!); otherwise, pairing those points does not make any sense! At the moment, I have implemented an idea that determines a proper direction for the interaction force to be away from the contact point and towards the outer part of the floe (perpendicular to contact line), but since the intersect points are off, we have an improper contact point! This needs to be fixed.\
+
+\f0\b0 \
+}
