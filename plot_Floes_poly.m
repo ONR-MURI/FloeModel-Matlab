@@ -1,4 +1,4 @@
-function fig=plot_Floes(fig, Time,Floe,ocean,c2_boundary)
+function fig=plot_Floes_poly(fig, Time,Floe,ocean,c2_boundary)
 
 showContactPoints=0;
 showCenterOfMass=0;
@@ -13,17 +13,14 @@ clf(fig);
 dn=2; % plot every dn'th velocity vector
 quiver(ocean.Xo(1:dn:end),ocean.Yo(1:dn:end),ocean.Uocn(1:dn:end,1:dn:end),ocean.Vocn(1:dn:end,1:dn:end));
 hold on;
-axis([-1 1 -1 1]*7e4);
-%axis([nanmin(c2_boundary(1,:)) nanmax(c2_boundary(1,:)) nanmin(c2_boundary(2,:)) nanmax(c2_boundary(2,:))]);
+%axis([-1 1 -1 1]*7e4);
+axis([nanmin(c2_boundary(1,:)) nanmax(c2_boundary(1,:)) nanmin(c2_boundary(2,:)) nanmax(c2_boundary(2,:))]);
 colormap('gray'); caxis([0 1]);
 title(['Time = ' num2str(Time) ' s']);
 
 for j=1:length(Floe)
     if Floe(j).alive
-         c=[Floe(j).c_alpha(1,:)+Floe(j).Xi; Floe(j).c_alpha(2,:)+Floe(j).Yi];
-         ind=~isnan(c(1,:));
-         fill(c(1,ind),c(2,ind),[1 1 1]*0.6);
-         axis ij
+        plot(Floe(j).poly,'FaceColor','k');
     end
 end
 

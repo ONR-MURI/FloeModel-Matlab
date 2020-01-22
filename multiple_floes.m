@@ -13,10 +13,18 @@ winds=[0 5];
 %Floe=initialize_Floe('FloeShapes.mat');
 %load('Floe.mat','Floe');
 load('PackedFloesFullDomain.mat','Floe');
+
+Floe= create_polygons(Floe);
+Floe=RemoveFullyOverlappingFloes(Floe);
+Floe=rmfield(Floe,{'interactions','potentialInteractions'});
+Floe=rmfield(Floe,{'c0','c_alpha','X','Y'});
+
+
 %Floe= create_packed_domain();
 %Define boundaries
 c2_boundary=initialize_boundaries();
-
+in=inpolygon(cat(1,Floe.Xi),cat(1,Floe.Yi),c2_boundary(1,:),c2_boundary(2,:));
+Floe=Floe(logical(in));
 %%
 
 dt=40; %Time step in sec
@@ -35,8 +43,7 @@ ifPlot = true; %Plot floe figures or not?
 %% Calc interactions and plot initial state
 Floe = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt); % find interaction points
 Floe=Floe(logical(cat(1,Floe.alive)));
-%plot_Floes(0,0, Floe, ocean, c2_boundary);
-
+plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 
 %% Define Eulerian grid and coarsening factor
 ddx=250; % resolution of the original floe images in meters
@@ -44,9 +51,7 @@ ddx=250; % resolution of the original floe images in meters
 c_fact=40; % coarsening factor
 
 %Calc high and low-res Eulerian fields
-[x,y, cFine0, cCoarse0,  U_Fine0,V_Fine0, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
-
-
+%[x,y, cFine0, cCoarse0,  U_Fine0,V_Fine0, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
 
 
 %% Initialize time and other stuff to zero
@@ -57,7 +62,7 @@ if ~exist('Time','var')
     i_step=0;
     im_num=1;
     fig=0;
-    EulCoarse=zeros(3, length(cCoarse0(:)),nSnapshots); %allocating memory
+%    EulCoarse=zeros(3, length(cCoarse0(:)),nSnapshots); %allocating memory
 end
 
 
@@ -66,29 +71,31 @@ tic;
 while im_num<nSnapshots
      
     %c2_boundary=c2_boundary*(1+0.0005); % shrink by % every 10 steps
-
+    display(i_step);
     if mod(i_step,10)==0
-        disp(' ');
+        disp(newline);
         toc
         disp([num2str(i_step) ' timesteps comleted']); 
         numCollisions = calc_collisionNum(Floe);
         sacked = sum(~cat(1, Floe.alive));
         if sacked>0, disp(['sacked floes: ' num2str(sacked)]); end
-        disp(['number of collisions: ' num2str(numCollisions)]);
-        disp(' ');
+        disp(['number of collisions: ' num2str(numCollisions)  newline]);
         tic
     end
 
     if mod(i_step,nDTOut)==0  %plot the state after a number of timesteps
         
+        Floe=RemoveFullyOverlappingFloes(Floe);  % remove highly overlapping elements
+
+        
         if ifPlot
-            fig=plot_Floes(fig,Time,Floe, ocean, c2_boundary); % plots model state
+            fig=plot_Floes_poly(fig,Time,Floe, ocean, c2_boundary); % plots model state
             saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
         end
         
         %calculating and saving corase grid variables
-        %[x,y, cFine0, cCoarse0,  U_Fine0,V_Fine0, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact,c2_boundary );
-%         [~,~, ~, cCoarse0,  ~,~, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact ,c2_boundary);
+        %[x,y, cFine0, cCoarse0,  U_Fine0,V_Fine0, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
+%         [~,~, ~, cCoarse0,  ~,~, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
 %         EulCoarse(1,:,im_num)= cCoarse0(:);
 %         EulCoarse(2,:,im_num)= U_Coarse0(:);
 %         EulCoarse(3,:,im_num)= V_Coarse0(:);

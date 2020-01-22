@@ -6,10 +6,13 @@ N=length(Floe);
 %Floe(i).potentialInteractions(j).floeNum
 %Floe(i).potentialInteractions(j).c_alpha=Floe(floeNum).c_alpha.
 
+
+%%
+
 x=cat(1,Floe.Xi);
 y=cat(1,Floe.Yi);
-alive=cat(1,Floe.alive);
 rmax=cat(1,Floe.rmax);
+alive=cat(1,Floe.alive);
 
 for i=1:N  %do interactions with boundary in a separate parfor loop
     
@@ -28,7 +31,8 @@ for i=1:N  %do interactions with boundary in a separate parfor loop
             %display(j);
             if j>i && alive(j) && sqrt((x(i)-x(j))^2 + (y(i)-y(j))^2)<(rmax(i)+rmax(j)) % if floes are potentially overlapping
                 Floe(i).potentialInteractions(k).floeNum=j;
-                Floe(i).potentialInteractions(k).c=[Floe(j).c_alpha(1,:)+x(j); Floe(j).c_alpha(2,:)+y(j)];
+%                Floe(i).potentialInteractions(k).c=[Floe(j).c_alpha(1,:)+Floe(j).Xi; Floe(j).c_alpha(2,:)+Floe(j).Yi];
+                Floe(i).potentialInteractions(k).c=Floe(j).poly;
                 k=k+1;
             end
             
@@ -38,12 +42,15 @@ for i=1:N  %do interactions with boundary in a separate parfor loop
     
 end
 
+%%
 
-parfor i=1:N  %now the interactions could be calculated in a parfor loop!
+c2_boundary_poly=polyshape(c2_boundary(1,:),c2_boundary(2,:));
+
+for i=1:N  %now the interactions could be calculated in a parfor loop!
     
-    
-    
-    c1=[Floe(i).c_alpha(1,:)+x(i); Floe(i).c_alpha(2,:)+y(i)];
+        
+%   c1=[Floe(i).c_alpha(1,:)+Floe(i).Xi; Floe(i).c_alpha(2,:)+Floe(i).Yi];
+    c1=Floe(i).poly;
     
     if ~isempty(Floe(i).potentialInteractions)
         
@@ -53,9 +60,9 @@ parfor i=1:N  %now the interactions could be calculated in a parfor loop!
             
             c2=Floe(i).potentialInteractions(k).c;
             
-            [force_j,P_j,worked] = floe_interactions(c1,c2);
+            [force_j,P_j,worked] = floe_interactions_poly(c1,c2);
             
-            if ~worked, disp(['contact points issue for (' num2str(i) ',' num2str(floeNum) ')' ]); end
+            %if ~worked, disp(['potential contact issue for floes (' num2str(i) ',' num2str(floeNum) ')' ]); end
             
             if sum(abs(force_j))~=0
                 Floe(i).interactions=[Floe(i).interactions ; floeNum*ones(size(force_j,1),1) force_j P_j zeros(size(force_j,1),1)];
@@ -65,9 +72,9 @@ parfor i=1:N  %now the interactions could be calculated in a parfor loop!
         
     end
     
-    [force_b, P_j, worked] = floe_interactions(c1, c2_boundary);
-    if ~worked, display(['contact points issue for (' num2str(i) ', boundary)' ]); end
-    if sum(abs(force_b))~=0,
+    [force_b, P_j, worked] = floe_interactions_poly(c1, c2_boundary_poly);
+    %if ~worked, disp(['potential contact issue for floes (' num2str(i) ', boundary)' ]); end
+    if sum(abs(force_b))~=0
         % boundary will be recorded as floe number Inf;
         Floe(i).interactions=[Floe(i).interactions ; Inf*ones(size(force_b,1),1) force_b P_j zeros(size(force_b,1),1)];
     end
@@ -75,7 +82,10 @@ parfor i=1:N  %now the interactions could be calculated in a parfor loop!
 end
 
 
+Floe=rmfield(Floe,{'potentialInteractions'});
 
+
+%%
 %Fill the lower part of the interacton matrix (floe_i,floe_j) for floes with j<i
 for i=1:N %this has to be done sequentially
       
@@ -98,12 +108,12 @@ for i=1:N %this has to be done sequentially
 end
 
 % calculate all torques from forces
-parfor i=1:N
+for i=1:N
     
     if ~isempty(Floe(i).interactions)
         
        a=Floe(i).interactions;
-       r=[x(i) y(i)];
+       r=[Floe(i).Xi Floe(i).Yi];
         for k=1:size(a,1)
             floe_Rforce=a(k,4:5);
             floe_force=a(k,2:3);
@@ -117,14 +127,13 @@ parfor i=1:N
     end
     
    %Do the timestepping now that forces and torques are known.
-    if Floe(i).alive,
+    if Floe(i).alive
         tmp=calc_trajectory(dt,ocean, winds,Floe(i)); % calculate trajectory
-        if (isempty(tmp) || isnan(x(i)) ), Floe(i).alive=0; else Floe(i)=tmp; end
+        if (isempty(tmp) || isnan(Floe(i).Xi) ), Floe(i).alive=0; else Floe(i)=tmp; end
     end
     
     
 end
-
 
 
 end
