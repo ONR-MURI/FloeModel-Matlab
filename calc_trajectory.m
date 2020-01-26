@@ -51,14 +51,16 @@ else
         disp('Ice floe sacked: out of ocean grid bounds!'); floe=[];        
     else
         
-        A_alpha=imrotate(floe.A,-floe.alpha_i/pi*180,'bilinear','crop');
+%        A_alpha=imrotate(floe.A,-floe.alpha_i/pi*180,'bilinear','crop');
 
-        floe_mask=(A_alpha==1);
-
-        [Xg, Yg]= meshgrid(floe.Xg+floe.Xi, floe.Yg+floe.Yi);
+%        floe_mask=(A_alpha==1);
+        dX=150; % resolution of the grid inside the flow
+        n=(fix(floe.rmax/dX)+1); n=dX*(-n:n);
+        [Xg, Yg]= meshgrid(n+floe.Xi, n+floe.Yi);
         
-%        in=inpolygon(Xg(:),Yg(:),floe.poly.Vertices(:,1),floe.poly.Vertices(:,2)); 
-%        floe_mask=reshape(in,length(Xg),length(Xg));
+       % in=inpolygon(Xg(:),Yg(:),floe.poly.Vertices(:,1),floe.poly.Vertices(:,2)); 
+        in=inpoly2([Xg(:) Yg(:)],floe.poly.Vertices); 
+        floe_mask=reshape(in,length(Xg),length(Xg));
 
         [theta,rho] = cart2pol(Xg-Xi,Yg-Yi);
         

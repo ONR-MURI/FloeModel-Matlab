@@ -1,5 +1,6 @@
 close all; clear all;
 
+addpath ~/Downloads/dengwirda-inpoly-ebf47d6/ 
 
 %% Initialize model vars
 
@@ -17,7 +18,7 @@ load('PackedFloesFullDomain.mat','Floe');
 Floe= create_polygons(Floe);
 Floe=RemoveFullyOverlappingFloes(Floe);
 Floe=rmfield(Floe,{'interactions','potentialInteractions'});
-Floe=rmfield(Floe,{'c0','c_alpha','X','Y'});
+Floe=rmfield(Floe,{'c0','c_alpha','X','Y','A','Xg','Yg'});
 
 
 %Floe= create_packed_domain();

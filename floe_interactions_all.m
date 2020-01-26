@@ -18,6 +18,8 @@ for i=1:N  %do interactions with boundary in a separate parfor loop
     
     Floe(i).interactions=[];
     
+    Floe(i).OverlapArea=0;
+    
     Floe(i).potentialInteractions=[];
     
     Floe(i).collision_force=[0 0];
@@ -66,6 +68,7 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
             
             if sum(abs(force_j))~=0
                 Floe(i).interactions=[Floe(i).interactions ; floeNum*ones(size(force_j,1),1) force_j P_j zeros(size(force_j,1),1)];
+                Floe(i).OverlapArea=Floe(i).OverlapArea+area(intersect(c1,c2));
             end
             
         end
@@ -77,12 +80,13 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
     if sum(abs(force_b))~=0
         % boundary will be recorded as floe number Inf;
         Floe(i).interactions=[Floe(i).interactions ; Inf*ones(size(force_b,1),1) force_b P_j zeros(size(force_b,1),1)];
+        Floe(i).OverlapArea=Floe(i).OverlapArea+(area(c1)-area(intersect(c1,c2_boundary_poly)));
     end
     
 end
 
 
-Floe=rmfield(Floe,{'potentialInteractions'});
+%Floe=rmfield(Floe,{'potentialInteractions'});
 
 
 %%
@@ -106,8 +110,10 @@ for i=1:N %this has to be done sequentially
     end
     
 end
+%%
 
 % calculate all torques from forces
+
 for i=1:N
     
     if ~isempty(Floe(i).interactions)
@@ -131,7 +137,6 @@ for i=1:N
         tmp=calc_trajectory(dt,ocean, winds,Floe(i)); % calculate trajectory
         if (isempty(tmp) || isnan(Floe(i).Xi) ), Floe(i).alive=0; else Floe(i)=tmp; end
     end
-    
     
 end
 
