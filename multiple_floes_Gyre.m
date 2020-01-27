@@ -9,6 +9,7 @@ ocean=initialize_ocean_Gyre();
 
 %define coastal boundaries 
 c2_boundary=initialize_boundaries();
+c2_boundary_poly=polyshape(c2_boundary(1,:),c2_boundary(2,:));
 
 %Define 10m winds
 winds=[0 0];
@@ -31,9 +32,9 @@ ifPlot = true; %Plot floe figures or not?
 
 
 %% Calc interactions and plot initial state
-Floe = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt); % find interaction points
+Floe = floe_interactions_all(Floe, ocean, winds,c2_boundary_poly, dt); % find interaction points
 Floe=Floe(logical(cat(1,Floe.alive)));
-plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
+%plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 
 %% Define Eulerian grid and coarsening factor
 ddx=250; % resolution of the original floe images in meters
@@ -95,7 +96,7 @@ while im_num<nSnapshots
     
     
     %Calculate forces and torques and intergrate forward
-    Floe = floe_interactions_all(Floe, ocean, winds, c2_boundary, dt);
+    Floe = floe_interactions_all(Floe, ocean, winds, c2_boundary_poly, dt);
     
     Time=Time+dt; i_step=i_step+1; %update time index
 

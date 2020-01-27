@@ -1,4 +1,4 @@
-function Floe = floe_interactions_all(Floe, ocean, winds,c2_boundary_poly, dt)
+function Floe = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt)
 
 
 N=length(Floe);
