@@ -1,5 +1,6 @@
-function ocean=initialize_ocean_Gyre()
+function ocean=initialize_ocean_Gyre(transport)
 
+% transport=1e3; % horizontal transport, in m^2/s (controls ocean currents) 
 % defining ocean currents
 
 % ocean grid;
@@ -9,7 +10,6 @@ Xo=-80e3:dXo:80e3; Xo=1*Xo; Yo=Xo;
 [Xocn, Yocn]=meshgrid(Xo,Yo);
 
 %defining ocean streamfunction with some eddies
-transport=1e3; % horizontal transport, in m^2/s (controls ocean currents) 
 psi_ocean=transport*cos(2*pi*Xocn/320e3).*cos(2*pi*Yocn/320e3); 
 
 

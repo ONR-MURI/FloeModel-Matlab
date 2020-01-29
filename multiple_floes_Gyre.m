@@ -5,14 +5,14 @@ addpath ~/Downloads/dengwirda-inpoly-ebf47d6/
 %% Initialize model vars
 
 %Define ocean currents
-ocean=initialize_ocean_Gyre();
+ocean=initialize_ocean_Gyre(0);
 
 %define coastal boundaries 
 c2_boundary=initialize_boundaries();
 c2_boundary_poly=polyshape(c2_boundary(1,:),c2_boundary(2,:));
 
 %Define 10m winds
-winds=[0 0];
+winds=[10 10];
 
 %Initialize Floe state
 load('Floe_clean.mat','Floe');
@@ -31,7 +31,7 @@ nPar = 4; %Number of workerks for parfor
 ifPlot = true; %Plot floe figures or not?
 
 
-%% Calc interactions and plot initial state
+% Calc interactions and plot initial state
 Floe = floe_interactions_all(Floe, ocean, winds,c2_boundary_poly, dt); % find interaction points
 Floe=Floe(logical(cat(1,Floe.alive)));
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
@@ -75,10 +75,7 @@ while im_num<nSnapshots
     end
 
     if mod(i_step,nDTOut)==0  %plot the state after a number of timesteps
-        
-        Floe=RemoveFullyOverlappingFloes(Floe);  % remove highly overlapping elements
-
-        
+                
         if ifPlot
             fig=plot_Floes_poly(fig,Time,Floe, ocean, c2_boundary); % plots model state
             saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
@@ -94,9 +91,13 @@ while im_num<nSnapshots
         im_num=im_num+1;  %image number for saving data and coarse vars;
     end
     
-    
     %Calculate forces and torques and intergrate forward
     Floe = floe_interactions_all(Floe, ocean, winds, c2_boundary_poly, dt);
+    
+    overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
+    keep=rand(length(Floe),1)>overlapArea.^2;
+    Floe=Floe(keep);
+    if sum(keep)<length(keep), disp(['diluted floes: ' num2str(length(keep)-sum(keep))]); end
     
     Time=Time+dt; i_step=i_step+1; %update time index
 

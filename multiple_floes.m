@@ -16,7 +16,6 @@ winds=[0 5];
 load('PackedFloesFullDomain.mat','Floe');
 
 Floe= create_polygons(Floe);
-Floe=RemoveFullyOverlappingFloes(Floe);
 Floe=rmfield(Floe,{'interactions','potentialInteractions'});
 Floe=rmfield(Floe,{'c0','c_alpha','X','Y','A','Xg','Yg'});
 
@@ -24,8 +23,16 @@ Floe=rmfield(Floe,{'c0','c_alpha','X','Y','A','Xg','Yg'});
 %Floe= create_packed_domain();
 %Define boundaries
 c2_boundary=initialize_boundaries();
+c2_boundary_poly=polyshape(c2_boundary(1,:),c2_boundary(2,:));
+
 in=inpolygon(cat(1,Floe.Xi),cat(1,Floe.Yi),c2_boundary(1,:),c2_boundary(2,:));
 Floe=Floe(logical(in));
+
+
+Floe=RemoveFullyOverlappingFloes(Floe,c2_boundary_poly);
+Floe=Floe(logical(cat(1,Floe.alive)));
+
+
 %%
 
 dt=40; %Time step in sec
@@ -42,7 +49,7 @@ ifPlot = true; %Plot floe figures or not?
 
 
 %% Calc interactions and plot initial state
-Floe = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt); % find interaction points
+Floe = floe_interactions_all(Floe, ocean, winds,c2_boundary_poly, dt); % find interaction points
 Floe=Floe(logical(cat(1,Floe.alive)));
 plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 
@@ -106,7 +113,7 @@ while im_num<nSnapshots
     
     
     %Calculate forces and torques and intergrate forward
-    Floe = floe_interactions_all(Floe, ocean, winds, c2_boundary, dt);
+    Floe = floe_interactions_all(Floe, ocean, winds, c2_boundary_poly, dt);
     
     Time=Time+dt; i_step=i_step+1; %update time index
 

@@ -5,7 +5,7 @@ figure;
 
 plot(floe.poly,'FaceColor','k'); hold on; 
 
-for k=1:length(floe.potentialInteractions),
+for k=1:length(floe.potentialInteractions)
     
     plot(floe.potentialInteractions(k).c); 
 

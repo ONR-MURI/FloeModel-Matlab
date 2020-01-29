@@ -46,18 +46,20 @@ end
 
 %%
 
-
 for i=1:N  %now the interactions could be calculated in a parfor loop!
     
-        
-%   c1=[Floe(i).c_alpha(1,:)+Floe(i).Xi; Floe(i).c_alpha(2,:)+Floe(i).Yi];
     c1=Floe(i).poly;
-    
+            
     if ~isempty(Floe(i).potentialInteractions)
         
-        for k=1:length(Floe(i).potentialInteractions)
+        NpotInter=length(Floe(i).potentialInteractions);
+                
+        for k=1:NpotInter
+            
             
             floeNum=Floe(i).potentialInteractions(k).floeNum;
+            
+            Floe(i).potentialInteractions(k).overlapArea=0;
             
             c2=Floe(i).potentialInteractions(k).c;
             
@@ -67,7 +69,7 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
             
             if sum(abs(force_j))~=0
                 Floe(i).interactions=[Floe(i).interactions ; floeNum*ones(size(force_j,1),1) force_j P_j zeros(size(force_j,1),1)];
-                Floe(i).OverlapArea=Floe(i).OverlapArea+area(intersect(c1,c2));
+                Floe(i).potentialInteractions(k).overlapArea=area(intersect(c1,c2));
             end
             
         end
@@ -79,11 +81,10 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
     if sum(abs(force_b))~=0
         % boundary will be recorded as floe number Inf;
         Floe(i).interactions=[Floe(i).interactions ; Inf*ones(size(force_b,1),1) force_b P_j zeros(size(force_b,1),1)];
-        Floe(i).OverlapArea=Floe(i).OverlapArea+(area(c1)-area(intersect(c1,c2_boundary_poly)));
+        Floe(i).OverlapArea=area(c1)-area(intersect(c1,c2_boundary_poly)); % overlap area with the boundary only
     end
     
 end
-
 
 %Floe=rmfield(Floe,{'potentialInteractions'});
 
@@ -106,9 +107,21 @@ for i=1:N %this has to be done sequentially
             
         end
         
+        
+        for j=1:length(Floe(i).potentialInteractions)
+            overlapArea=Floe(i).potentialInteractions(j).overlapArea;
+            floeNum=Floe(i).potentialInteractions(j).floeNum;
+            
+            Floe(i).OverlapArea=Floe(i).OverlapArea+overlapArea;
+            Floe(floeNum).OverlapArea=Floe(floeNum).OverlapArea+overlapArea;
+        end
+        
     end
     
 end
+
+Floe=rmfield(Floe,{'potentialInteractions'});
+
 %%
 
 % calculate all torques from forces
