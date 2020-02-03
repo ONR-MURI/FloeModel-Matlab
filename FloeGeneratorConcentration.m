@@ -1,10 +1,10 @@
-function [Floe2]= FloeGeneratorConcentration(Floe,c2_boundary,Target)
+function [Floe2]= FloeGeneratorConcentration(Floe,c2_boundary,Target,N)
 %Generate set of random points
 ddx = 250;
 id ='MATLAB:polyshape:boundary3Points';
 warning('off',id)
 %load FloeVoronoi;
-N = 3000;%floor(((max(c2_boundary(2,:))-min(c2_boundary(2,:)))*(max(c2_boundary(2,:))-min(c2_boundary(2,:))))/(mean(cat(1,Floe.area))/4));
+N = floor(4*N);%floor(((max(c2_boundary(2,:))-min(c2_boundary(2,:)))*(max(c2_boundary(2,:))-min(c2_boundary(2,:))))/(mean(cat(1,Floe.area))/4));
 x = min(c2_boundary(1,:)):ddx:max(c2_boundary(1,:));
 y = min(c2_boundary(2,:)):ddx:max(c2_boundary(2,:));
 dx = max(x)-min(x);
