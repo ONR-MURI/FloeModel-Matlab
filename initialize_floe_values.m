@@ -1,7 +1,8 @@
 function Floe = initialize_floe_values(poly1)
 rho_ice=920;
 poly1 = translate(poly1, [(-1)^randi([0 1])*rand (-1)^randi([0 1])*rand]);
-h = 0.2*rand+0.1128;
+%h = 0.2*rand+0.1128;
+h=1;
 [Xi,Yi] = centroid(poly1);
     Floe.area = area(poly1);
     Floe.mass = Floe.area*h*rho_ice;

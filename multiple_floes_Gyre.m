@@ -5,20 +5,21 @@ addpath ~/Downloads/dengwirda-inpoly-ebf47d6/
 %% Initialize model vars
 
 %Define ocean currents
-ocean=initialize_ocean_Gyre(0);
-
-%define coastal boundaries 
-c2_boundary=initialize_boundaries();
+[ocean, c2_boundary]=initialize_ocean_Gyre(10e3, 5e5, 1e5,2e3);
 c2_boundary_poly=polyshape(c2_boundary(1,:),c2_boundary(2,:));
 
+
 %Define 10m winds
-winds=[10 10];
+winds=[0 0];
 
 %Initialize Floe state
-load('Floe_clean.mat','Floe');
+%load('Floe_clean.mat','Floe');
+
+c=[0.1:0.1:1];
+Floe = initialize_concentration(c,c2_boundary,1000);
 %%
 
-dt=40; %Time step in sec
+dt=20; %Time step in sec
 
 nDTOut=50; %Output frequency (in number of time steps)
 
@@ -94,10 +95,10 @@ while im_num<nSnapshots
     %Calculate forces and torques and intergrate forward
     Floe = floe_interactions_all(Floe, ocean, winds, c2_boundary_poly, dt);
     
-    overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
-    keep=rand(length(Floe),1)>overlapArea.^2;
-    Floe=Floe(keep);
-    if sum(keep)<length(keep), disp(['diluted floes: ' num2str(length(keep)-sum(keep))]); end
+   % overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
+   % keep=rand(length(Floe),1)>overlapArea.^2;
+   % Floe=Floe(keep);
+   % if sum(keep)<length(keep), disp(['diluted floes: ' num2str(length(keep)-sum(keep))]); end
     
     Time=Time+dt; i_step=i_step+1; %update time index
 

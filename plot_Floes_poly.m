@@ -4,9 +4,11 @@ showContactPoints=0;
 showCenterOfMass=0;
 stressColor=1;
 
+
+ratio=max(c2_boundary(:,1:end-1),[],2)-mean(c2_boundary(:,1:end-1),2); ratio=ratio(2)/ratio(1);
 if (fig==0 || ~isvalid(fig))
-    fig=figure('Position',[100 100 500 500]);  
-    set(fig,'PaperSize',[8 8],'PaperPosition',[0 0 8 8]);
+    fig=figure('Position',[100 100 1000 1000*ratio]);  
+    set(fig,'PaperSize',[8 8*ratio],'PaperPosition',[0 0 8 8*ratio]);
 end
 
 clf(fig);

@@ -1,19 +1,26 @@
-function ocean=initialize_ocean_Gyre(transport)
+function [ocean, c2_boundary]=initialize_ocean_Gyre(transport, Lx, Ly,dXo)
 
 % transport=1e3; % horizontal transport, in m^2/s (controls ocean currents) 
 % defining ocean currents
 
 % ocean grid;
-dXo=2000; % in meters
+%dXo=2000; % in meters
 
-Xo=-80e3:dXo:80e3; Xo=1*Xo; Yo=Xo; 
+Xo=(-Lx/2-2*dXo):dXo:(Lx/2+2*dXo); 
+Yo=(-Ly/2-2*dXo):dXo:(Ly/2+2*dXo); 
+
 [Xocn, Yocn]=meshgrid(Xo,Yo);
 
+x=[-1 -1 1 1 -1]*Lx/2; 
+y=[-1 1 1 -1 -1]*Ly/2;
+c2_boundary = [x; y];
+
+
 %defining ocean streamfunction with some eddies
-psi_ocean=transport*cos(2*pi*Xocn/320e3).*cos(2*pi*Yocn/320e3); 
+psi_ocean=transport*cos(2*pi*Xocn/100e3).*cos(2*pi*Yocn/100e3); 
 
 
-figure; imagesc(psi_ocean');
+figure; imagesc(psi_ocean);
 title('Ocean Streamfunction');
 
 %calculating ocean velocity field 
