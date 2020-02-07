@@ -5,7 +5,11 @@ addpath ~/Downloads/dengwirda-inpoly-ebf47d6/
 %% Initialize model vars
 
 %Define ocean currents
+<<<<<<< Updated upstream
 ocean=initialize_ocean_Gyre();
+=======
+ocean=initialize_ocean_Gyre(1e2);
+>>>>>>> Stashed changes
 
 %define coastal boundaries 
 c2_boundary=initialize_boundaries();
@@ -14,10 +18,14 @@ c2_boundary=initialize_boundaries();
 winds=[0 0];
 
 %Initialize Floe state
-load('Floe_clean.mat','Floe');
+c = 0.8;%[0.4 0.2 0.3; 0.1 0.5 0.3; 0.25 0.2 0.3];
+[Ny,Nx] = size(c);
+[Floe] = initialize_concentration(c,c2_boundary,1000);
+% load('Floe_clean.mat','Floe');
+%Floe = FloeGeneratorConcentration(Floe(1),c2_boundary,0.5);
 %%
 
-dt=40; %Time step in sec
+dt=10; %Time step in sec
 
 nDTOut=50; %Output frequency (in number of time steps)
 
@@ -71,6 +79,16 @@ while im_num<nSnapshots
         if sacked>0, disp(['sacked floes: ' num2str(sacked)]); end
         disp(['number of collisions: ' num2str(numCollisions)  newline]);
         tic
+        
+        [c,vel,accel] = calc_eulerian_data(Floe,Nx,Ny,c2_boundary);
+%         live = cat(1,Floe.alive);
+%         Area = sum(cat(1,Floe(live == 1).area));
+%         cnow = Area/((max(c2_boundary(2,:))-min(c2_boundary(2,:)))*(max(c2_boundary(2,:))-min(c2_boundary(2,:))));
+%         if cnow < 0.5
+%             Floe2 = FloeGeneratorConcentration(Floe,c2_boundary,0.5);
+%             Floe2=rmfield(Floe2,{'potentialInteractions'});
+%             Floe = [Floe Floe2];
+%         end
     end
 
     if mod(i_step,nDTOut)==0  %plot the state after a number of timesteps
@@ -83,6 +101,14 @@ while im_num<nSnapshots
             saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
         end
         
+%         live = cat(1,Floe.alive);
+%         Area = sum(cat(1,Floe(live == 1).area));
+%         cnow = Area/((max(c2_boundary(2,:))-min(c2_boundary(2,:)))*(max(c2_boundary(2,:))-min(c2_boundary(2,:))));
+%         if cnow < 0.5
+%             Floe2 = FloeGeneratorConcentration(Floe,c2_boundary,0.5);
+%             Floe2=rmfield(Floe2,{'potentialInteractions'});
+%             Floe = [Floe Floe2];
+%         end
         %calculating and saving corase grid variables
         %[x,y, cFine0, cCoarse0,  U_Fine0,V_Fine0, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
 %         [~,~, ~, cCoarse0,  ~,~, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
