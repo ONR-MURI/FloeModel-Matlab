@@ -16,6 +16,12 @@ winds=[0 0];
 %load('Floe_clean.mat','Floe');
 
 c=[0.1:0.1:1];
+[Ny,Nx] = size(c);
+averaged.c = zeros(Ny,Nx);
+averaged.u = zeros(Ny,Nx);
+averaged.v = zeros(Ny,Nx);
+averaged.du = zeros(Ny,Nx);
+averaged.dv = zeros(Ny,Nx);
 Floe = initialize_concentration(c,c2_boundary,1000);
 %%
 
@@ -83,6 +89,17 @@ while im_num<nSnapshots
         end
         
         %calculating and saving corase grid variables
+        averaged.c = averaged.c/(nDTOut*dt);
+        averaged.u = averaged.u/(nDTOut*dt);
+        averaged.v = averaged.v/(nDTOut*dt);
+        averaged.du = averaged.du/(nDTOut*dt);
+        averaged.dv = averaged.dv/(nDTOut*dt);
+        [c,vel,accel] = calc_eulerian_data(Floe,Nx,Ny,c2_boundary);
+        averaged.c = zeros(Ny,Nx);
+        averaged.u = zeros(Ny,Nx);
+        averaged.v = zeros(Ny,Nx);
+        averaged.du = zeros(Ny,Nx);
+        averaged.dv = zeros(Ny,Nx);
         %[x,y, cFine0, cCoarse0,  U_Fine0,V_Fine0, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
 %         [~,~, ~, cCoarse0,  ~,~, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
 %         EulCoarse(1,:,im_num)= cCoarse0(:);
@@ -99,9 +116,16 @@ while im_num<nSnapshots
    % keep=rand(length(Floe),1)>overlapArea.^2;
    % Floe=Floe(keep);
    % if sum(keep)<length(keep), disp(['diluted floes: ' num2str(length(keep)-sum(keep))]); end
-    
-    Time=Time+dt; i_step=i_step+1; %update time index
-
-
+   
+   [c,vel,accel] = calc_eulerian_data(Floe,Nx,Ny,c2_boundary);
+   averaged.c = averaged.c + c;
+   averaged.u = averaged.u+vel.u;
+   averaged.v = averaged.v + vel.v;
+   averaged.du = averaged.du + accel.du;
+   averaged.dv = averaged.dv + accel.dv;
+   
+   Time=Time+dt; i_step=i_step+1; %update time index
+   
+   
 end
 %%
