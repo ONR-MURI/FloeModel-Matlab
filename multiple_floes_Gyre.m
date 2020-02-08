@@ -16,13 +16,10 @@ winds=[0 0];
 %load('Floe_clean.mat','Floe');
 
 c=[0.1:0.1:1];
-[Ny,Nx] = size(c);
-averaged.c = zeros(Ny,Nx);
-averaged.u = zeros(Ny,Nx);
-averaged.v = zeros(Ny,Nx);
-averaged.du = zeros(Ny,Nx);
-averaged.dv = zeros(Ny,Nx);
+
 Floe = initialize_concentration(c,c2_boundary,1000);
+
+%figure; plot([Floe.poly])
 %%
 
 dt=20; %Time step in sec
@@ -44,13 +41,17 @@ Floe=Floe(logical(cat(1,Floe.alive)));
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 
 %% Define Eulerian grid and coarsening factor
-ddx=250; % resolution of the original floe images in meters
-[Xgg, Ygg]=meshgrid(-70e3:ddx:70e3,-70e3:ddx:70e3); % high-res eulerian grid
-c_fact=40; % coarsening factor
+%ddx=250; % resolution of the original floe images in meters
+%[Xgg, Ygg]=meshgrid(-70e3:ddx:70e3,-70e3:ddx:70e3); % high-res eulerian grid
+%c_fact=40; % coarsening factor
 
 %Calc high and low-res Eulerian fields
 %[x,y, cFine0, cCoarse0,  U_Fine0,V_Fine0, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
 
+Nx=50; Ny=10;
+
+coarseMean=zeros(5,Ny,Nx,nSnapshots);
+coarseSnap=zeros(5,Ny,Nx,nSnapshots);
 
 %% Initialize time and other stuff to zero
 if isempty(dir('figs')); disp('Creating folder: figs'); mkdir('figs'); end
@@ -89,17 +90,16 @@ while im_num<nSnapshots
         end
         
         %calculating and saving corase grid variables
-        averaged.c = averaged.c/(nDTOut*dt);
-        averaged.u = averaged.u/(nDTOut*dt);
-        averaged.v = averaged.v/(nDTOut*dt);
-        averaged.du = averaged.du/(nDTOut*dt);
-        averaged.dv = averaged.dv/(nDTOut*dt);
+        
         [c,vel,accel] = calc_eulerian_data(Floe,Nx,Ny,c2_boundary);
-        averaged.c = zeros(Ny,Nx);
-        averaged.u = zeros(Ny,Nx);
-        averaged.v = zeros(Ny,Nx);
-        averaged.du = zeros(Ny,Nx);
-        averaged.dv = zeros(Ny,Nx);
+        coarseSnap(1,:,:,im_num)=c;
+        coarseSnap(2,:,:,im_num)=vel.u;
+        coarseSnap(3,:,:,im_num)=vel.v;
+        coarseSnap(4,:,:,im_num)=accel.du;
+        coarseSnap(5,:,:,im_num)=accel.dv;
+        
+        save('coarseData.mat','coarseSnap','coarseMean');
+
         %[x,y, cFine0, cCoarse0,  U_Fine0,V_Fine0, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
 %         [~,~, ~, cCoarse0,  ~,~, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
 %         EulCoarse(1,:,im_num)= cCoarse0(:);
@@ -118,12 +118,15 @@ while im_num<nSnapshots
    % if sum(keep)<length(keep), disp(['diluted floes: ' num2str(length(keep)-sum(keep))]); end
    
    [c,vel,accel] = calc_eulerian_data(Floe,Nx,Ny,c2_boundary);
-   averaged.c = averaged.c + c;
-   averaged.u = averaged.u+vel.u;
-   averaged.v = averaged.v + vel.v;
-   averaged.du = averaged.du + accel.du;
-   averaged.dv = averaged.dv + accel.dv;
    
+   coarseMean(1,:,:,im_num)=squeeze(coarseMean(1,:,:,im_num))+c/nDTOut;
+   coarseMean(2,:,:,im_num)=squeeze(coarseMean(2,:,:,im_num))+vel.u/nDTOut;
+   coarseMean(3,:,:,im_num)=squeeze(coarseMean(3,:,:,im_num))+vel.v/nDTOut;
+   coarseMean(4,:,:,im_num)=squeeze(coarseMean(4,:,:,im_num))+accel.du/nDTOut;
+   coarseMean(5,:,:,im_num)=squeeze(coarseMean(5,:,:,im_num))+accel.dv/nDTOut;
+   
+
+
    Time=Time+dt; i_step=i_step+1; %update time index
    
    
