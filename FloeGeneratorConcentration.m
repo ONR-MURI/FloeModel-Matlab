@@ -132,4 +132,6 @@ while cnow < Target
     ii = ii+1;
 end
 warning('on',id)
+
+Floe2=rmfield(Floe2,'potentialInteractions');
 end

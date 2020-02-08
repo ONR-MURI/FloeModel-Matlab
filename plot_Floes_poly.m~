@@ -6,7 +6,7 @@ stressColor=1;
 
 ratio=max(c2_boundary(:,1:end-1),[],2)-mean(c2_boundary(:,1:end-1),2); ratio=ratio(2)/ratio(1);
 if (fig==0 || ~isvalid(fig))
-    fig=figure('Position',[100 100 1000 1000*ratio],'visible','on');  
+    fig=figure('Position',[100 100 1000 1000*ratio],'visible','off');  
     set(fig,'PaperSize',12*[1 ratio],'PaperPosition',12*[0 0 1 ratio]);
 end
 
@@ -37,7 +37,7 @@ for j=1:length(Floe)
     end
 end
 
-%plot([Floe(logical(cat(1,Floe.alive))).poly]);
+plot([Floe(logical(cat(1,Floe.alive))).poly],'FaceColor','k');
 
 plot(c2_boundary(1,:),c2_boundary(2,:),'linewidth',2,'color', [0 102 51]/255);
 
@@ -57,7 +57,7 @@ xlabel('m');ylabel('m');
 set(gca,'Ydir','normal');
 
 drawnow;
-
+saveas(fig,'test.jpg','jpg');
 sacked_floes=sum(~cat(1,Floe.alive));
 if sacked_floes>0, display(['Sacked floes: ' num2str(sacked_floes)]); end
 

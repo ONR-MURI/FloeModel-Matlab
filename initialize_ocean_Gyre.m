@@ -17,7 +17,7 @@ c2_boundary = [x; y];
 
 
 %defining ocean streamfunction with some eddies
-psi_ocean=transport*cos(2*pi*Xocn/100e3).*cos(2*pi*Yocn/100e3); 
+psi_ocean=transport*cos(2*pi*Xocn/200e3).*cos(2*pi*Yocn/100e3); 
 
 
 figure; imagesc(psi_ocean);
