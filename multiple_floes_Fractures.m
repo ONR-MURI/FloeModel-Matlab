@@ -16,8 +16,8 @@ winds=[0 0];
 %load('Floe_clean.mat','Floe');
 
 c=1; % could be a vector
-Floe = initialize_concentration(c,c2_boundary,100);
-plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
+Floe = initialize_concentration(c,c2_boundary,10);
+%plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 %%
 
 dt=20; %Time step in sec
@@ -109,7 +109,7 @@ while im_num<nSnapshots
     
     
     Area=cat(1,Floe.area);
-    Floe=Floe(Area> 1e6);
+    Floe=Floe(Area> 2e5);
     if sum(Area<1e6)>0, display(['num of small floes killed:' num2str(sum(Area<1e6))]); end
     Time=Time+dt; i_step=i_step+1; %update time index
 

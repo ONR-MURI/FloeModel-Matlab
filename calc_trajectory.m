@@ -46,8 +46,12 @@ V10=winds(2); % constant here
 
 if isnan(floe.Xi)||isnan(floe.alpha_i)||isnan(floe.ksi_ice), disp('Ice floe sacked: out of ocean grid bounds!'); floe=[];
 else
-    
-    if  ( floe.Xi+floe.rmax>max(Xo) || floe.Xi-floe.rmax<min(Xo) || floe.Yi+floe.rmax>max(Yo) || floe.Yi-floe.rmax<min(Yo)   )       
+     
+%     if  ( floe.Xi+floe.rmax>max(Xo) || floe.Xi-floe.rmax<min(Xo) || floe.Yi+floe.rmax>max(Yo) || floe.Yi-floe.rmax<min(Yo)   )       
+%         disp('Ice floe sacked: out of ocean grid bounds!'); floe=[];        
+%     else
+        
+    if  ( max(floe.poly.Vertices(:,1))>max(Xo) || min(floe.poly.Vertices(:,1))<min(Xo) || max(floe.poly.Vertices(:,2))>max(Yo) || min(floe.poly.Vertices(:,2))<min(Yo)   )
         disp('Ice floe sacked: out of ocean grid bounds!'); floe=[];        
     else
         

@@ -20,8 +20,8 @@ c2_boundary = [x; y];
 psi_ocean=transport*cos(2*pi*Xocn/200e3).*cos(2*pi*Yocn/100e3); 
 
 
-figure; imagesc(psi_ocean);
-title('Ocean Streamfunction');
+%figure; imagesc(psi_ocean);
+%title('Ocean Streamfunction');
 
 %calculating ocean velocity field 
 Uocn=zeros(size(Xocn)); Vocn=zeros(size(Xocn));
