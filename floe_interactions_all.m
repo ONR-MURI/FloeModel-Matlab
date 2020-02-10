@@ -67,7 +67,7 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
             
             floeNum=Floe(i).potentialInteractions(k).floeNum;
             
-            Floe(i).potentialInteractions(k).overlapArea=0;
+            %Floe(i).potentialInteractions(k).overlapArea=0;
             
             c2=Floe(i).potentialInteractions(k).c;
             

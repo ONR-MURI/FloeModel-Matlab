@@ -5,18 +5,18 @@ addpath ~/Downloads/dengwirda-inpoly-ebf47d6/
 %% Initialize model vars
 
 %Define ocean currents
-[ocean, c2_boundary]=initialize_ocean_Gyre(10e3, 1e5, 1e5,4e3);
+[ocean, c2_boundary]=initialize_ocean_Gyre(1e4, 1e5, 1e5,4e3);
 c2_boundary_poly=polyshape(c2_boundary(1,:),c2_boundary(2,:));
 
 
 %Define 10m winds
-winds=[0 0];
+winds=[10 10];
 
 %Initialize Floe state
 %load('Floe_clean.mat','Floe');
 
 c=1; % could be a vector
-Floe = initialize_concentration(c,c2_boundary,100);
+Floe = initialize_concentration(c,c2_boundary,30);
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 %%
 
@@ -39,9 +39,9 @@ Floe=Floe(logical(cat(1,Floe.alive)));
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 
 %% Define Eulerian grid and coarsening factor
-ddx=250; % resolution of the original floe images in meters
-[Xgg, Ygg]=meshgrid(-70e3:ddx:70e3,-70e3:ddx:70e3); % high-res eulerian grid
-c_fact=40; % coarsening factor
+%ddx=250; % resolution of the original floe images in meters
+%[Xgg, Ygg]=meshgrid(-70e3:ddx:70e3,-70e3:ddx:70e3); % high-res eulerian grid
+%c_fact=40; % coarsening factor
 
 %Calc high and low-res Eulerian fields
 %[x,y, cFine0, cCoarse0,  U_Fine0,V_Fine0, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
@@ -109,7 +109,7 @@ while im_num<nSnapshots
     
     
     Area=cat(1,Floe.area);
-    Floe=Floe(Area> 1e6);
+    Floe=Floe(Area> 3e5);
     if sum(Area<1e6)>0, display(['num of small floes killed:' num2str(sum(Area<1e6))]); end
     Time=Time+dt; i_step=i_step+1; %update time index
 
