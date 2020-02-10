@@ -16,7 +16,7 @@ winds=[0 0];
 %load('Floe_clean.mat','Floe');
 
 c=1; % could be a vector
-Floe = initialize_concentration(c,c2_boundary,10);
+Floe = initialize_concentration(c,c2_boundary,100);
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 %%
 
@@ -24,7 +24,7 @@ dt=20; %Time step in sec
 
 nDTOut=10; %Output frequency (in number of time steps)
 
-nSnapshots=1000; %Total number of model snapshots to save
+nSnapshots=10000; %Total number of model snapshots to save
 
 nDT=nDTOut*nSnapshots; %Total number of time steps
 
@@ -98,8 +98,8 @@ while im_num<nSnapshots
     
     overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
     keep=rand(length(Floe),1)>overlapArea;
-    fracturedFloes=fracture_floe(Floe(~keep),6);        
-    if length(fracturedFloes)<length(Floe(~keep)), disp('fractures killed floes'); end
+    fracturedFloes=fracture_floe(Floe(~keep),3);        
+    %if length(fracturedFloes)<length(Floe(~keep)), disp('fractures killed floes'); end
     if ~isempty(fracturedFloes), fracturedFloes=rmfield(fracturedFloes,'potentialInteractions'); 
     Floe=[Floe(keep) fracturedFloes];
     %figure; plot([fracturedFloes.poly]); drawnow;
@@ -109,7 +109,7 @@ while im_num<nSnapshots
     
     
     Area=cat(1,Floe.area);
-    Floe=Floe(Area> 2e5);
+    Floe=Floe(Area> 1e6);
     if sum(Area<1e6)>0, display(['num of small floes killed:' num2str(sum(Area<1e6))]); end
     Time=Time+dt; i_step=i_step+1; %update time index
 

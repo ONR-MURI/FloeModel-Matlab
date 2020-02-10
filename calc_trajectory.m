@@ -58,7 +58,7 @@ else
 %        A_alpha=imrotate(floe.A,-floe.alpha_i/pi*180,'bilinear','crop');
 
 %        floe_mask=(A_alpha==1);
-        dX=150; % resolution of the grid inside the flow
+        dX=500; % resolution of the grid inside the flow
         n=(fix(floe.rmax/dX)+1); n=dX*(-n:n);
         [Xg, Yg]= meshgrid(n+floe.Xi, n+floe.Yi);
         

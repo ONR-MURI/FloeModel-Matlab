@@ -17,10 +17,10 @@ c2_boundary = [x; y];
 
 
 %defining ocean streamfunction with some eddies
-psi_ocean=transport*cos(2*pi*Xocn/200e3).*cos(2*pi*Yocn/100e3); 
+psi_ocean=transport*sin(2*pi*Xocn/Lx).*sin(2*pi*Yocn/Ly); 
 
 
-%figure; imagesc(psi_ocean);
+figure; imagesc(psi_ocean);
 %title('Ocean Streamfunction');
 
 %calculating ocean velocity field 
