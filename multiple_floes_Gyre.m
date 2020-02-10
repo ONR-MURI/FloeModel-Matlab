@@ -5,11 +5,7 @@ addpath ~/Downloads/dengwirda-inpoly-ebf47d6/
 %% Initialize model vars
 
 %Define ocean currents
-<<<<<<< Updated upstream
-ocean=initialize_ocean_Gyre();
-=======
 ocean=initialize_ocean_Gyre(1e2);
->>>>>>> Stashed changes
 
 %define coastal boundaries 
 c2_boundary=initialize_boundaries();
@@ -24,8 +20,7 @@ c = 0.8;%[0.4 0.2 0.3; 0.1 0.5 0.3; 0.25 0.2 0.3];
 % load('Floe_clean.mat','Floe');
 %Floe = FloeGeneratorConcentration(Floe(1),c2_boundary,0.5);
 %%
-
-dt=10; %Time step in sec
+dt=5; %Time step in sec
 
 nDTOut=50; %Output frequency (in number of time steps)
 
