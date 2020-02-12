@@ -18,6 +18,7 @@ for ii = 1:Nx
     for jj = 1:Ny
         Area = sum(cat(1,Floe(live == 1 & Binx == ii & Biny == jj).area));
         c(jj,ii) = Area/(dx*dy);
+        if Area > 0
         vel.u(jj,ii) = sum(cat(1,Floe(live == 1 & Binx == ii & Biny == jj).Ui).* ...
             cat(1,Floe(live == 1 & Binx == ii & Biny == jj).area))./Area;
         vel.v(jj,ii) = sum(cat(1,Floe(live == 1 & Binx == ii & Biny == jj).Vi).* ...
@@ -26,8 +27,12 @@ for ii = 1:Nx
             cat(1,Floe(live == 1 & Binx == ii & Biny == jj).area))./Area; 
         accel.dv(jj,ii) =    sum(cat(1,Floe(live == 1 & Binx == ii & Biny == jj).dVi_p).* ...
             cat(1,Floe(live == 1 & Binx == ii & Biny == jj).area))./Area; 
+        end
     end
 end
-
+vel.u(isnan(vel.u)) = 0;
+vel.v(isnan(vel.v)) = 0;
+accel.du(isnan(accel.du)) = 0;
+accel.dv(isnan(accel.dv)) = 0;
 end
 

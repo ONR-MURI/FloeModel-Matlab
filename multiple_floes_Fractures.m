@@ -47,6 +47,12 @@ Floe=Floe(logical(cat(1,Floe.alive)));
 %[x,y, cFine0, cCoarse0,  U_Fine0,V_Fine0, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
 [c,vel,accel] = calc_eulerian_data(Floe,20,20,c2_boundary);
 
+Nx=50; Ny=10;
+
+coarseMean=zeros(5,Ny,Nx,nSnapshots);
+coarseSnap=zeros(5,Ny,Nx,nSnapshots);
+Vd = zeros(Ny,Nx,2);
+
 %% Initialize time and other stuff to zero
 if isempty(dir('figs')); disp('Creating folder: figs'); mkdir('figs'); end
 
@@ -84,6 +90,17 @@ while im_num<nSnapshots
         end
         
         %calculating and saving corase grid variables
+        
+        [c,vel,accel] = calc_eulerian_data(Floe,Nx,Ny,c2_boundary);
+        coarseSnap(1,:,:,im_num)=c;
+        coarseSnap(2,:,:,im_num)=vel.u;
+        coarseSnap(3,:,:,im_num)=vel.v;
+        coarseSnap(4,:,:,im_num)=accel.du;
+        coarseSnap(5,:,:,im_num)=accel.dv;
+        
+        save('coarseData.mat','coarseSnap','coarseMean');
+        
+        %calculating and saving corase grid variables
         %[x,y, cFine0, cCoarse0,  U_Fine0,V_Fine0, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
 %         [~,~, ~, cCoarse0,  ~,~, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
 %         EulCoarse(1,:,im_num)= cCoarse0(:);
@@ -107,8 +124,20 @@ while im_num<nSnapshots
     %diluted=length(keep)-sum(keep);
     %if diluted>0, disp(['diluted floes: ' num2str(diluted)]); end
     
+    [c,vel,accel] = calc_eulerian_data(Floe,Nx,Ny,c2_boundary);
+    
+    coarseMean(1,:,:,im_num)=squeeze(coarseMean(1,:,:,im_num))+c/nDTOut;
+    coarseMean(2,:,:,im_num)=squeeze(coarseMean(2,:,:,im_num))+vel.u/nDTOut;
+    coarseMean(3,:,:,im_num)=squeeze(coarseMean(3,:,:,im_num))+vel.v/nDTOut;
+    coarseMean(4,:,:,im_num)=squeeze(coarseMean(4,:,:,im_num))+accel.du/nDTOut;
+    coarseMean(5,:,:,im_num)=squeeze(coarseMean(5,:,:,im_num))+accel.dv/nDTOut;
     
     Area=cat(1,Floe.area);
+    dissolvedNEW = calc_vol_dissolved(Floe(Area<3e5),Nx,Ny,c2_boundary);
+    %Vd(:,:,im_num) = Vd(:,:,im_num)+Dissolved_Ice(Vd,coarseMean,im_num,dissolvedNEW,c2_boundary,dt)/nDTOut;
+    Vdnew = Dissolved_Ice(Vd,coarseMean,im_num,dissolvedNEW,c2_boundary,dt);
+    Vd(:,:,2) = Vd(:,:,1);
+    Vd(:,:,1) = Vdnew;
     Floe=Floe(Area> 3e5);
     if sum(Area<1e6)>0, display(['num of small floes killed:' num2str(sum(Area<1e6))]); end
     Time=Time+dt; i_step=i_step+1; %update time index
