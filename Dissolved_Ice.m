@@ -74,6 +74,20 @@ dx(Nx,Nx-1) = -2*a;
 dx(Nx,Nx) = 2*a;
 d2x = dx^2;
 
+dxfor = zeros(Nx,Nx);
+a = 1/(delx);
+dxfor(1:1+Nx:Nx*Nx) = -a;
+dxfor(Nx+1:1+Nx:Nx*Nx-1) = a;
+dxfor(Nx,Nx) = a;
+dxfor(Nx,Nx-1) = -a;
+
+dxback = zeros(Nx,Nx);
+a = 1/(delx);
+dxback(Nx+2:1+Nx:Nx*Nx) = a;
+dxback(2:1+Nx:Nx*Nx-Nx) = -a;
+dxback(1,2) = a;
+dxback(1,1) = -a;
+
 %Find differentiation matrix for y
 dy = zeros(Ny,Ny);
 b = 1/(2*dely);
@@ -85,11 +99,29 @@ dy(Ny,Ny-1) = -2*b;
 dy(Ny,Ny) = 2*b;
 d2y = dy^2;
 
+dyfor = zeros(Ny,Ny);
+a = 1/(dely);
+dyfor(1:1+Ny:Ny*Ny) = -a;
+dyfor(Ny+1:1+Ny:Ny*Ny-1) = a;
+dyfor(Ny,Ny) = a;
+dyfor(Ny,Ny-1) = -a;
+
+dyback = zeros(Ny,Ny);
+a = 1/(dely);
+dyback(Ny+2:1+Ny:Ny*Ny) = a;
+dyback(2:1+Ny:Ny*Ny-Ny) = -a;
+dyback(1,2) = a;
+dyback(1,1) = -a;
+
 %% Use Kroenicker product to allow for differentiation in both x and y direction
 Ix = eye(Nx);
 Iy = eye(Ny);
 Dy = kron(Ix,dy);
+Dyback = kron(Ix,dyback);
+Dyfor = kron(Ix,dyfor);
 Dx = kron(dx,Iy);
+Dxback = kron(dxback,Iy);
+Dxfor = kron(dxfor,Iy);
 L = kron(Iy,Ix)-diffusion*dt/2*(kron(Ix,d2y)+kron(d2x,Iy));
 
 %Add Boundary conditions
@@ -113,8 +145,11 @@ end
 %% Time step new equation for dissolved ice. Adams Basheforth for NL terms and Crank-Nicolsen for linear terms
 %while t < tnew
     RHS = Vdcurrent(:)+Dissolved_new(:)+dt*(diffusion/2*(kron(Ix,d2y)+kron(d2x,Iy))*Vdcurrent(:)...
-        -1/2*(3*u(:).*(Dx*Vdcurrent(:))-uold(:).*(Dx*Vdold(:))) - 1/2*(3*v(:).*(Dy*Vdcurrent(:))-vold(:).*(Dy*Vdold(:))));
-    
+        -1/2*(3*(heaviside(u(:)).*Dxback*(u(:).*Vdcurrent(:))+heaviside(-u(:)).*Dxfor*(u(:).*Vdcurrent(:)))...
+        -(heaviside(uold(:)).*Dxback*(uold(:).*Vdold(:))+heaviside(-uold(:)).*Dxfor*(uold(:).*Vdold(:))))...
+        -1/2*(3*(heaviside(v(:)).*Dyback*(v(:).*Vdcurrent(:))+heaviside(-v(:)).*Dyfor*(v(:).*Vdcurrent(:)))...
+        -(heaviside(vold(:)).*Dyback*(vold(:).*Vdold(:))+heaviside(-vold(:)).*Dyfor*(vold(:).*Vdold(:)))));
+        %-1/2*(3*Dx*(u(:).*Vdcurrent(:))-Dx*(uold(:).*Vdold(:))) - 1/2*(3*Dy*(v(:).*Vdcurrent(:))-Dy*(vold(:).*Vdold(:))));     
     %Setting RHS to 0 for BCs
     RHS(1:Ny:Nx*Ny-1) = 0;
     RHS(Ny:Ny:Nx*Ny) = 0;
