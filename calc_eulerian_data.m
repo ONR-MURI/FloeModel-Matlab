@@ -34,5 +34,10 @@ vel.u(isnan(vel.u)) = 0;
 vel.v(isnan(vel.v)) = 0;
 accel.du(isnan(accel.du)) = 0;
 accel.dv(isnan(accel.dv)) = 0;
+c = flipud(c);
+vel.u = flipud(vel.u);
+vel.v = flipud(vel.v);
+accel.du = flipud(accel.du);
+accel.dv = flipud(accel.dv);
 end
 

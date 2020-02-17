@@ -15,6 +15,6 @@ for ii = 1:Nx
             %cat(1,Floe(live == 1 & Binx == ii & Biny == jj).h));
     end
 end
-
+Vd = flipud(Vd);
 end
 
