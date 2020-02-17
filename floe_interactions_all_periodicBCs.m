@@ -21,7 +21,8 @@ parent=[];
 
 for i=1:length(Floe)
     
-   if alive(i) && (x(i)>Lx-rmax(i)) || (x(i)<-Lx+rmax(i))
+%   if alive(i) && (x(i)>Lx-rmax(i)) || (x(i)<-Lx+rmax(i))
+   if alive(i) && (max(abs(Floe(i).poly.Vertices(:,1)))>Lx)
    
     ghostFloe=[ghostFloe  Floe(i)];  
     ghostFloe(end).poly=translate(Floe(i).poly,[-2*Lx*sign(x(i)) 0]);
@@ -194,6 +195,7 @@ for i=1:N0
     if Floe(i).alive
         
         if abs(Floe(i).Xi)>Lx %if floe got out of periodic bounds, put it on the other end
+           % 
            Floe(i).poly=translate(Floe(i).poly,[-2*Lx*sign(Floe(i).Xi) 0]); 
            Floe(i).Xi=Floe(i).Xi-2*Lx*sign(Floe(i).Xi); 
         end

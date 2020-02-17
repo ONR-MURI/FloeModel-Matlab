@@ -17,8 +17,9 @@ ghostFloe=[];
 
 for i=1:length(Floe)
     
-   if alive(i) && (x(i)>Lx-rmax(i)) || (x(i)<-Lx+rmax(i))
-   
+%   if alive(i) && (x(i)>Lx-rmax(i)) || (x(i)<-Lx+rmax(i))
+   if alive(i) && (max(abs(Floe(i).poly.Vertices(:,1)))>Lx)
+
     ghostFloe=[ghostFloe  Floe(i)];  
     ghostFloe(end).poly=translate(Floe(i).poly,[-2*Lx*sign(x(i)) 0]);
     ghostFloe(end).Xi=Floe(i).Xi-2*Lx*sign(x(i));
