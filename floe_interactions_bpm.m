@@ -105,5 +105,4 @@ if max(max(abs(force_1)))>0
         worked = 0;
     end
 end
-
 end

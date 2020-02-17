@@ -76,10 +76,15 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
             c1=Floe(i).poly;
             c2=Floe(i).potentialInteractions(k).c;
             
+<<<<<<< Updated upstream
 %             [force_j,P_j,worked] = floe_interactions_poly(c1,c2);
             [force_j,P_j,worked] = floe_interactions_bpm(c1,c2);
             [force_j,P_j,worked] = floe_interactions_bpm(c1,c2);
 %             [force_j,P_j,worked] = floe_interactions_poly(c1,c2);
+=======
+%             [force_j,P_j,worked] = floe_interactions_bpm(c1,c2);
+            [force_j,P_j,worked] = floe_interactions_poly(c1,c2);
+>>>>>>> Stashed changes
             
             %if ~worked, disp(['potential contact issue for floes (' num2str(i) ',' num2str(floeNum) ')' ]); end
             
@@ -95,8 +100,13 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
         
     end
     
+<<<<<<< Updated upstream
     [force_b, P_j, worked] = floe_interactions_bpm(c1, c2_poly);
 %     [force_b, P_j, worked] = floe_interactions_poly(c1, c2_boundary_poly);
+=======
+    [force_b, P_j, worked] = floe_interactions_poly(c1, c2_boundary_poly);
+%     [force_b, P_j, worked] = floe_interactions_bpm(c1, c2_poly);
+>>>>>>> Stashed changes
     %if ~worked, disp(['potential contact issue for floes (' num2str(i) ', boundary)' ]); end
     if sum(abs(force_b))~=0
         % boundary will be recorded as floe number Inf;
@@ -196,4 +206,13 @@ end
 
 Floe=rmfield(Floe,{'potentialInteractions'});
 
+for i=1:N             
+    if ~isempty(Floe(i).potentialInteractions)        
+        NpotInter=length(Floe(i).potentialInteractions);                
+        for k=1:NpotInter
+            %[Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),Vd] = ridging(Vd,Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum));
+        end
+    end
+end
+Floe=rmfield(Floe,{'potentialInteractions'});
 end
