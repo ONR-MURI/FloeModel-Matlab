@@ -24,12 +24,14 @@ for ii = 1:length(Floe)
 end
 for ii = 1:Nx
     for jj = 1:Ny
-        bound = [x(ii) x(ii) x(ii+1) x(ii+1) x(ii);y(jj) y(jj+1) y(jj+1) y(jj) y(jj)];
-        box = polyshape(bound(1,:), bound(2,:));
-        overlap = intersect(box,[Floe(logical(potentialInteractions(jj,ii,:))).poly]);
-        Aover = area(overlap);
-        Area = sum(Aover);
-        c(jj,ii) = Area/area(box);
+        if sum(logical(potentialInteractions(jj,ii,:)))>0
+            bound = [x(ii) x(ii) x(ii+1) x(ii+1) x(ii);y(jj) y(jj+1) y(jj+1) y(jj) y(jj)];
+            box = polyshape(bound(1,:), bound(2,:));
+            overlap = intersect(box,[Floe(logical(potentialInteractions(jj,ii,:))).poly]);
+            Aover = area(overlap);
+            Area = sum(Aover);
+            c(jj,ii) = Area/area(box);
+        end
         if c(jj,ii) > 0
             vel.u(jj,ii) = sum(cat(1,Floe(logical(potentialInteractions(jj,ii,:))).Ui)'.*Aover)./Area;
             vel.v(jj,ii) = sum(cat(1,Floe(logical(potentialInteractions(jj,ii,:))).Vi)'.*Aover)./Area;
