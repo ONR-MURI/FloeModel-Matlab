@@ -1,11 +1,9 @@
-function Floe = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt)
+function [Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds,c2_boundary_poly, dt,dissolvedNEW,Nx,Ny,c2_boundary)
 
 
-N=length(Floe);
 %Floe(i).interactions=[floeNumber Fx Fy px py torque];
 %Floe(i).potentialInteractions(j).floeNum
 %Floe(i).potentialInteractions(j).c_alpha=Floe(floeNum).c_alpha.
-Vd = 0;
 x = c2_boundary_poly.Vertices(:,1);
 y = c2_boundary_poly.Vertices(:,2);
 dx = max(x)-min(x);
@@ -14,7 +12,10 @@ xb = [min(x)-dx min(x)-dx max(x)+dx max(x)+dx min(x)-dx];
 yb = [min(y)-dy max(y)+dy max(y)+dy min(y)-dy min(y)-dy];
 poly3 = polyshape(xb,yb);
 c2_poly = subtract(poly3,c2_boundary_poly);
+
 %%
+
+N=length(Floe);
 
 x=cat(1,Floe.Xi);
 y=cat(1,Floe.Yi);
@@ -41,7 +42,7 @@ for i=1:N  %do interactions with boundary in a separate parfor loop
             if j>i && alive(j) && sqrt((x(i)-x(j))^2 + (y(i)-y(j))^2)<(rmax(i)+rmax(j)) % if floes are potentially overlapping
                 Floe(i).potentialInteractions(k).floeNum=j;
 %                Floe(i).potentialInteractions(k).c=[Floe(j).c_alpha(1,:)+Floe(j).Xi; Floe(j).c_alpha(2,:)+Floe(j).Yi];
-                Floe(i).potentialInteractions(k).c=Floe(j).poly;
+           %     Floe(i).potentialInteractions(k).c=Floe(j).poly;
                 k=k+1;
             end
             
@@ -49,87 +50,71 @@ for i=1:N  %do interactions with boundary in a separate parfor loop
         
     end
     
+    if ~isempty(Floe(i).potentialInteractions)
+        a=area(intersect(Floe(i).poly,[Floe([Floe(i).potentialInteractions.floeNum]).poly]));
+        Floe(i).potentialInteractions=Floe(i).potentialInteractions(a>0);
+        b=num2cell(a(a>0));
+        [Floe(i).potentialInteractions.overlapArea]=b{:};
+        [Floe(i).potentialInteractions.c]= Floe([Floe(i).potentialInteractions.floeNum]).poly;    
+    end
 end
 
 %%
 
-c2_boundary_poly=polyshape(c2_boundary(1,:),c2_boundary(2,:));
-
 for i=1:N  %now the interactions could be calculated in a parfor loop!
-        
-%   c1=[Floe(i).c_alpha(1,:)+Floe(i).Xi; Floe(i).c_alpha(2,:)+Floe(i).Yi];
-    c1=Floe(i).poly;
     
+    c1=Floe(i).poly;
             
     if ~isempty(Floe(i).potentialInteractions)
         
-        for k=1:length(Floe(i).potentialInteractions)
-            
-            floeNum=Floe(i).potentialInteractions(k).floeNum;
-            
-            Floe(i).potentialInteractions(k).overlapArea=0;
-            
-            
-            %add ridging
-            [Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),Vd] = ridging(Vd,Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum));
-            
-            c1=Floe(i).poly;
-            c2=Floe(i).potentialInteractions(k).c;
-            
-<<<<<<< Updated upstream
-%             [force_j,P_j,worked] = floe_interactions_poly(c1,c2);
-            [force_j,P_j,worked] = floe_interactions_bpm(c1,c2);
-            [force_j,P_j,worked] = floe_interactions_bpm(c1,c2);
-%             [force_j,P_j,worked] = floe_interactions_poly(c1,c2);
-=======
-%             [force_j,P_j,worked] = floe_interactions_bpm(c1,c2);
-            [force_j,P_j,worked] = floe_interactions_poly(c1,c2);
->>>>>>> Stashed changes
-            
-            %if ~worked, disp(['potential contact issue for floes (' num2str(i) ',' num2str(floeNum) ')' ]); end
-            
-            if sum(abs(force_j))~=0
-                Floe(i).interactions=[Floe(i).interactions ; floeNum*ones(size(force_j,1),1) force_j P_j zeros(size(force_j,1),1)];
-
-                Floe(i).OverlapArea=Floe(i).OverlapArea+area(intersect(c1,c2));
-           
-                Floe(i).potentialInteractions(k).overlapArea=area(intersect(c1,c2));
-            end
-            
+        NpotInter=length(Floe(i).potentialInteractions);
+        if NpotInter > 1
+            c2 = union([Floe(i).potentialInteractions.c]);
+        else
+            c2 = Floe(i).potentialInteractions.c;
         end
+        
+        [force_j,P_j,worked] = floe_interactions_bpm2(c1,c2);
+        
+        %if ~worked, disp(['potential contact issue for floes (' num2str(i) ',' num2str(floeNum) ')' ]); end
+        
+        if sum(abs(force_j))~=0
+            Floe(i).interactions=[Floe(i).interactions ; ones(size(force_j,1),1) force_j P_j zeros(size(force_j,1),1)];
+        end
+        
+%         for k=1:NpotInter
+%             
+%             
+%             floeNum=Floe(i).potentialInteractions(k).floeNum;
+%             
+%             %Floe(i).potentialInteractions(k).overlapArea=0;
+%             
+%             c2=Floe(i).potentialInteractions(k).c;
+%             
+%             [force_j,P_j,worked] = floe_interactions_poly(c1,c2);
+%             %[force_j,P_j,worked] = floe_interactions_bpm(c1,c2);
+%             
+%             %if ~worked, disp(['potential contact issue for floes (' num2str(i) ',' num2str(floeNum) ')' ]); end
+%             
+%             if sum(abs(force_j))~=0
+%                 Floe(i).interactions=[Floe(i).interactions ; floeNum*ones(size(force_j,1),1) force_j P_j zeros(size(force_j,1),1)];
+%               %  Floe(i).potentialInteractions(k).overlapArea=area(intersect(c1,c2));
+%             end
+%             
+%         end
         
     end
     
-<<<<<<< Updated upstream
-    [force_b, P_j, worked] = floe_interactions_bpm(c1, c2_poly);
 %     [force_b, P_j, worked] = floe_interactions_poly(c1, c2_boundary_poly);
-=======
-    [force_b, P_j, worked] = floe_interactions_poly(c1, c2_boundary_poly);
-%     [force_b, P_j, worked] = floe_interactions_bpm(c1, c2_poly);
->>>>>>> Stashed changes
+    [force_b, P_j, worked] = floe_interactions_bpm2(c1, c2_poly);
     %if ~worked, disp(['potential contact issue for floes (' num2str(i) ', boundary)' ]); end
     if sum(abs(force_b))~=0
         % boundary will be recorded as floe number Inf;
         Floe(i).interactions=[Floe(i).interactions ; Inf*ones(size(force_b,1),1) force_b P_j zeros(size(force_b,1),1)];
-        Floe(i).OverlapArea=Floe(i).OverlapArea+(area(c1)-area(intersect(c1,c2_boundary_poly)));
+        Floe(i).OverlapArea=area(c1)-area(intersect(c1,c2_boundary_poly)); % overlap area with the boundary only
     end
-    
 end
-
-
 %Floe=rmfield(Floe,{'potentialInteractions'});
-% for ii = 1:N
-%     if Floe(ii).alive == 1
-%         if isempty(Floe(ii).potentialInteractions) ==0
-%             for jj = 1:length(Floe(ii).potentialInteractions)
-%                 if Floe(Floe(ii).potentialInteractions(jj).floeNum).alive == 1 && Floe(ii).alive == 1
-%                     [Floe(ii),Floe(Floe(ii).potentialInteractions(jj).floeNum),Vd] = ridging(Vd,Floe(ii),Floe(Floe(ii).potentialInteractions(jj).floeNum));
-%                 end
-%             end
-%         end
-%     end
-% end
-
 %%
 %Fill the lower part of the interacton matrix (floe_i,floe_j) for floes with j<i
 for i=1:N %this has to be done sequentially
@@ -150,7 +135,6 @@ for i=1:N %this has to be done sequentially
         
         
         for j=1:length(Floe(i).potentialInteractions)
-            
             overlapArea=Floe(i).potentialInteractions(j).overlapArea;
             floeNum=Floe(i).potentialInteractions(j).floeNum;
             
@@ -162,10 +146,10 @@ for i=1:N %this has to be done sequentially
     
 end
 
+%Floe=rmfield(Floe,{'potentialInteractions'});
+
 %%
-
 % calculate all torques from forces
-
 for i=1:N
     
     if ~isempty(Floe(i).interactions)
@@ -187,32 +171,58 @@ for i=1:N
    %Do the timestepping now that forces and torques are known.
     if Floe(i).alive
         tmp=calc_trajectory(dt,ocean, winds,Floe(i)); % calculate trajectory
-        if (isempty(tmp) || isnan(Floe(i).Xi) ), Floe(i).alive=0; else Floe(i)=tmp; end
+        if (isempty(tmp) || isnan(Floe(i).Xi) ), Floe(i).alive=0; 
+        elseif Floe(i).alive == 0
+            dissolvedNEW = dissolvedNEW+calc_vol_dissolved(Floe(i),Nx,Ny,c2_boundary);
+        else 
+            Floe(i)=tmp; 
+        end
     end
     
 end
-
+Xi = cat(1,Floe.Xi);
+alph = cat(1,Floe.alpha_i);
+ksi = cat(1,Floe.ksi_ice);
+IM = cat(1,Floe.inertia_moment);
+if max(isnan(Xi)) == 1
+    X = 1;
+    X(1) = [1 2];
+elseif max(isnan(alph)) == 1
+    X = 1;
+    X(1) = [1 2];
+elseif max(isnan(ksi)) == 1
+    X = 1;
+    X(1) = [1 2];
+elseif max(isnan(IM)) == 1
+    X = 1;
+    X(1) = [1 2];
+end
 for i=1:N
     
     if ~isempty(Floe(i).interactions)
         
-        for k = 1:length(Floe(i).potentialInteractions)
+        if ~isempty(Floe(i).potentialInteractions)
         
-            [Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),Vd] = ridging(Vd,Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum));
-    
+            for k = 1:length(Floe(i).potentialInteractions)
+                
+                [Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),dissolvedNEW] = ridging(dissolvedNEW,Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),Nx,Ny,c2_boundary);
+                
+                if Floe(i).poly.NumRegions > 1
+                    polyout = sortregions(Floe(i).poly,'area','descend');
+                    R = regions(polyout);
+                    polynew = R(1);
+                    Floe(i)=initialize_floe_values(polynew);
+                elseif Floe(Floe(i).potentialInteractions(k).floeNum).poly.NumRegions > 1
+                    polyout = sortregions(Floe(Floe(i).potentialInteractions(k).floeNum).poly,'area','descend');
+                    R = regions(polyout);
+                    polynew = R(1);
+                    Floe(Floe(i).potentialInteractions(k).floeNum)=initialize_floe_values(polynew);
+                end
+            end
         end
     end
 end
 
-Floe=rmfield(Floe,{'potentialInteractions'});
 
-for i=1:N             
-    if ~isempty(Floe(i).potentialInteractions)        
-        NpotInter=length(Floe(i).potentialInteractions);                
-        for k=1:NpotInter
-            %[Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),Vd] = ridging(Vd,Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum));
-        end
-    end
-end
 Floe=rmfield(Floe,{'potentialInteractions'});
 end

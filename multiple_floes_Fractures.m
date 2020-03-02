@@ -22,9 +22,9 @@ Floe = initialize_concentration(c,c2_boundary,50);
 
 dt=20; %Time step in sec
 
-nDTOut=10; %Output frequency (in number of time steps)
+nDTOut=50; %Output frequency (in number of time steps)
 
-nSnapshots=1000; %Total number of model snapshots to save
+nSnapshots=10000; %Total number of model snapshots to save
 
 nDT=nDTOut*nSnapshots; %Total number of time steps
 
@@ -34,7 +34,9 @@ ifPlot = true; %Plot floe figures or not?
 
 
 % Calc interactions and plot initial state
-Floe = floe_interactions_all(Floe, ocean, winds,c2_boundary_poly, dt); % find interaction points
+Nx=5; Ny=5;
+dissolvedNEW = zeros(Ny,Nx);
+[Floe, dissolvedNEW] = floe_interactions_all(Floe, ocean, winds,c2_boundary_poly, dt,dissolvedNEW,Nx,Ny,c2_boundary); % find interaction points
 Floe=Floe(logical(cat(1,Floe.alive)));
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 
@@ -45,9 +47,7 @@ Floe=Floe(logical(cat(1,Floe.alive)));
 
 %Calc high and low-res Eulerian fields
 %[x,y, cFine0, cCoarse0,  U_Fine0,V_Fine0, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
-[c,vel,accel] = calc_eulerian_data(Floe,20,20,c2_boundary);
-
-Nx=5; Ny=5;
+[c,vel,accel] = calc_eulerian_data2(Floe,20,20,c2_boundary);
 
 coarseMean=zeros(5,Ny,Nx,nSnapshots);
 coarseSnap=zeros(5,Ny,Nx,nSnapshots);
@@ -89,14 +89,19 @@ while im_num<nSnapshots
         if ifPlot
             figure(fig)
             fig=plot_Floes_poly(fig,Time,Floe, ocean, c2_boundary); % plots model state
-%             saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
+            saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
             if im_num > 1
+                x = min(c2_boundary(1,:)):(max(c2_boundary(1,:))-min(c2_boundary(1,:)))/Nx:max(c2_boundary(1,:));
+                y = min(c2_boundary(2,:)):(max(c2_boundary(2,:))-min(c2_boundary(2,:)))/Ny:max(c2_boundary(2,:));
+                x = 0.5*(x(1:end-1)+x(2:end));
+                y = 0.5*(y(1:end-1)+y(2:end));
+                y = fliplr(y);
                 Vdnew = Dissolved_Ice(Vd,coarseMean,im_num,dissolvedNEW,c2_boundary,nDTOut*dt);
                 Vd(:,:,2) = Vd(:,:,1);
                 Vd(:,:,1) = Vdnew;
                 figure(fig2)
-                subplot(1,2,1); imagesc(dissolvedNEW/(400*1e9)); colorbar; set(gca,'Ydir','normal')
-                subplot(1,2,2); imagesc(Vdnew/(400*1e9)); colorbar; set(gca,'Ydir','normal')
+                subplot(1,2,1); imagesc(x,y,dissolvedNEW/(400*1e9)); colorbar; set(gca,'Ydir','normal')
+                subplot(1,2,2); imagesc(x,y,Vdnew/(400*1e9)); colorbar; set(gca,'Ydir','normal')
                 drawnow
             end
             dissolvedNEW = zeros(Ny,Nx);
@@ -104,7 +109,7 @@ while im_num<nSnapshots
         
         %calculating and saving corase grid variables
         
-        [c,vel,accel] = calc_eulerian_data(Floe,Nx,Ny,c2_boundary);
+        [c,vel,accel] = calc_eulerian_data2(Floe,Nx,Ny,c2_boundary);
         coarseSnap(1,:,:,im_num)=c;
         coarseSnap(2,:,:,im_num)=vel.u;
         coarseSnap(3,:,:,im_num)=vel.v;
@@ -124,20 +129,26 @@ while im_num<nSnapshots
     end
     
     %Calculate forces and torques and intergrate forward
-    Floe = floe_interactions_all(Floe, ocean, winds, c2_boundary_poly, dt);
+    [Floe, dissolvedNEW] = floe_interactions_all(Floe, ocean, winds, c2_boundary_poly, dt,dissolvedNEW,Nx,Ny,c2_boundary);
     
     overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
     keep=rand(length(Floe),1)>overlapArea;
-    fracturedFloes=fracture_floe(Floe(~keep),3);        
-    %if length(fracturedFloes)<length(Floe(~keep)), disp('fractures killed floes'); end
-    if ~isempty(fracturedFloes), fracturedFloes=rmfield(fracturedFloes,'potentialInteractions'); 
-    Floe=[Floe(keep) fracturedFloes];
-    %figure; plot([fracturedFloes.poly]); drawnow;
-    end
+%     fracturedFloes=fracture_floe(Floe(~keep),3);        
+%     %if length(fracturedFloes)<length(Floe(~keep)), disp('fractures killed floes'); end
+%     if ~isempty(fracturedFloes), fracturedFloes=rmfield(fracturedFloes,'potentialInteractions'); 
+%     Floe=[Floe(keep) fracturedFloes];
+%     %figure; plot([fracturedFloes.poly]); drawnow;
+%     end
     %diluted=length(keep)-sum(keep);
     %if diluted>0, disp(['diluted floes: ' num2str(diluted)]); end
     
-    [c,vel,accel] = calc_eulerian_data(Floe,Nx,Ny,c2_boundary);
+    u = cat(1,Floe.Ui);
+    if max(max(isnan(u))) == 1
+        X = 1;
+        X(1) = [1 2];
+    end
+    
+    [c,vel,accel] = calc_eulerian_data2(Floe,Nx,Ny,c2_boundary);
     
     coarseMean(1,:,:,im_num)=squeeze(coarseMean(1,:,:,im_num))+c/nDTOut;
     coarseMean(2,:,:,im_num)=squeeze(coarseMean(2,:,:,im_num))+vel.u/nDTOut;
@@ -145,13 +156,21 @@ while im_num<nSnapshots
     coarseMean(4,:,:,im_num)=squeeze(coarseMean(4,:,:,im_num))+accel.du/nDTOut;
     coarseMean(5,:,:,im_num)=squeeze(coarseMean(5,:,:,im_num))+accel.dv/nDTOut;
     
+    if max(max(isnan(vel.u))) == 1
+        X = 1;
+        X(1) = [1 2];
+    elseif max(max(isnan(vel.v))) == 1
+        X = 1;
+        X(1) = [1 2];
+    end
+    
     Area=cat(1,Floe.area);
     dissolvedNEW = dissolvedNEW+calc_vol_dissolved(Floe(Area<3e5),Nx,Ny,c2_boundary);
     %Vd(:,:,im_num) = Vd(:,:,im_num)+Dissolved_Ice(Vd,coarseMean,im_num,dissolvedNEW,c2_boundary,dt)/nDTOut;
     Floe=Floe(Area> 3e5);
     if sum(Area<1e6)>0, display(['num of small floes killed:' num2str(sum(Area<1e6))]); end
     Time=Time+dt; i_step=i_step+1; %update time index
-
+    Atot(i_step) = sum(Area);
 
 end
 %%
