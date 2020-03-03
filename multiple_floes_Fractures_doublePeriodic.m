@@ -3,11 +3,11 @@ close all; clear all;
 addpath ~/Downloads/dengwirda-inpoly-ebf47d6/ 
 
 %% Initialize model vars
-RIDGING=true; 
+RIDGING=false; 
 
-FRACTURES=false;
+FRACTURES=true;
 
-PERIODIC=true;
+PERIODIC=false;
 
 %Define ocean currents
 [ocean, c2_boundary]=initialize_ocean_Gyre(1e4, 2e5, 1e5,4e3);
@@ -24,7 +24,7 @@ Floe = initialize_concentration(c,c2_boundary,50);
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 %%
 
-dt=40; %Time step in sec
+dt=20; %Time step in sec
 
 nDTOut=10; %Output frequency (in number of time steps)
 
@@ -96,7 +96,7 @@ while im_num<nSnapshots
     if mod(i_step,nDTOut)==0  %plot the state after a number of timesteps
                 
         if ifPlot
-            fig=plot_Floes_poly_doublePeriodicBC(fig,Time,Floe, ocean, c2_boundary_poly); % plots model state
+            fig=plot_Floes_poly_doublePeriodicBC(fig,Time,Floe, ocean, c2_boundary_poly, PERIODIC); % plots model state
             saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
             if im_num>1
             if (~isvalid(fig2)), fig2=figure; end
@@ -146,6 +146,7 @@ while im_num<nSnapshots
             %figure; plot([fracturedFloes.poly]); drawnow;
         end
     end
+    
     %diluted=length(keep)-sum(keep);
     %if diluted>0, disp(['diluted floes: ' num2str(diluted)]); end
     

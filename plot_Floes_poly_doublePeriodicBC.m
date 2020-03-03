@@ -1,4 +1,4 @@
-function fig=plot_Floes_poly_doublePeriodicBC(fig, Time,Floe,ocean,c2_boundary_poly)
+function fig=plot_Floes_poly_doublePeriodicBC(fig, Time,Floe,ocean,c2_boundary_poly, PERIODIC)
 
 showContactPoints=0;
 showCenterOfMass=0;
@@ -18,43 +18,47 @@ parent=[];
 x=cat(1,Floe.Xi);
 alive=cat(1,Floe.alive);
 
-for i=1:length(Floe)
+
+
+if PERIODIC
     
-%   if alive(i) && (x(i)>Lx-rmax(i)) || (x(i)<-Lx+rmax(i))
-   if alive(i) && (max(abs(Floe(i).poly.Vertices(:,1)))>Lx/2)
-   
-    ghostFloeX=[ghostFloeX  Floe(i)];  
-    ghostFloeX(end).poly=translate(Floe(i).poly,[-2*Lx*sign(x(i)) 0]);
-    ghostFloeX(end).Xi=Floe(i).Xi-2*Lx*sign(x(i));
-    parent=[parent  i];
-   
-   end
+    for i=1:length(Floe)
+        
+        %   if alive(i) && (x(i)>Lx-rmax(i)) || (x(i)<-Lx+rmax(i))
+        if alive(i) && (max(abs(Floe(i).poly.Vertices(:,1)))>Lx/2)
+            
+            ghostFloeX=[ghostFloeX  Floe(i)];
+            ghostFloeX(end).poly=translate(Floe(i).poly,[-2*Lx*sign(x(i)) 0]);
+            ghostFloeX(end).Xi=Floe(i).Xi-2*Lx*sign(x(i));
+            parent=[parent  i];
+            
+        end
+        
+        
+    end
     
+    Floe=[Floe ghostFloeX];
+    
+    y=cat(1,Floe.Yi);
+    alive=cat(1,Floe.alive);
+    
+    for i=1:length(Floe)
+        
+        %   if alive(i) && (x(i)>Lx-rmax(i)) || (x(i)<-Lx+rmax(i))
+        if alive(i) && (max(abs(Floe(i).poly.Vertices(:,2)))>Ly/2)
+            
+            ghostFloeY=[ghostFloeY  Floe(i)];
+            ghostFloeY(end).poly=translate(Floe(i).poly,[0 -2*Ly*sign(y(i))]);
+            ghostFloeY(end).Yi=Floe(i).Yi-2*Ly*sign(y(i));
+            parent=[parent  i];
+            
+        end
+        
+    end
+    
+    Floe=[Floe ghostFloeY];
     
 end
-
-Floe=[Floe ghostFloeX];
-
-y=cat(1,Floe.Yi);
-alive=cat(1,Floe.alive);
-
-for i=1:length(Floe)
-    
-%   if alive(i) && (x(i)>Lx-rmax(i)) || (x(i)<-Lx+rmax(i))
-   if alive(i) && (max(abs(Floe(i).poly.Vertices(:,2)))>Ly/2)
-   
-    ghostFloeY=[ghostFloeY  Floe(i)];  
-    ghostFloeY(end).poly=translate(Floe(i).poly,[0 -2*Ly*sign(y(i))]);
-    ghostFloeY(end).Yi=Floe(i).Yi-2*Ly*sign(y(i));
-    parent=[parent  i];
-   
-   end    
-    
-end
-
-Floe=[Floe ghostFloeY];
-
-
 
 
 %ratio=max(c2_boundary(:,1:end-1),[],2)-mean(c2_boundary(:,1:end-1),2); ratio=ratio(2)/ratio(1);
@@ -82,16 +86,16 @@ title(['Time = ' num2str(Time) ' s']);
 for j=1:length(Floe)
     if Floe(j).alive
         poly=intersect(Floe(j).poly,c2_boundary_poly);
-        poly_ghost=subtract(Floe(j).poly,c2_boundary_poly);
+        if PERIODIC, poly_ghost=subtract(Floe(j).poly,c2_boundary_poly); end
 
         if stressColor==1
             cFact=min(1,Floe(j).OverlapArea/Floe(j).area); 
             plot(poly,'FaceColor',[1 0 0]*cFact^0.25,'FaceAlpha',0.5);
-            plot(poly_ghost,'FaceColor','k','FaceAlpha',0.2,'EdgeColor',[1 1 1]*0.4);
+            if PERIODIC, plot(poly_ghost,'FaceColor','k','FaceAlpha',0.2,'EdgeColor',[1 1 1]*0.4); end
 
         else
             plot(poly,'FaceColor','k'); 
-            plot(poly_ghost,'FaceColor','k','FaceAlpha',0.2,'EdgeColor',[1 1 1]*0.4);
+            if PERIODIC,  plot(poly_ghost,'FaceColor','k','FaceAlpha',0.2,'EdgeColor',[1 1 1]*0.4); end
 
         end
     end
@@ -99,8 +103,11 @@ end
 
 %plot([Floe(logical(cat(1,Floe.alive))).poly]);
 
-xb=c2_boundary_poly.Vertices(:,1); xb(end+1)=xb(1); %elongate the boundaries to inf in the x direction such that the overlap areas and interactions with the x boundary do not count
-yb=c2_boundary_poly.Vertices(:,2); yb(end+1)=yb(1);
+if ~PERIODIC 
+    xb=c2_boundary_poly.Vertices(:,1); xb(end+1)=xb(1);
+    yb=c2_boundary_poly.Vertices(:,2); yb(end+1)=yb(1);
+    plot(xb,yb, 'k-','linewidth',2);
+end
 
 %plot(xb,yb,'-','linewidth',2,'color', 'k');
 %plot([min(ocean.Xo)  max(ocean.Xo)], [min(yb) min(yb)],'-','linewidth',2,'color', 'k')
