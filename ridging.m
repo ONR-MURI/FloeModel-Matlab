@@ -1,5 +1,12 @@
-function [Floe1,Floe2,dissolvedNEW]= ridging(dissolvedNEW,Floe1,Floe2,Nx,Ny,c2_boundary_poly)
+function [Floe1,Floe2,dissolvedNEW]= ridging(dissolvedNEW,Floe1,Floe2,Nx,Ny,c2_boundary_poly,PERIODIC)
 %% 
+Lx= max(c2_boundary_poly.Vertices(:,1));
+Ly= max(c2_boundary_poly.Vertices(:,2));%c2 must be symmetric around x=0 for channel boundary conditions.
+x=[-1 -1 1 1 -1]*Lx*2; 
+y=[-1 1 1 -1 -1]*Ly*2;
+polybound = polyshape(x,y);
+c2_poly = subtract(polybound,c2_boundary_poly);
+
 polyout = intersect(Floe1.poly,Floe2.poly);
 areaPoly = area(polyout);
 rho_ice=920;
@@ -102,6 +109,26 @@ if disolved == 0 && areaPoly > 500
         Floe1.Xi = Floe1.Xi;
         Floe1.Yi = Floe1.Yi;
         Floe1.area = area(poly1new);
+        Floe1.mass = area(poly1new)*Floe1.h*rho_ice;
+        Floe1.poly = poly1new;
+        Floe1.rmax = sqrt(max(sum((poly1new.Vertices' - [Floe1.Xi; Floe1.Yi]).^2,1)));
+        Floe1.inertia_moment = PolygonMoments(Floe1.poly.Vertices,Floe1.h);
+    end
+end
+
+if ~PERIODIC
+    Abound = area(intersect(Floe1.poly,c2_poly));
+    if Abound>0
+        overlapV = areaPoly*Floe2.h;
+        [poly1new] = subtract(Floe1.poly,Floe2.poly);
+        polyout = sortregions(poly1new,'area','descend');
+        R = regions(polyout);
+        poly1new = R(1);
+        [Floe1.Xi,Floe1.Yi] = centroid(poly1new);
+        Floe1.Xi = Floe1.Xi;
+        Floe1.Yi = Floe1.Yi;
+        Floe1.area = area(poly1new);
+        Floe1.h = Floe1.h+overlapV/Floe1.area;
         Floe1.mass = area(poly1new)*Floe1.h*rho_ice;
         Floe1.poly = poly1new;
         Floe1.rmax = sqrt(max(sum((poly1new.Vertices' - [Floe1.Xi; Floe1.Yi]).^2,1)));

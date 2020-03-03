@@ -122,12 +122,14 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
         
     end
     
-    [force_b, P_j, worked] = floe_interactions_bpm2(c1, c2_poly);
-    %if ~worked, disp(['potential contact issue for floes (' num2str(i) ', boundary)' ]); end
-    if sum(abs(force_b(:)))~=0 && abs(P_j(1))<(Lx-0.1) %; subtracting 0.1m to ensure that interactions with x=+-Lx boundary are excluded as this is a periodic boundary.
-        % boundary will be recorded as floe number Inf;
-        Floe(i).interactions=[Floe(i).interactions ; Inf*ones(size(force_b,1),1) force_b P_j zeros(size(force_b,1),1)];
-        Floe(i).OverlapArea=area(c1)-area(intersect(c1,c2_boundary_channel)); % overlap area with the channel boundary only
+    if ~PERIODIC
+        [force_b, P_j, worked] = floe_interactions_bpm2(c1, c2_poly);
+        %if ~worked, disp(['potential contact issue for floes (' num2str(i) ', boundary)' ]); end
+        if sum(abs(force_b(:)))~=0 && abs(P_j(1))<(Lx-0.1) %; subtracting 0.1m to ensure that interactions with x=+-Lx boundary are excluded as this is a periodic boundary.
+            % boundary will be recorded as floe number Inf;
+            Floe(i).interactions=[Floe(i).interactions ; Inf*ones(size(force_b,1),1) force_b P_j zeros(size(force_b,1),1)];
+            Floe(i).OverlapArea=area(c1)-area(intersect(c1,c2_boundary_channel)); % overlap area with the channel boundary only
+        end
     end
     
 end

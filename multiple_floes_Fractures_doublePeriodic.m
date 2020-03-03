@@ -3,7 +3,7 @@ close all; clear all;
 addpath ~/Downloads/dengwirda-inpoly-ebf47d6/ 
 
 %% Initialize model vars
-RIDGING=false; 
+RIDGING=true; 
 
 FRACTURES=true;
 

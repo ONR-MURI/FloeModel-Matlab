@@ -1,5 +1,12 @@
 function Floe = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,c2_boundary_poly, dt,dissolvedNEW,Nx,Ny, RIDGING, PERIODIC)
 
+Lx= max(c2_boundary_poly.Vertices(:,1));
+Ly= max(c2_boundary_poly.Vertices(:,2));%c2 must be symmetric around x=0 for channel boundary conditions.
+x=[-1 -1 1 1 -1]*Lx*2; 
+y=[-1 1 1 -1 -1]*Ly*2;
+polybound = polyshape(x,y);
+c2_poly = subtract(polybound,c2_boundary_poly);
+
 %%
 N0=length(Floe);
 
@@ -125,6 +132,14 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
         
     end
     
+    if ~PERIODIC
+        [force_b, P_j, worked] = floe_interactions_bpm2(c1, c2_poly);
+        if sum(abs(force_b(:)))~=0 && abs(P_j(1))<(Lx-0.1) %; subtracting 0.1m to ensure that interactions with x=+-Lx boundary are excluded as this is a periodic boundary.
+            % boundary will be recorded as floe number Inf;
+            Floe(i).interactions=[Floe(i).interactions ; Inf*ones(size(force_b,1),1) force_b P_j zeros(size(force_b,1),1)];
+            Floe(i).OverlapArea=area(c1)-area(intersect(c1,c2_boundary_poly)); % overlap area with the boundary only
+        end
+    end
 end
 
 %Floe=rmfield(Floe,{'potentialInteractions'});
@@ -225,7 +240,7 @@ if RIDGING
             if ~isempty(Floe(i).potentialInteractions)
                 
                 for k = 1:length(Floe(i).potentialInteractions)
-                    [Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),dissolvedNEW] = ridging(dissolvedNEW,Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),Nx,Ny,c2_boundary_poly);
+                    [Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),dissolvedNEW] = ridging(dissolvedNEW,Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),Nx,Ny,c2_boundary_poly,PERIODIC);
                     
                     if Floe(i).poly.NumRegions > 1
                         polyout = sortregions(Floe(i).poly,'area','descend');
