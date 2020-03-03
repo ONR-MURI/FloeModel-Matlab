@@ -1,7 +1,7 @@
-function [Vd] = calc_vol_dissolved(Floe,Nx,Ny,c2_boundary)
+function [Vd] = calc_vol_dissolved(Floe,Nx,Ny,c2_boundary_poly)
 
-x = min(c2_boundary(1,:)):(max(c2_boundary(1,:))-min(c2_boundary(1,:)))/Nx:max(c2_boundary(1,:));
-y = min(c2_boundary(2,:)):(max(c2_boundary(2,:))-min(c2_boundary(2,:)))/Ny:max(c2_boundary(2,:));
+x = min(c2_boundary_poly.Vertices(:,1)):(max(c2_boundary_poly.Vertices(:,1))-min(c2_boundary_poly.Vertices(:,1)))/Nx:max(c2_boundary_poly.Vertices(:,1));
+y = min(c2_boundary_poly.Vertices(:,2)):(max(c2_boundary_poly.Vertices(:,2))-min(c2_boundary_poly.Vertices(:,2)))/Ny:max(c2_boundary_poly.Vertices(:,2));
 X=cat(1,Floe.Xi);
 Y=cat(1,Floe.Yi);
 live = cat(1,Floe.alive);
@@ -15,6 +15,6 @@ for ii = 1:Nx
             %cat(1,Floe(live == 1 & Binx == ii & Biny == jj).h));
     end
 end
-
+% Vd = flipud(Vd);
 end
 

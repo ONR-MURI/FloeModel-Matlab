@@ -117,7 +117,7 @@ while cnow < Target
                     Anew = area(poly1,jj)+Anew;
                     polynew = polyshape(c0(1,I(jj)+1:I(jj+1)-1),c0(2,I(jj)+1:I(jj+1)-1));
                     cnow = (Area+Anew)/((max(c2_boundary(2,:))-min(c2_boundary(2,:)))*(max(c2_boundary(1,:))-min(c2_boundary(1,:))));
-                    [Floe2(ind)] = initialize_floe_values(polynew);
+                    [Floe2(ind)] = initialize_floe_values(polynew, 0.25);
                     Floe2(ind).potentialInteractions = FloeNEW(ii).potentialInteractions;
                     ind = ind+1;
                 end
