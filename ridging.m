@@ -8,7 +8,7 @@ E = max([Floe1.E, Floe2.E]);
 sigma_m = max([Floe1.sigma_m, Floe2.sigma_m]);
 nu = 0.29;
 g = 9.81;
-hc = 14.2*(1-nu^2)/(rho_l*g)*sigma_m^2/E;
+hc = 2;%14.2*(1-nu^2)/(rho_l*g)*sigma_m^2/E;
 disolved = 0;
 
 %check to make sure one floe is not inside the other

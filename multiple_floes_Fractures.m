@@ -157,8 +157,8 @@ while im_num<nSnapshots
     %Vd(:,:,im_num) = Vd(:,:,im_num)+Dissolved_Ice(Vd,coarseMean,im_num,dissolvedNEW,c2_boundary,dt)/nDTOut;
     Vdnew = Dissolved_Ice(Vd,coarseMean,im_num,dissolvedNEW,c2_boundary,dt);
     Vd(:,:,2) = Vd(:,:,1);
-   % Vd(:,:,1) = Vdnew;
-    Vd(:,:,1)= Vd(:,:,1)+dissolvedNEW;
+    Vd(:,:,1) = Vdnew;
+%     Vd(:,:,1)= Vd(:,:,1)+dissolvedNEW;
     
     Floe=Floe(Area> 3e5);
     if sum(Area<3e5)>0, display(['num of small floes killed:' num2str(sum(Area<3e5))]); end
