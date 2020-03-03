@@ -5,3 +5,4 @@
 *.mat
 *.mat
 coarseData.mat
+.DS_Store
