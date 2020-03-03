@@ -17,11 +17,12 @@ boundingbox=[-1 ,-1; 1,-1; 1,1; -1 ,1]*floe.rmax+[floe.Xi floe.Yi];
 
 
 for i=1:length(b)
-    a=intersect(floe.poly,polyshape(b{i})); 
-    if a.NumRegions==1, 
-        if k==1 Floes=initialize_floe_values(a); k=k+1;
-        else Floes(k)=initialize_floe_values(a);k=k+1; 
+    a=regions(intersect(floe.poly,polyshape(b{i}))); 
+    for p=1:length(a), 
+        if k==1 Floes=initialize_floe_values(a(p)); k=k+1;
+        else Floes(k)=initialize_floe_values(a(p)); k=k+1; 
         end
+
     end
     
 end
