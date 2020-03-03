@@ -8,11 +8,11 @@ addpath ~/Downloads/dengwirda-inpoly-ebf47d6/
 [ocean, c2_boundary]=initialize_ocean_Gyre(1e4, 2e5, 1e5,4e3);
 c2_boundary_poly=polyshape(c2_boundary(1,:),c2_boundary(2,:));
 
-RIDGING='True'; 
+RIDGING=false; 
 
-FRACTURES='False';
+FRACTURES=true;
 
-PERIODIC='True';
+PERIODIC=true;
 
 
 %Define 10m winds
