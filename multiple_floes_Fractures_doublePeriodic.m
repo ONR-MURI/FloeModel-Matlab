@@ -3,11 +3,11 @@ close all; clear all;
 addpath ~/Downloads/dengwirda-inpoly-ebf47d6/ 
 
 %% Initialize model vars
-RIDGING='True'; 
+RIDGING=true; 
 
-FRACTURES='False';
+FRACTURES=false;
 
-PERIODIC='True';
+PERIODIC=true;
 
 %Define ocean currents
 [ocean, c2_boundary]=initialize_ocean_Gyre(1e4, 2e5, 1e5,4e3);
