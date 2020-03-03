@@ -95,7 +95,7 @@ end
 %% Solving for floe trajectories
 tic;
 gridArea=area(c2_boundary_poly)/Nx/Ny;
-
+Vdnew=zeros(Ny,Nx);
 fig2=figure;
 while im_num<nSnapshots
      
@@ -154,7 +154,8 @@ while im_num<nSnapshots
     
     %Calculate forces and torques and intergrate forward
     Floe = floe_interactions_all_doublePeriodicBCs_Heart(Floe, ocean, winds, c2_boundary_poly, dt);
-    
+    %Floe = floe_interactions_all_periodicBCs_bpm(Floe, ocean, winds, c2_boundary_poly, dt,dissolvedNEW,Nx,Ny);
+
     overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area); 
     overlapArea(1)=0; %keeping floe#1 intact
     keep=rand(length(Floe),1)>overlapArea;
@@ -176,7 +177,7 @@ while im_num<nSnapshots
     coarseMean(5,:,:,im_num)=squeeze(coarseMean(5,:,:,im_num))+accel.dv/nDTOut;
     
     Area=cat(1,Floe.area);
-    dissolvedNEW = calc_vol_dissolved(Floe(Area<3e5),Nx,Ny,c2_boundary);
+    dissolvedNEW = calc_vol_dissolved(Floe(Area<3e5),Nx,Ny,c2_boundary_poly);
     %Vd(:,:,im_num) = Vd(:,:,im_num)+Dissolved_Ice(Vd,coarseMean,im_num,dissolvedNEW,c2_boundary,dt)/nDTOut;
     Vdnew = Dissolved_Ice(Vd,coarseMean,im_num,dissolvedNEW,c2_boundary,dt);
     Vd(:,:,2) = Vd(:,:,1);

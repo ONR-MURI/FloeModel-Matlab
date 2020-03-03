@@ -8,6 +8,12 @@ addpath ~/Downloads/dengwirda-inpoly-ebf47d6/
 [ocean, c2_boundary]=initialize_ocean_Gyre(1e4, 2e5, 1e5,4e3);
 c2_boundary_poly=polyshape(c2_boundary(1,:),c2_boundary(2,:));
 
+RIDGING='True'; 
+
+FRACTURES='False';
+
+PERIODIC='True';
+
 
 %Define 10m winds
 winds=[10 0];
@@ -33,8 +39,12 @@ nPar = 4; %Number of workerks for parfor
 ifPlot = true; %Plot floe figures or not?
 
 
+% specify coarse grid size
+Lx= 2*max(ocean.Xo);Ly= 2*max(ocean.Yo);
+Nx=10; Ny=fix(Nx*Ly/Lx);
+
 % Calc interactions and plot initial state
-Nx=5; Ny=5;
+
 dissolvedNEW = zeros(Ny,Nx);
 [Floe, dissolvedNEW] = floe_interactions_all(Floe, ocean, winds,c2_boundary_poly, dt,dissolvedNEW,Nx,Ny); % find interaction points
 Floe=Floe(logical(cat(1,Floe.alive)));
@@ -131,15 +141,19 @@ while im_num<nSnapshots
     end
     
     %Calculate forces and torques and intergrate forward
-    Floe = floe_interactions_all_periodicBCs_bpm(Floe, ocean, winds, c2_boundary_poly, dt,dissolvedNEW,Nx,Ny);
+    Floe = floe_interactions_all_periodicBCs_bpm(Floe, ocean, winds, c2_boundary_poly, dt,dissolvedNEW,Nx,Ny,RIDGING, PERIODIC);
     
-    overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
-    keep=rand(length(Floe),1)>overlapArea;
-    fracturedFloes=fracture_floe(Floe(~keep),3);        
-    %if length(fracturedFloes)<length(Floe(~keep)), disp('fractures killed floes'); end
-    if ~isempty(fracturedFloes), fracturedFloes=rmfield(fracturedFloes,'potentialInteractions'); 
-    Floe=[Floe(keep) fracturedFloes];
-    %figure; plot([fracturedFloes.poly]); drawnow;
+    if FRACTURES
+        
+        overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
+        keep=rand(length(Floe),1)>overlapArea;
+        fracturedFloes=fracture_floe(Floe(~keep),3);
+        %if length(fracturedFloes)<length(Floe(~keep)), disp('fractures killed floes'); end
+        if ~isempty(fracturedFloes), fracturedFloes=rmfield(fracturedFloes,'potentialInteractions');
+            Floe=[Floe(keep) fracturedFloes];
+            %figure; plot([fracturedFloes.poly]); drawnow;
+        end
+        
     end
     %diluted=length(keep)-sum(keep);
     %if diluted>0, disp(['diluted floes: ' num2str(diluted)]); end

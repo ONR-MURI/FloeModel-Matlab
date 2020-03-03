@@ -1,4 +1,4 @@
-function Floe = floe_interactions_all_periodicBCs_bpm(Floe, ocean, winds,c2_boundary_poly, dt,dissolvedNEW,Nx,Ny)
+function Floe = floe_interactions_all_periodicBCs_bpm(Floe, ocean, winds,c2_boundary_poly, dt,dissolvedNEW,Nx,Ny, RIDGING, PERIODIC)
 
 
 %Floe(i).interactions=[floeNumber Fx Fy px py torque];
@@ -24,25 +24,33 @@ Lx= max(c2_boundary_poly.Vertices(:,1)); %c2 must be symmetric around x=0 for ch
 c2_boundary_channel=c2_boundary_poly;
 c2_boundary_channel.Vertices(:,1)=c2_boundary_channel.Vertices(:,1)*10; %elongate the boundaries to inf in the x direction such that the overlap areas and interactions with the x boundary do not count
   
-ghostFloe=[];
-parent=[];
 
-for i=1:length(Floe)
+
+if PERIODIC
     
-%   if alive(i) && (x(i)>Lx-rmax(i)) || (x(i)<-Lx+rmax(i))
-   if alive(i) && (max(abs(Floe(i).poly.Vertices(:,1)))>Lx)
-   
-    ghostFloe=[ghostFloe  Floe(i)];  
-    ghostFloe(end).poly=translate(Floe(i).poly,[-2*Lx*sign(x(i)) 0]);
-    ghostFloe(end).Xi=Floe(i).Xi-2*Lx*sign(x(i));
-    parent=[parent  i];
-   
-   end
+    ghostFloe=[];
     
+    parent=[];
+    
+    for i=1:length(Floe)
+        
+        %   if alive(i) && (x(i)>Lx-rmax(i)) || (x(i)<-Lx+rmax(i))
+        if alive(i) && (max(abs(Floe(i).poly.Vertices(:,1)))>Lx)
+            
+            ghostFloe=[ghostFloe  Floe(i)];
+            ghostFloe(end).poly=translate(Floe(i).poly,[-2*Lx*sign(x(i)) 0]);
+            ghostFloe(end).Xi=Floe(i).Xi-2*Lx*sign(x(i));
+            parent=[parent  i];
+            
+        end
+        
+        
+    end
+    
+    Floe=[Floe ghostFloe];
     
 end
 
-Floe=[Floe ghostFloe];
 
 N=length(Floe);
 x=cat(1,Floe.Xi);
@@ -178,13 +186,18 @@ for i=1:N
     
 end
 
-%add forces and torques from ghost floes to their parents; ghost floes
-%begin with the index N0+1
-for i=1:length(parent)    
-    Floe(parent(i)).collision_force =Floe(parent(i)).collision_force +Floe(N0+i).collision_force;
-    Floe(parent(i)).collision_torque=Floe(parent(i)).collision_torque+Floe(N0+i).collision_torque;
-end
 
+if PERIODIC
+    
+    %add forces and torques from ghost floes to their parents; ghost floes
+    %begin with the index N0+1
+    for i=1:length(parent)
+        Floe(parent(i)).collision_force =Floe(parent(i)).collision_force +Floe(N0+i).collision_force;
+        Floe(parent(i)).collision_torque=Floe(parent(i)).collision_torque+Floe(N0+i).collision_torque;
+    end
+    
+    
+end
 
 
 %Do the timestepping for parent floes now that their forces and torques are known.
@@ -211,16 +224,17 @@ for i=1:N0
     
 end
 
-Floe=Floe(1:N0); % ditch the ghost floes.
 
-for i=1:N0
+if RIDGING
     
-    if ~isempty(Floe(i).interactions)
+    for i=1:N0
         
-        if ~isempty(Floe(i).potentialInteractions)
-        
-            for k = 1:length(Floe(i).potentialInteractions)
-                if Floe(i).potentialInteractions(k).floeNum <= N0
+        if ~isempty(Floe(i).interactions)
+            
+            if ~isempty(Floe(i).potentialInteractions)
+                
+                for k = 1:length(Floe(i).potentialInteractions)
+                    %  if Floe(i).potentialInteractions(k).floeNum <= N0
                     [Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),dissolvedNEW] = ridging(dissolvedNEW,Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),Nx,Ny,c2_boundary_poly);
                     
                     if Floe(i).poly.NumRegions > 1
@@ -234,11 +248,17 @@ for i=1:N0
                         polynew = R(1);
                         Floe(Floe(i).potentialInteractions(k).floeNum)=initialize_floe_values(polynew);
                     end
+                    % end
                 end
             end
         end
     end
+    
+    
 end
+
+
+Floe=Floe(1:N0); % ditch the ghost floes if there are any
 
 
 Floe=rmfield(Floe,{'potentialInteractions'});
