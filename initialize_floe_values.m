@@ -1,4 +1,4 @@
-function Floe = initialize_floe_values(poly1, variance)
+function Floe = initialize_floe_values(poly1, SUBFLOES)
 rho_ice=920;
 poly1 = translate(poly1, [(-1)^randi([0 1])*rand (-1)^randi([0 1])*rand]);
 polyout = sortregions(poly1,'area','descend');
@@ -9,8 +9,8 @@ poly1 = rmholes(poly1);
 h=2+(-1)^randi([0 1])*rand/2;
 [Xi,Yi] = centroid(poly1);
     Floe.area = area(poly1);
-    Floe.mass = Floe.area*h*rho_ice;
-    Floe.inertia_moment = PolygonMoments(poly1.Vertices,h);
+    Floe.mass = 0;%Floe.area*h*rho_ice;
+    Floe.inertia_moment = 0;%PolygonMoments(poly1.Vertices,h);
     Floe.rmax = sqrt(max(sum((poly1.Vertices' - [Xi;Yi]).^2,1)));
     Floe.Xi = Xi;
     Floe.Yi = Yi;
@@ -34,23 +34,34 @@ h=2+(-1)^randi([0 1])*rand/2;
     Floe.interactions = [];
     Floe.OverlapArea = 0;
     Floe.potentialInteractions = [];
-
-%     dX=500; % resolution of the grid inside the flow
-%     n=(fix(Floe.rmax/dX)+1); n=dX*(-n:n);
-%     [Xg, Yg]= meshgrid(n+Floe.Xi, n+Floe.Yi);
-%     
-%     % in=inpolygon(Xg(:),Yg(:),floe.poly.Vertices(:,1),floe.poly.Vertices(:,2));
-%     in=inpoly2([Xg(:) Yg(:)],Floe.poly.Vertices);
-%     floe_mask=reshape(in,length(Xg),length(Xg));
-%     Floe.thickness = Floe.h*floe_mask+rand(length(n),length(n))*variance.*floe_mask;
     
-    
-%     d = logical(abs(double(floe_mask)-1));
-%     d = bwdist(d)-1;
-%     h = sin(pi*d)./(pi*d)+Floe.h;
-%     h(isinf(1./floe_mask)) = 0;
-%     h(isnan(h)) = 1 + Floe.h;
-%     thickness = abs(h)+rand(length(n),length(n))*(min(abs(h(floe_mask))));
-%     thickness(isinf(1./floe_mask))=0;
+    if SUBFLOES
+        EXISTING = false;
+        N1 = ceil(sqrt(Floe.area/1e6))+2;
+        [subFloes,Floe.vorX,Floe.vorY,Floe.vorbox] = create_subfloes(Floe,N1,EXISTING);
+        N = length(subFloes);
+        areaS = zeros(N,1);
+        inertia = zeros(N,1);
+        centers = zeros(N,2);
+        for ii = 1:N
+            R = regions(subFloes(ii));
+            polynew = R(1);
+            Floe.SubFloes(ii).poly = rmholes(polynew);
+            Floe.SubFloes(ii).h = h;
+            areaS(ii) = area(Floe.SubFloes(ii).poly);
+            if areaS(ii) == 0
+                x = 1;
+                x(1) = [1 2];
+            end
+            inertia(ii) = PolygonMoments(Floe.SubFloes(ii).poly.Vertices,Floe.SubFloes(ii).h);
+            [Xi,Yi] = centroid(Floe.SubFloes(ii).poly);
+            centers(ii,:) = [Xi,Yi];
+        end
+        Floe.mass = sum(rho_ice*areaS.*cat(1,Floe.SubFloes.h));
+        Floe.Xm = sum(rho_ice*areaS.*cat(1,Floe.SubFloes.h).*centers(:,1))./Floe.mass;
+        Floe.Ym = sum(rho_ice*areaS.*cat(1,Floe.SubFloes.h).*centers(:,2))./Floe.mass;
+        Floe.inertia_moment = sum(inertia+cat(1,Floe.SubFloes.h).*sqrt((centers(:,1)-Floe.Xm).^2+(centers(:,2)-Floe.Ym).^2));
+        Floe.rmax = sqrt(max(sum((Floe.poly.Vertices' - [Floe.Xi; Floe.Yi]).^2,1)));
+    end
     
 end

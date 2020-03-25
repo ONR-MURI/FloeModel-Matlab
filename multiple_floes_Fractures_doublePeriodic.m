@@ -5,9 +5,9 @@ addpath ~/Downloads/dengwirda-inpoly-ebf47d6/
 %% Initialize model vars
 RIDGING=true; 
 
-FRACTURES=true;
+FRACTURES=false;
 
-PERIODIC=false;
+PERIODIC=true;
 
 %Define ocean currents
 [ocean, c2_boundary]=initialize_ocean_Gyre(1e4, 2e5, 1e5,4e3);
@@ -26,7 +26,7 @@ Floe = initialize_concentration(c,c2_boundary,50);
 
 dt=20; %Time step in sec
 
-nDTOut=10; %Output frequency (in number of time steps)
+nDTOut=50; %Output frequency (in number of time steps)
 
 nSnapshots=10000; %Total number of model snapshots to save
 
@@ -78,6 +78,7 @@ tic;
 gridArea=area(c2_boundary_poly)/Nx/Ny;
 Vdnew=zeros(Ny, Nx);
 fig2=figure;
+fig3 = figure;
 while im_num<nSnapshots
      
     %c2_boundary=c2_boundary*(1+0.0005); % shrink by % every 10 steps
@@ -98,6 +99,9 @@ while im_num<nSnapshots
         if ifPlot
             fig=plot_Floes_poly_doublePeriodicBC(fig,Time,Floe, ocean, c2_boundary_poly, PERIODIC); % plots model state
             saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
+            figure(fig3);
+            fig3=plot_Floes_poly_doublePeriodicBC_thickness(fig,Time,Floe, ocean, c2_boundary_poly, PERIODIC); 
+            saveas(fig,['./figs/' num2str(im_num,'t%03.f') '.jpg'],'jpg');
             if im_num>1
             if (~isvalid(fig2)), fig2=figure; end
             figure(fig2);
@@ -122,6 +126,7 @@ while im_num<nSnapshots
         coarseSnap(5,:,:,im_num)=accel.dv;
         
         save('coarseData.mat','coarseSnap','coarseMean');
+        save('Floe.mat','Floe');
         
         %calculating and saving corase grid variables
         %[x,y, cFine0, cCoarse0,  U_Fine0,V_Fine0, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
@@ -136,10 +141,12 @@ while im_num<nSnapshots
     %Calculate forces and torques and intergrate forward
     Floe = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds, c2_boundary_poly, dt,dissolvedNEW,Nx,Ny, RIDGING, PERIODIC);
     
+    SUBFLOES = false;
+    
     if FRACTURES
         overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
         keep=rand(length(Floe),1)>overlapArea;
-        fracturedFloes=fracture_floe(Floe(~keep),3);
+        fracturedFloes=fracture_floe(Floe(~keep),3,SUBFLOES);
         %if length(fracturedFloes)<length(Floe(~keep)), disp('fractures killed floes'); end
         if ~isempty(fracturedFloes), fracturedFloes=rmfield(fracturedFloes,'potentialInteractions');
             Floe=[Floe(keep) fracturedFloes];

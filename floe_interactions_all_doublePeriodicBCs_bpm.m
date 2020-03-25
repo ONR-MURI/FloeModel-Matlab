@@ -30,7 +30,12 @@ if PERIODIC
             
             ghostFloeX=[ghostFloeX  Floe(i)];
             ghostFloeX(end).poly=translate(Floe(i).poly,[-2*Lx*sign(x(i)) 0]);
+            for ii = 1:length(Floe(i).SubFloes)
+                ghostFloeX(end).SubFloes(ii).poly=translate(Floe(i).SubFloes(ii).poly,[-2*Lx*sign(x(i)) 0]);
+            end
             ghostFloeX(end).Xi=Floe(i).Xi-2*Lx*sign(x(i));
+            ghostFloeX(end).vorX=Floe(i).vorX-2*Lx*sign(x(i));
+            ghostFloeX(end).vorbox(:,1)=Floe(i).vorbox(:,1)-2*Lx*sign(x(i));
             parent=[parent  i];
             
         end
@@ -51,7 +56,12 @@ if PERIODIC
             
             ghostFloeY=[ghostFloeY  Floe(i)];
             ghostFloeY(end).poly=translate(Floe(i).poly,[0 -2*Ly*sign(y(i))]);
+            for ii = 1:length(Floe(i).SubFloes)
+                ghostFloeY(end).SubFloes(ii).poly=translate(Floe(i).SubFloes(ii).poly,[0 -2*Ly*sign(y(i))]);
+            end
             ghostFloeY(end).Yi=Floe(i).Yi-2*Ly*sign(y(i));
+            ghostFloeY(end).vorY=Floe(i).vorY-2*Ly*sign(y(i));
+            ghostFloeY(end).vorbox(:,2)=Floe(i).vorbox(:,2)-2*Ly*sign(y(i));
             parent=[parent  i];
             
         end
@@ -212,21 +222,47 @@ for i=1:N0
     
     if Floe(i).alive
         
-        if abs(Floe(i).Xi)>Lx %if floe got out of periodic bounds, put it on the other end
-           % 
-           Floe(i).poly=translate(Floe(i).poly,[-2*Lx*sign(Floe(i).Xi) 0]); 
-           Floe(i).Xi=Floe(i).Xi-2*Lx*sign(Floe(i).Xi); 
+        if PERIODIC
+            
+            floe = Floe(i);
+            if abs(Floe(i).Xi)>Lx %if floe got out of periodic bounds, put it on the other end
+                %
+                Floe(i).poly=translate(Floe(i).poly,[-2*Lx*sign(Floe(i).Xi) 0]);
+                Floe(i).Xm=Floe(i).Xm-2*Lx*sign(Floe(i).Xi);
+                for ii = 1:length(Floe(i).SubFloes)
+                    Floe(i).SubFloes(ii).poly=translate(Floe(i).SubFloes(ii).poly,[-2*Lx*sign(Floe(i).Xi) 0]);
+                end
+                Floe(i).vorX=Floe(i).vorX-2*Lx*sign(Floe(i).Xi);
+                Floe(i).vorbox(:,1)=Floe(i).vorbox(:,1)-2*Lx*sign(Floe(i).Xi);
+                Floe(i).Xi=Floe(i).Xi-2*Lx*sign(Floe(i).Xi);
+            end
+            
+            if abs(Floe(i).Yi)>Ly %if floe got out of periodic bounds, put it on the other end
+                %
+                Floe(i).poly=translate(Floe(i).poly,[0 -2*Ly*sign(Floe(i).Yi)]);
+                Floe(i).Ym=Floe(i).Ym-2*Ly*sign(Floe(i).Yi);
+                for ii = 1:length(Floe(i).SubFloes)
+                    Floe(i).SubFloes(ii).poly=translate(Floe(i).SubFloes(ii).poly,[0 -2*Ly*sign(Floe(i).Yi)]);
+                end
+                Floe(i).vorY=Floe(i).vorY-2*Ly*sign(Floe(i).Yi);
+                Floe(i).vorbox(:,2)=Floe(i).vorbox(:,2)-2*Ly*sign(Floe(i).Yi);
+                Floe(i).Yi=Floe(i).Yi-2*Ly*sign(Floe(i).Yi);
+            end
+            
         end
         
-        if abs(Floe(i).Yi)>Ly %if floe got out of periodic bounds, put it on the other end
-           % 
-           Floe(i).poly=translate(Floe(i).poly,[0 -2*Ly*sign(Floe(i).Yi)]); 
-           Floe(i).Yi=Floe(i).Yi-2*Ly*sign(Floe(i).Yi); 
-        end
-        
+
         
         tmp=calc_trajectory(dt,ocean, winds,Floe(i)); % calculate trajectory
-        if (isempty(tmp) || isnan(Floe(i).Xi) ), Floe(i).alive=0; else Floe(i)=tmp; end
+        if (isempty(tmp) || isnan(Floe(i).Xi) )
+            Floe(i).alive=0; 
+        elseif Floe(i).alive == 0
+            dissolvedNEW = calc_vol_dissolved(Floe(i),Nx,Ny,c2_boundary_poly);
+            Floe(i) = [];
+        else
+            Floe(i)=tmp;
+        end
+
     end
     
 end
@@ -234,26 +270,39 @@ end
 if RIDGING
     
     for i=1:N0
-        
+        floe = Floe(i);
         if ~isempty(Floe(i).interactions)
             
             if ~isempty(Floe(i).potentialInteractions)
                 
                 for k = 1:length(Floe(i).potentialInteractions)
+                    poly1 = union([Floe(i).SubFloes.poly]);
+                    test = area(intersect(poly1,Floe(i).poly))/area(Floe(i).poly);
+                    if test < 0.5
+                        polynew = subtract(Floe(i).poly,poly1);
+                        polyout = sortregions(polynew,'area','descend');
+                        R = regions(polyout);
+                        polynew = R(1);
+                        Floe(i).SubFloes(length(Floe(i).SubFloes)+1).poly = rmholes(polynew);
+                        Floe(i).SubFloes(length(Floe(i).SubFloes)).h = mean(cat(1,Floe(i).SubFloes.h));
+                    end
                     [Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),dissolvedNEW] = ridging(dissolvedNEW,Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),Nx,Ny,c2_boundary_poly,PERIODIC);
+                    
+                    
                     
                     if Floe(i).poly.NumRegions > 1
                         polyout = sortregions(Floe(i).poly,'area','descend');
                         R = regions(polyout);
                         polynew = R(1);
-                        Floe(i)=initialize_floe_values(polynew);
+                        Floe(i).poly = polynew;
                     elseif Floe(Floe(i).potentialInteractions(k).floeNum).poly.NumRegions > 1
                         polyout = sortregions(Floe(Floe(i).potentialInteractions(k).floeNum).poly,'area','descend');
                         R = regions(polyout);
                         polynew = R(1);
-                        Floe(Floe(i).potentialInteractions(k).floeNum)=initialize_floe_values(polynew);
+                        Floe(Floe(i).potentialInteractions(k).floeNum).poly=polynew;
                     end
                 end
+                
             end
         end
     end

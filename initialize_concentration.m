@@ -1,4 +1,7 @@
 function [Floe] = initialize_concentration(c,c2_boundary,NumFloes)
+
+SUBFLOES = true;
+
 [Ny, Nx] = size(c);
 N = floor(NumFloes/sum(sum(c)));
 c = flipud(c);
@@ -10,7 +13,7 @@ Floe = [];
 for jj = 1:Ny
     for ii = 1:Nx
         polynew=polyshape(mean([x(ii),(ii+1)]) +xf,mean([y(jj),y(jj+1)]) + yf);
-        Floe0 = initialize_floe_values(polynew);
+        Floe0 = initialize_floe_values(polynew, SUBFLOES);
         Floe0.alive = 0;
         boundary = [x(ii) x(ii) x(ii+1) x(ii+1) x(ii); y(jj) y(jj+1) y(jj+1) y(jj) y(jj)];
         [dFloe]= FloeGeneratorConcentration(Floe0,boundary,c(jj,ii),N);
