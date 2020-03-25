@@ -12,10 +12,10 @@ polyout = intersect(c1,c2);
 %     areaPoly = 0;
 % end
 areaPoly = area(polyout);
-if areaPoly/area(c1) >0.75 && area(c1) > 5e7
-    X = 1;
-    X(1) = [1 2];
-end
+% if areaPoly/area(c1) >0.75 && area(c1) > 5e7
+%     X = 1;
+%     X(1) = [1 2];
+% end
 worked=1;
 %% 
 
