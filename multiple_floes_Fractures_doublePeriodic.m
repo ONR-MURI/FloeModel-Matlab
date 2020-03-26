@@ -5,7 +5,7 @@ addpath ~/Downloads/dengwirda-inpoly-ebf47d6/
 %% Initialize model vars
 RIDGING=true; 
 
-FRACTURES=false;
+FRACTURES=true;
 
 PERIODIC=true;
 
@@ -36,6 +36,8 @@ nPar = 4; %Number of workerks for parfor
 
 ifPlot = true; %Plot floe figures or not?
 
+SackedOB = 0; %initialize number of floes sacked for being out of bounds at zero
+
 % specify coarse grid size
 Lx= 2*max(ocean.Xo);Ly= 2*max(ocean.Yo);
 Nx=10; Ny=fix(Nx*Ly/Lx);
@@ -44,7 +46,7 @@ Nx=10; Ny=fix(Nx*Ly/Lx);
 dissolvedNEW=zeros(Ny,Nx);
 
 % Calc interactions and plot initial state
-Floe = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,c2_boundary_poly, dt,dissolvedNEW,Nx,Ny, RIDGING, PERIODIC); % find interaction points
+[Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC); % find interaction points
 Floe=Floe(logical(cat(1,Floe.alive)));
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 
@@ -90,6 +92,7 @@ while im_num<nSnapshots
         numCollisions = calc_collisionNum(Floe);
         sacked = sum(~cat(1, Floe.alive));
         if sacked>0, disp(['sacked floes: ' num2str(sacked)]); end
+        if SackedOB>0, disp(['total sacked floes for being out of bounds: ' num2str(SackedOB)]); end
         disp(['number of collisions: ' num2str(numCollisions)  newline]);
         tic
     end
@@ -139,7 +142,7 @@ while im_num<nSnapshots
     end
     
     %Calculate forces and torques and intergrate forward
-    Floe = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds, c2_boundary_poly, dt,dissolvedNEW,Nx,Ny, RIDGING, PERIODIC);
+    [Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds, c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC);
     
     SUBFLOES = false;
     
@@ -166,7 +169,7 @@ while im_num<nSnapshots
     coarseMean(5,:,:,im_num)=squeeze(coarseMean(5,:,:,im_num))+accel.dv/nDTOut;
     
     Area=cat(1,Floe.area);
-    dissolvedNEW = calc_vol_dissolved(Floe(Area<3e5),Nx,Ny,c2_boundary_poly);
+    dissolvedNEW = calc_vol_dissolved(Floe(Area<3e5),Nx,Ny,c2_boundary_poly)+dissolvedNEW;
     %Vd(:,:,im_num) = Vd(:,:,im_num)+Dissolved_Ice(Vd,coarseMean,im_num,dissolvedNEW,c2_boundary,dt)/nDTOut;
     Vdnew = Dissolved_Ice(Vd,coarseMean,im_num,dissolvedNEW,c2_boundary,dt);
     Vd(:,:,2) = Vd(:,:,1);

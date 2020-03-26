@@ -1,7 +1,7 @@
 function [ force_1, pcenter, worked] = floe_interactions_bpm2(c1, c2)
 %% 
 % Find Vertices of overlapping polygons
-Force_factor=2e3;
+Force_factor=1e3;
 polyout = intersect(c1,c2);
 % if polyout.NumRegions>0
 %     polyout2 = sortregions(polyout,'area','descend');
@@ -119,6 +119,14 @@ if max(max(abs(force_1)))>0
     if area(polynew)>areaPoly
         force_1 = -force_1;
         worked = 0;
+        displace = 0.1*sum(force_1,1)/norm(sum(force_1,1));
+        c1.Vertices(:,1) = c1.Vertices(:,1) + displace(1);
+        c1.Vertices(:,2) = c1.Vertices(:,2)+displace(2);
+        polynew = intersect(c1,c2);
+        if area(polynew)>areaPoly
+            x = 1;
+            x(1) = [1 2];
+        end
     end
 end
 end

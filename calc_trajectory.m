@@ -59,8 +59,6 @@ else
 %checking out of bounds only for Y-direction as X-direction is periodic.
 %     if  ~PERIODIC && (max(floe.poly.Vertices(:,2))>max(Yo) || min(floe.poly.Vertices(:,2))<min(Yo)   )
 %     if (max(floe.poly.Vertices(:,2))>max(Yo) || min(floe.poly.Vertices(:,2))<min(Yo)   )
-%         x = 1;
-%         x(1) = [1,2];
         disp('Ice floe sacked: out of ocean grid bounds!'); floe=[];        
     else
         

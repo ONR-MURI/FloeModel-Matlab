@@ -1,4 +1,4 @@
-function Floe = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,c2_boundary_poly, dt,dissolvedNEW,Nx,Ny, RIDGING, PERIODIC)
+function [Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC)
 
 Lx= max(c2_boundary_poly.Vertices(:,1));
 Ly= max(c2_boundary_poly.Vertices(:,2));%c2 must be symmetric around x=0 for channel boundary conditions.
@@ -256,6 +256,7 @@ for i=1:N0
         tmp=calc_trajectory(dt,ocean, winds,Floe(i)); % calculate trajectory
         if (isempty(tmp) || isnan(Floe(i).Xi) )
             Floe(i).alive=0; 
+            SackedOB = SackedOB +1;
         elseif Floe(i).alive == 0
             dissolvedNEW = calc_vol_dissolved(Floe(i),Nx,Ny,c2_boundary_poly);
             Floe(i) = [];
