@@ -121,12 +121,12 @@ while im_num<nSnapshots
         
         %calculating and saving corase grid variables
         
-        [c,vel,accel] = calc_eulerian_data(Floe,Nx,Ny,c2_boundary);
-        coarseSnap(1,:,:,im_num)=c;
-        coarseSnap(2,:,:,im_num)=vel.u;
-        coarseSnap(3,:,:,im_num)=vel.v;
-        coarseSnap(4,:,:,im_num)=accel.du;
-        coarseSnap(5,:,:,im_num)=accel.dv;
+        [eularian_data] = calc_eulerian_data2(Floe,Nx,Ny,c2_boundary);
+        coarseSnap(1,:,:,im_num)=eularian_data.c;
+        coarseSnap(2,:,:,im_num)=eularian_data.vel.u;
+        coarseSnap(3,:,:,im_num)=eularian_data.vel.v;
+        coarseSnap(4,:,:,im_num)=eularian_data.accel.du;
+        coarseSnap(5,:,:,im_num)=eularian_data.accel.dv;
         
         save('coarseData.mat','coarseSnap','coarseMean');
         save('Floe.mat','Floe');
@@ -160,13 +160,13 @@ while im_num<nSnapshots
     %diluted=length(keep)-sum(keep);
     %if diluted>0, disp(['diluted floes: ' num2str(diluted)]); end
     
-    [c,vel,accel] = calc_eulerian_data(Floe,Nx,Ny,c2_boundary);
+    [eularian_data] = calc_eulerian_data2(Floe,Nx,Ny,c2_boundary);
     
-    coarseMean(1,:,:,im_num)=squeeze(coarseMean(1,:,:,im_num))+c/nDTOut;
-    coarseMean(2,:,:,im_num)=squeeze(coarseMean(2,:,:,im_num))+vel.u/nDTOut;
-    coarseMean(3,:,:,im_num)=squeeze(coarseMean(3,:,:,im_num))+vel.v/nDTOut;
-    coarseMean(4,:,:,im_num)=squeeze(coarseMean(4,:,:,im_num))+accel.du/nDTOut;
-    coarseMean(5,:,:,im_num)=squeeze(coarseMean(5,:,:,im_num))+accel.dv/nDTOut;
+    coarseMean(1,:,:,im_num)=squeeze(coarseMean(1,:,:,im_num))+eularian_data.c/nDTOut;
+    coarseMean(2,:,:,im_num)=squeeze(coarseMean(2,:,:,im_num))+eularian_data.vel.u/nDTOut;
+    coarseMean(3,:,:,im_num)=squeeze(coarseMean(3,:,:,im_num))+eularian_data.vel.v/nDTOut;
+    coarseMean(4,:,:,im_num)=squeeze(coarseMean(4,:,:,im_num))+eularian_data.accel.du/nDTOut;
+    coarseMean(5,:,:,im_num)=squeeze(coarseMean(5,:,:,im_num))+eularian_data.accel.dv/nDTOut;
     
     Area=cat(1,Floe.area);
     dissolvedNEW = calc_vol_dissolved(Floe(Area<3e5),Nx,Ny,c2_boundary_poly)+dissolvedNEW;

@@ -1,18 +1,20 @@
-function [c,vel,accel] = calc_eulerian_data2(Floe,Nx,Ny,c2_boundary)
+function [eularian_data] = calc_eulerian_data2(Floe,Nx,Ny,c2_boundary)
 
 x = min(c2_boundary(1,:)):(max(c2_boundary(1,:))-min(c2_boundary(1,:)))/Nx:max(c2_boundary(1,:));
 y = min(c2_boundary(2,:)):(max(c2_boundary(2,:))-min(c2_boundary(2,:)))/Ny:max(c2_boundary(2,:));
 y = fliplr(y);
 dx = abs(x(2)-x(1));
 dy = abs(y(2)-y(1));
-c = zeros(Ny,Nx);
-vel.u = c;
-vel.v = c;
-accel.du = c;
-accel.dv = c;
+eularian_data.c = zeros(Ny,Nx);
+eularian_data.vel.u = eularian_data.c;
+eularian_data.vel.v = eularian_data.c;
+eularian_data.accel.du = eularian_data.c;
+eularian_data.accel.dv = eularian_data.c;
 [xx,yy] = meshgrid(0.5*(x(1:end-1)+x(2:end)),0.5*(y(1:end-1)+y(2:end)));
 xf = cat(1,Floe.Xi);
 yf = cat(1,Floe.Yi);
+mass = cat(1,Floe.mass);
+mass(isnan(mass)==1)=0;
 U = cat(1,Floe.Ui);
 U(isnan(U)==1)=0;
 V = cat(1,Floe.Vi);
@@ -38,13 +40,17 @@ for ii = 1:Nx
             overlap = intersect(box,[Floe(logical(potentialInteractions(jj,ii,:))).poly]);
             Aover = area(overlap);
             Area = sum(Aover);
-            c(jj,ii) = Area/area(box);
+            eularian_data.c(jj,ii) = Area/area(box);
         end
-        if c(jj,ii) > 0
-            vel.u(jj,ii) = sum(U(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
-            vel.v(jj,ii) = sum(V(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
-            accel.du(jj,ii) = sum(dU(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
-            accel.dv(jj,ii) = sum(dV(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
+        if eularian_data.c(jj,ii) > 0
+            eularian_data.vel.u(jj,ii) = sum(U(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
+            eularian_data.vel.v(jj,ii) = sum(V(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
+            eularian_data.accel.du(jj,ii) = sum(dU(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
+            eularian_data.accel.dv(jj,ii) = sum(dV(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
+            eularian_data.mom.x(jj,ii) = sum(mass(logical(potentialInteractions(jj,ii,:)))'.*U(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
+            eularian_data.mom.y(jj,ii) = sum(mass(logical(potentialInteractions(jj,ii,:)))'.*V(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
+            eularian_data.force.x(jj,ii) = sum(mass(logical(potentialInteractions(jj,ii,:)))'.*dU(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
+            eularian_data.force.y(jj,ii) = sum(mass(logical(potentialInteractions(jj,ii,:)))'.*dV(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
         end
     end
 end
