@@ -43,14 +43,14 @@ for ii = 1:Nx
             eularian_data.c(jj,ii) = Area/area(box);
         end
         if eularian_data.c(jj,ii) > 0
-            eularian_data.vel.u(jj,ii) = sum(U(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
-            eularian_data.vel.v(jj,ii) = sum(V(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
-            eularian_data.accel.du(jj,ii) = sum(dU(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
-            eularian_data.accel.dv(jj,ii) = sum(dV(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
-            eularian_data.mom.x(jj,ii) = sum(mass(logical(potentialInteractions(jj,ii,:)))'.*U(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
-            eularian_data.mom.y(jj,ii) = sum(mass(logical(potentialInteractions(jj,ii,:)))'.*V(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
-            eularian_data.force.x(jj,ii) = sum(mass(logical(potentialInteractions(jj,ii,:)))'.*dU(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
-            eularian_data.force.y(jj,ii) = sum(mass(logical(potentialInteractions(jj,ii,:)))'.*dV(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
+            eularian_data.u(jj,ii) = sum(U(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
+            eularian_data.v(jj,ii) = sum(V(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
+            eularian_data.du(jj,ii) = sum(dU(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
+            eularian_data.dv(jj,ii) = sum(dV(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
+            eularian_data.mom_x(jj,ii) = sum(mass(logical(potentialInteractions(jj,ii,:)))'.*U(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
+            eularian_data.mom_y(jj,ii) = sum(mass(logical(potentialInteractions(jj,ii,:)))'.*V(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
+            eularian_data.force_x(jj,ii) = sum(mass(logical(potentialInteractions(jj,ii,:)))'.*dU(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
+            eularian_data.force_y(jj,ii) = sum(mass(logical(potentialInteractions(jj,ii,:)))'.*dV(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
         end
     end
 end

@@ -123,10 +123,14 @@ while im_num<nSnapshots
         
         [eularian_data] = calc_eulerian_data2(Floe,Nx,Ny,c2_boundary);
         coarseSnap(1,:,:,im_num)=eularian_data.c;
-        coarseSnap(2,:,:,im_num)=eularian_data.vel.u;
-        coarseSnap(3,:,:,im_num)=eularian_data.vel.v;
-        coarseSnap(4,:,:,im_num)=eularian_data.accel.du;
-        coarseSnap(5,:,:,im_num)=eularian_data.accel.dv;
+        coarseSnap(2,:,:,im_num)=eularian_data.u;
+        coarseSnap(3,:,:,im_num)=eularian_data.v;
+        coarseSnap(4,:,:,im_num)=eularian_data.du;
+        coarseSnap(5,:,:,im_num)=eularian_data.dv;
+        coarseSnap(6,:,:,im_num)=eularian_data.mom_x;
+        coarseSnap(7,:,:,im_num)=eularian_data.mom_y;
+        coarseSnap(8,:,:,im_num)=eularian_data.force_x;
+        coarseSnap(9,:,:,im_num)=eularian_data.force_y;
         
         save('coarseData.mat','coarseSnap','coarseMean');
         save('Floe.mat','Floe');
@@ -163,10 +167,14 @@ while im_num<nSnapshots
     [eularian_data] = calc_eulerian_data2(Floe,Nx,Ny,c2_boundary);
     
     coarseMean(1,:,:,im_num)=squeeze(coarseMean(1,:,:,im_num))+eularian_data.c/nDTOut;
-    coarseMean(2,:,:,im_num)=squeeze(coarseMean(2,:,:,im_num))+eularian_data.vel.u/nDTOut;
-    coarseMean(3,:,:,im_num)=squeeze(coarseMean(3,:,:,im_num))+eularian_data.vel.v/nDTOut;
-    coarseMean(4,:,:,im_num)=squeeze(coarseMean(4,:,:,im_num))+eularian_data.accel.du/nDTOut;
-    coarseMean(5,:,:,im_num)=squeeze(coarseMean(5,:,:,im_num))+eularian_data.accel.dv/nDTOut;
+    coarseMean(2,:,:,im_num)=squeeze(coarseMean(2,:,:,im_num))+eularian_data.u/nDTOut;
+    coarseMean(3,:,:,im_num)=squeeze(coarseMean(3,:,:,im_num))+eularian_data.v/nDTOut;
+    coarseMean(4,:,:,im_num)=squeeze(coarseMean(4,:,:,im_num))+eularian_data.du/nDTOut;
+    coarseMean(5,:,:,im_num)=squeeze(coarseMean(5,:,:,im_num))+eularian_data.dv/nDTOut;
+    coarseMean(6,:,:,im_num)=squeeze(coarseMean(2,:,:,im_num))+eularian_data.mom_x/nDTOut;
+    coarseMean(7,:,:,im_num)=squeeze(coarseMean(3,:,:,im_num))+eularian_data.mom_y/nDTOut;
+    coarseMean(8,:,:,im_num)=squeeze(coarseMean(4,:,:,im_num))+eularian_data.force_x/nDTOut;
+    coarseMean(9,:,:,im_num)=squeeze(coarseMean(5,:,:,im_num))+eularian_data.force_y/nDTOut;
     
     Area=cat(1,Floe.area);
     dissolvedNEW = calc_vol_dissolved(Floe(Area<3e5),Nx,Ny,c2_boundary_poly)+dissolvedNEW;
