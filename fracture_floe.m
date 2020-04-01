@@ -1,5 +1,5 @@
 
-function Floes=fracture_floe(Floe,N,SUBFLOES)
+function Floes=fracture_floe(Floe,N)
 
 Floes=[]; k=1; rho_ice = 920;
 
@@ -22,7 +22,19 @@ for i=1:length(b)
     a=regions(intersect(floe.poly,polyshape(b{i}))); 
     for p=1:length(a)
         if k==1 
-            Floes=initialize_floe_values(a(p),SUBFLOES); 
+            Floes.poly = a(p);
+            [Xi,Yi] = centroid(Floes.poly);
+            Floes.area = area(Floes.poly);
+            Floes.rmax = sqrt(max(sum((Floes.poly.Vertices' - [Xi;Yi]).^2,1)));
+            Floes.Xi = Xi; Floes.Yi = Yi; Floes.alive = 1;
+            Floes.collision_force = 0;
+            Floes.collision_torque = 0;
+            Floes.h = floe.h;
+            Floes.E = 1e9;
+            Floes.sigma_m = 400000;
+            Floes.interactions = [];
+            Floes.OverlapArea = 0;
+            Floes.potentialInteractions = [];
             Floes.alpha_i = floe.alpha_i; Floes.Ui = floe.Ui; Floes.Vi = floe.Vi;
             Floes.dXi_p = floe.dXi_p; Floes.dYi_p = floe.dYi_p;
             Floes.dUi_p = floe.dUi_p; Floes.dVi_p = floe.dVi_p;
@@ -55,7 +67,19 @@ for i=1:length(b)
                 Floes = [];
             end
         else
-            FloeNEW=initialize_floe_values(a(p),SUBFLOES);
+            FloeNEW.poly = a(p);
+            [Xi,Yi] = centroid(FloeNEW.poly);
+            FloeNEW.area = area(FloeNEW.poly);
+            FloeNEW.rmax = sqrt(max(sum((FloeNEW.poly.Vertices' - [Xi;Yi]).^2,1)));
+            FloeNEW.Xi = Xi; FloeNEW.Yi = Yi; FloeNEW.alive = 1;
+            FloeNEW.collision_force = 0;
+            FloeNEW.collision_torque = 0;
+            FloeNEW.h = floe.h;
+            FloeNEW.E = 1e9;
+            FloeNEW.sigma_m = 400000;
+            FloeNEW.interactions = [];
+            FloeNEW.OverlapArea = 0;
+            FloeNEW.potentialInteractions = [];
             FloeNEW.alpha_i = floe.alpha_i; FloeNEW.Ui = floe.Ui; FloeNEW.Vi = floe.Vi;
             FloeNEW.dXi_p = floe.dXi_p; FloeNEW.dYi_p = floe.dYi_p;
             FloeNEW.dUi_p = floe.dUi_p; FloeNEW.dVi_p = floe.dVi_p;

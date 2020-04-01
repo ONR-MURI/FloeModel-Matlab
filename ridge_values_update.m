@@ -74,10 +74,10 @@ FloeLess.Xm = sum(rho_ice*areaS.*cat(1,FloeLess.SubFloes.h).*centers(:,1))./Floe
 FloeLess.Ym = sum(rho_ice*areaS.*cat(1,FloeLess.SubFloes.h).*centers(:,2))./FloeLess.mass;
 FloeLess.inertia_moment = sum(inertia+cat(1,FloeLess.SubFloes.h).*sqrt((centers(:,1)-FloeLess.Xm).^2+(centers(:,2)-FloeLess.Ym).^2));
 FloeLess.rmax = sqrt(max(sum((FloeLess.poly.Vertices' - [FloeLess.Xi; FloeLess.Yi]).^2,1)));
-if isempty(FloeLess.SubFloes)
-    SUBFLOES = true;
-    FloeLess = initialize_floe_values(FloeLess.poly,SUBFLOES);
-    disp('SubFloes term is empty');
-end
+% if isempty(FloeLess.SubFloes)
+%     SUBFLOES = true;
+%     FloeLess = initialize_floe_values(FloeLess.poly,SUBFLOES);
+%     disp('SubFloes term is empty');
+% end
 end
 

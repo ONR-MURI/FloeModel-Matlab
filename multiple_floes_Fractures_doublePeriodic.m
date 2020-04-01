@@ -9,6 +9,10 @@ FRACTURES=true;
 
 PERIODIC=true;
 
+SUBFLOES = true;
+
+PACKING = false;
+
 %Define ocean currents
 [ocean, c2_boundary]=initialize_ocean_Gyre(1e4, 2e5, 1e5,4e3);
 c2_boundary_poly=polyshape(c2_boundary(1,:),c2_boundary(2,:));
@@ -20,7 +24,7 @@ winds=[10 10];
 %load('Floe_clean.mat','Floe');
 
 c=1; % could be a vector
-Floe = initialize_concentration(c,c2_boundary,50);
+Floe = initialize_concentration(c,c2_boundary,SUBFLOES, 50);
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 %%
 
@@ -38,6 +42,8 @@ ifPlot = true; %Plot floe figures or not?
 
 SackedOB = 0; %initialize number of floes sacked for being out of bounds at zero
 
+dhdt = 0.1; %Rate at which ice thickness increases thermodynamically per day
+
 % specify coarse grid size
 Lx= 2*max(ocean.Xo);Ly= 2*max(ocean.Yo);
 Nx=10; Ny=fix(Nx*Ly/Lx);
@@ -46,7 +52,7 @@ Nx=10; Ny=fix(Nx*Ly/Lx);
 dissolvedNEW=zeros(Ny,Nx);
 
 % Calc interactions and plot initial state
-[Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC); % find interaction points
+[Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES); % find interaction points
 Floe=Floe(logical(cat(1,Floe.alive)));
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 
@@ -146,14 +152,13 @@ while im_num<nSnapshots
     end
     
     %Calculate forces and torques and intergrate forward
-    [Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds, c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC);
+    [Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds, c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES);
     
-    SUBFLOES = false;
     
     if FRACTURES
         overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
         keep=rand(length(Floe),1)>overlapArea;
-        fracturedFloes=fracture_floe(Floe(~keep),3,SUBFLOES);
+        fracturedFloes=fracture_floe(Floe(~keep),3);
         %if length(fracturedFloes)<length(Floe(~keep)), disp('fractures killed floes'); end
         if ~isempty(fracturedFloes), fracturedFloes=rmfield(fracturedFloes,'potentialInteractions');
             Floe=[Floe(keep) fracturedFloes];
@@ -178,16 +183,27 @@ while im_num<nSnapshots
     
     Area=cat(1,Floe.area);
     dissolvedNEW = calc_vol_dissolved(Floe(Area<3e5),Nx,Ny,c2_boundary_poly)+dissolvedNEW;
+    if dhdt > 0
+        dissolvedNEW = dissolvedNEW + (1-eularian_data.c)*gridArea*dhdt/(24*3600)*dt;
+    end
     %Vd(:,:,im_num) = Vd(:,:,im_num)+Dissolved_Ice(Vd,coarseMean,im_num,dissolvedNEW,c2_boundary,dt)/nDTOut;
     Vdnew = Dissolved_Ice(Vd,coarseMean,im_num,dissolvedNEW,c2_boundary,dt);
     Vd(:,:,2) = Vd(:,:,1);
     Vd(:,:,1) = Vdnew;
+    if PACKING
+        [floe2,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,SUBFLOES,PACKING);
+    end
     %Vd(:,:,1)= Vd(:,:,1)+dissolvedNEW;
     
     Floe=Floe(Area> 1e6);
     if sum(Area<1e6)>0, display(['num of small floes killed:' num2str(sum(Area<1e6))]); end
     Time=Time+dt; i_step=i_step+1; %update time index
 
-
+    for ii = 1:length(Floe)
+        if Floe(ii).poly.NumRegions > 1
+            xx(1) = 1;
+            xx(1) = [1 2];
+        end
+    end
 end
 %%

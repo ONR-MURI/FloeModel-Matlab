@@ -1,6 +1,9 @@
-function [Floe2]= FloeGeneratorConcentration(Floe,c2_boundary,Target,N)
+function [Floe2]= FloeGeneratorConcentration(Floe,c2_boundary,Target,N,SUBFLOES)
+%% 
+
 %Generate set of random points
 ddx = 250;
+PACKING = false;
 id ='MATLAB:polyshape:boundary3Points';
 warning('off',id)
 %load FloeVoronoi;
@@ -52,7 +55,9 @@ cnow = Area/((max(c2_boundary(2,:))-min(c2_boundary(2,:)))*(max(c2_boundary(1,:)
 %randomize order for polygons to be added as floes
 R = randperm(length(C));
 % R = randperm(length(FloeV));
-%% Loop until target concentration is reached
+
+
+% Loop until target concentration is reached
 Anew = 0;
 ii = 1;
 ind = 1;
@@ -117,7 +122,7 @@ while cnow < Target
                     Anew = area(poly1,jj)+Anew;
                     polynew = polyshape(c0(1,I(jj)+1:I(jj+1)-1),c0(2,I(jj)+1:I(jj+1)-1));
                     cnow = (Area+Anew)/((max(c2_boundary(2,:))-min(c2_boundary(2,:)))*(max(c2_boundary(1,:))-min(c2_boundary(1,:))));
-                    [Floe2(ind)] = initialize_floe_values(polynew, 0.25);
+                    [Floe2(ind)] = initialize_floe_values(polynew, SUBFLOES,PACKING);
                     Floe2(ind).potentialInteractions = FloeNEW(ii).potentialInteractions;
                     ind = ind+1;
                 end

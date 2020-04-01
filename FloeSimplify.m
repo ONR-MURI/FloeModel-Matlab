@@ -1,4 +1,4 @@
-function [floenew] = FloeSimplify(floe, ddx)
+function [floenew] = FloeSimplify(floe, ddx,SUBFLOES)
 %Take polyshape with a lot of vertices and simplify it to have fewer
 %vertices
 %% Remap the main polygon to a shape with fewer vertices
@@ -30,14 +30,20 @@ boundingbox = floe.vorbox;
 [~, b] = polybnd_voronoi([X Y],boundingbox);
 k = 1;
 
-for i=1:length(b)
-    a=regions(intersect(floenew.poly,polyshape(b{i})));
-    if ~isempty(area(a))
-        for j=1:length(a)
-            subfloes(k) = a(j);
-            k = k+1;
+if SUBFLOES
+    for i=1:length(b)
+        if ~isnan(b{i}(1))
+            a=regions(intersect(floenew.poly,polyshape(b{i})));
+            if ~isempty(area(a))
+                for j=1:length(a)
+                    subfloes(k) = a(j);
+                    k = k+1;
+                end
+            end
         end
     end
+else
+    subfloes = floenew.poly;
 end
 
 %populate new floes with heights of exisiting floes

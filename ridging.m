@@ -1,4 +1,4 @@
-function [Floe1,Floe2,dissolvedNEW]= ridging(dissolvedNEW,Floe1,Floe2,Nx,Ny,c2_boundary_poly,PERIODIC)
+function [Floe1,Floe2,dissolvedNEW]= ridging(dissolvedNEW,Floe1,Floe2,Nx,Ny,c2_boundary_poly,PERIODIC,SUBFLOES)
 %% 
 floe1 = Floe1;
 floe2 = Floe2;
@@ -159,9 +159,9 @@ if ~PERIODIC
 end
 
 if length(Floe1.poly.Vertices) > 500
-    Floe1 = FloeSimplify(Floe1, 250);
+    Floe1 = FloeSimplify(Floe1, 250,SUBFLOES);
 elseif length(Floe2.poly.Vertices) > 500
-    Floe2 = FloeSimplify(Floe2, 250);
+    Floe2 = FloeSimplify(Floe2, 250,SUBFLOES);
 end
 
 

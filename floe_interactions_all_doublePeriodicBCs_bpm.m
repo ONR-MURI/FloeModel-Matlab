@@ -1,4 +1,4 @@
-function [Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC)
+function [Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES)
 
 Lx= max(c2_boundary_poly.Vertices(:,1));
 Ly= max(c2_boundary_poly.Vertices(:,2));%c2 must be symmetric around x=0 for channel boundary conditions.
@@ -277,19 +277,8 @@ if RIDGING
             if ~isempty(Floe(i).potentialInteractions)
                 
                 for k = 1:length(Floe(i).potentialInteractions)
-                    poly1 = union([Floe(i).SubFloes.poly]);
-                    test = area(intersect(poly1,Floe(i).poly))/area(Floe(i).poly);
-                    if test < 0.5
-                        polynew = subtract(Floe(i).poly,poly1);
-                        polyout = sortregions(polynew,'area','descend');
-                        R = regions(polyout);
-                        polynew = R(1);
-                        Floe(i).SubFloes(length(Floe(i).SubFloes)+1).poly = rmholes(polynew);
-                        Floe(i).SubFloes(length(Floe(i).SubFloes)).h = mean(cat(1,Floe(i).SubFloes.h));
-                    end
-                    [Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),dissolvedNEW] = ridging(dissolvedNEW,Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),Nx,Ny,c2_boundary_poly,PERIODIC);
-                    
-                    
+
+                    [Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),dissolvedNEW] = ridging(dissolvedNEW,Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),Nx,Ny,c2_boundary_poly,PERIODIC,SUBFLOES);                  
                     
                     if Floe(i).poly.NumRegions > 1
                         polyout = sortregions(Floe(i).poly,'area','descend');
