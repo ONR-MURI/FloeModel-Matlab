@@ -1,7 +1,7 @@
 function [ force_1, pcenter, worked] = floe_interactions_bpm2(c1, c2)
 %% 
 % Find Vertices of overlapping polygons
-Force_factor=1e3;
+Force_factor=5e2;
 polyout = intersect(c1,c2);
 % if polyout.NumRegions>0
 %     polyout2 = sortregions(polyout,'area','descend');
@@ -23,7 +23,9 @@ worked=1;
 if areaPoly==0
     force_1=[0 0];
     pcenter=[0 0];   
-else    
+else
+    %% 
+    
     N_contact = polyout.NumRegions;
     c0(:,1) = polyout.Vertices(:,1); c0(:,2) = polyout.Vertices(:,2);
     c0 = c0';
@@ -37,61 +39,123 @@ else
     elseif n == 1
         I = [0 I' length(breaks)+1];
     end
-    node1 = c1.Vertices;
-    edge1 = [1:length(node1); 2:length(node1) 1]';
-    [check1,~] = inpoly2(c0',node1,edge1) ;
-    node2 = c1.Vertices;
-    edge2 = [1:length(node2); 2:length(node2) 1]';
-    [check2,~] = inpoly2(c0',node2,edge2) ;
-%     check1 = inpolygon(c0(:,1),c0(:,2),c2.Vertices(:,1),c2.Vertices(:,2));
-%     check2 = inpolygon(c0(:,1),c0(:,2),c1.Vertices(:,1),c1.Vertices(:,2));
+%     node1 = c1.Vertices;
+%     edge1 = [1:length(node1); 2:length(node1) 1]';
+%     [check1,~] = inpoly2(c0',node1,edge1) ;
+%     node2 = c1.Vertices;
+%     edge2 = [1:length(node2); 2:length(node2) 1]';
+%     [check2,~] = inpoly2(c0',node2,edge2) ;
+    [~,check1] = inpolygon(c0(1,:),c0(2,:),c1.Vertices(:,1),c1.Vertices(:,2));
+    [~,check2] = inpolygon(c0(1,:),c0(2,:),c2.Vertices(:,1),c2.Vertices(:,2));
     force_1=zeros(N_contact,2);
     [pcenter(:,1),pcenter(:,2)] = centroid(polyout, 1:polyout.NumRegions);
     
+    %% 
     
     for k=1:N_contact       
         %find vertices of points inside poly1
         in2 = c0(:,I(k)+1:I(k+1)-1)';
-%         in2 = R(k).Vertices;
         if sum(check1(I(k)+1:I(k+1)-1))>sum(check2(I(k)+1:I(k+1)-1))
-            [~,d] = dsearchn(c2.Vertices,in2);
-            if length(d(d>0))>2
-                in1 = in2(d>0,:);
-                [~,d2] = dsearchn(c1.Vertices,in1);
-                if max(d2) > 0 && min(abs(d2))==0
-                    while abs(d2(end))==0 || abs(d2(end-1))> 0
-                        in1 = [in1(2:end,:);in1(1,:)];
-                        d2 = [d2(2:end);d2(1)];
-                    end
-                elseif max(d2) > 0 && min(abs(d2)) > 0
-                    while abs(d2(end))==0
-                        in1 = [in1(2:end,:);in1(1,:)];
-                        d2 = [d2(2:end);d2(1)];
-                    end
-                end
-            else
-                in1 = in2;
-            end
+            in = check2(I(k)+1:I(k+1)-1);
+            on = logical(abs(in-1))';
+%             [~, on] = inpolygon(in2(:,1),in2(:,2),c2.Vertices(:,1),c2.Vertices(:,2));
+%             if sum(on) == 0
+%                 node2 = c2.Vertices;
+%                 edge2 = [1:length(node2); 2:length(node2) 1]';
+%                 [in,~] = inpoly2(in2,node2,edge2) ;
+%                 on = logical(abs(in-1));
+%             end
         else
-            [~,d] = dsearchn(c1.Vertices,in2);
-            if length(d(d>0))>2
-                in1 = in2(d>0,:);
-                [~,d2] = dsearchn(c2.Vertices,in1);
-                if max(d2) > 0 && min(abs(d2))==0
-                    while abs(d2(end))==0 || abs(d2(end-1))> 0
-                        in1 = [in1(2:end,:);in1(1,:)];
-                        d2 = [d2(2:end);d2(1)];
-                    end
-                elseif max(d2) > 0 && min(abs(d2)) > 0
-                    while abs(d2(end))==0 
-                        in1 = [in1(2:end,:);in1(1,:)];
-                        d2 = [d2(2:end);d2(1)];
-                    end
+            in = check1(I(k)+1:I(k+1)-1);
+            on = logical(abs(in-1))';
+%             [~, on] = inpolygon(in2(:,1),in2(:,2),c1.Vertices(:,1),c1.Vertices(:,2));
+%             if sum(on) == 0
+%                 node2 = c1.Vertices;
+%                 edge2 = [1:length(node2); 2:length(node2) 1]';
+%                 [in,~] = inpoly2(in2,node2,edge2) ;
+%                 on = logical(abs(in-1));
+%             end
+        end
+        ii = 1;
+        if sum(on) < 0.5
+            on(1) = 1; on(end) = 1;
+        elseif sum(on) < 1.5
+            while on(1) < 0.5
+                on = [on(2:end); on(1)];
+                in2 = [in2(2:end,:); in2(1,:)];
+                if ii == length(on)+1
+%                     xx = 1;
+%                     xx(1) = [1 2];
+                    on(1) = 1;% on(end) = 1;
                 end
-            else
-                in1 = in2;    
+                ii = ii+1;
+            end
+            on(end) = 1;
+        else
+            while on(1) +on(end) < 1.5
+                on = [on(2:end); on(1)];
+                in2 = [in2(2:end,:); in2(1,:)];
+                if ii == length(on)+1
+                    kk = 1;
+                    while on(1) < 0.5
+                        on = [on(2:end); on(1)];
+                        in2 = [in2(2:end,:); in2(1,:)];
+                        if kk == length(on)+1
+                            on(1) = 1;% on(end) = 1;
+                        end
+                        kk = kk+1;
+                    end
+                    on(end) = 1;
+                end
+                ii = ii+1;
             end
         end
+        II = find(on == 0);
+        if sum(on) == length(on)
+            in1 = in2;
+        else
+            in1 = [in2(min(II)-1,:); in2(II,:); in2(max(II) + 1,:)];
+        end
+% % %         in2 = R(k).Vertices;
+%         if sum(check1(I(k)+1:I(k+1)-1))>sum(check2(I(k)+1:I(k+1)-1))
+%             [~,d] = dsearchn(c2.Vertices,in2);
+%             if length(d(d>0))>2
+%                 in1 = in2(d>0,:);
+%                 [~,d2] = dsearchn(c1.Vertices,in1);
+%                 if max(d2) > 0 && min(abs(d2))==0
+%                     while abs(d2(end))==0 || abs(d2(end-1))> 0
+%                         in1 = [in1(2:end,:);in1(1,:)];
+%                         d2 = [d2(2:end);d2(1)];
+%                     end
+%                 elseif max(d2) > 0 && min(abs(d2)) > 0
+%                     while abs(d2(end))==0
+%                         in1 = [in1(2:end,:);in1(1,:)];
+%                         d2 = [d2(2:end);d2(1)];
+%                     end
+%                 end
+%             else
+%                 in1 = in2;
+%             end
+%         else
+%             [~,d] = dsearchn(c1.Vertices,in2);
+%             if length(d(d>0))>2
+%                 in1 = in2(d>0,:);
+%                 [~,d2] = dsearchn(c2.Vertices,in1);
+%                 if max(d2) > 0 && min(abs(d2))==0
+%                     while abs(d2(end))==0 || abs(d2(end-1))> 0
+%                         in1 = [in1(2:end,:);in1(1,:)];
+%                         d2 = [d2(2:end);d2(1)];
+%                     end
+%                 elseif max(d2) > 0 && min(abs(d2)) > 0
+%                     while abs(d2(end))==0 
+%                         in1 = [in1(2:end,:);in1(1,:)];
+%                         d2 = [d2(2:end);d2(1)];
+%                     end
+%                 end
+%             else
+%                 in1 = in2;    
+%             end
+%         end
         
         
         %calculate direction of force by calculating direction from center
@@ -111,18 +175,41 @@ else
 end
 %% 
 
+if isnan(force_1)
+    xx = 1;
+    xx(1) = [1 2];
+end
+
 if max(max(abs(force_1)))>0
     displace = 0.1*sum(force_1,1)/norm(sum(force_1,1));
-    c1.Vertices(:,1) = c1.Vertices(:,1) + displace(1);
-    c1.Vertices(:,2) = c1.Vertices(:,2)+displace(2);
-    polynew = intersect(c1,c2);
+    C1(:,1) = c1.Vertices(:,1) + displace(1);
+    C1(:,2) = c1.Vertices(:,2)+displace(2);
+    polynew = intersect(polyshape(C1),c2);
     if area(polynew)>areaPoly
         force_1 = -force_1;
         worked = 0;
-        displace = 0.2*sum(force_1,1)/norm(sum(force_1,1));
-        c1.Vertices(:,1) = c1.Vertices(:,1) + displace(1);
-        c1.Vertices(:,2) = c1.Vertices(:,2)+displace(2);
-        polynew = intersect(c1,c2);
+        displace = 0.1*sum(force_1,1)/norm(sum(force_1,1));
+        C1(:,1) = c1.Vertices(:,1) + displace(1);
+        C1(:,2) = c1.Vertices(:,2)+displace(2);
+        polynew = intersect(polyshape(C1),c2);
+        if area(polynew)>areaPoly
+            force_1 = [force_1(:,2) force_1(:,1)];
+            displace = 0.1*sum(force_1,1)/norm(sum(force_1,1));
+            C1(:,1) = c1.Vertices(:,1) + displace(1);
+            C1(:,2) = c1.Vertices(:,2)+displace(2);
+            polynew = intersect(polyshape(C1),c2);
+            if area(polynew)>areaPoly
+                force_1 = -force_1;
+                displace = 0.1*sum(force_1,1)/norm(sum(force_1,1));
+                C1(:,1) = c1.Vertices(:,1) + displace(1);
+                C1(:,2) = c1.Vertices(:,2)+displace(2);
+                polynew = intersect(polyshape(C1),c2);
+                if area(polynew)>areaPoly
+                    force_1=[0 0];
+                    pcenter=[0 0];
+                end
+            end
+        end
     end
 end
 end

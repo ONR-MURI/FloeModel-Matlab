@@ -128,17 +128,35 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
     if ~isempty(Floe(i).potentialInteractions)
         
         NpotInter=length(Floe(i).potentialInteractions);
-        if NpotInter > 1
-            c2 = union([Floe(i).potentialInteractions.c]);
-        else
-            c2 = Floe(i).potentialInteractions.c;
+        for k=1:NpotInter
+            
+            floeNum=Floe(i).potentialInteractions(k).floeNum;
+            
+            %Floe(i).potentialInteractions(k).overlapArea=0;
+            
+            c2=Floe(i).potentialInteractions(k).c;
+            
+            [force_j,P_j,worked] = floe_interactions_bpm2(c1,c2);
+            
+            %if ~worked, disp(['potential contact issue for floes (' num2str(i) ',' num2str(floeNum) ')' ]); end
+            
+            if sum(abs(force_j(:)))~=0 && abs(P_j(1))<Lx && abs(P_j(2))<Ly %make sure to count only interactions inside the domain, even for ghost floes
+                Floe(i).interactions=[Floe(i).interactions ; floeNum*ones(size(force_j,1),1) force_j P_j zeros(size(force_j,1),1)];
+              %  Floe(i).potentialInteractions(k).overlapArea=area(intersect(c1,c2));
+            end
+            
         end
-        
-        [force_j,P_j,worked] = floe_interactions_bpm2(c1,c2);
-                
-        if sum(abs(force_j))~=0
-            Floe(i).interactions=[Floe(i).interactions ; ones(size(force_j,1),1) force_j P_j zeros(size(force_j,1),1)];
-        end
+%         if NpotInter > 1
+%             c2 = union([Floe(i).potentialInteractions.c]);
+%         else
+%             c2 = Floe(i).potentialInteractions.c;
+%         end
+%         
+%         [force_j,P_j,worked] = floe_interactions_bpm2(c1,c2);
+%                 
+%         if sum(abs(force_j))~=0
+%             Floe(i).interactions=[Floe(i).interactions ; ones(size(force_j,1),1) force_j P_j zeros(size(force_j,1),1)];
+%         end
         
     end
     
@@ -203,6 +221,17 @@ for i=1:N
        Floe(i).collision_force=sum(Floe(i).interactions(:,2:3),1);
        Floe(i).collision_torque=sum(Floe(i).interactions(:,6),1);
         
+%        if abs(Floe(i).collision_force(1)/Floe(i).mass) > 0.35
+%            if Floe(i).area > 3500
+%                xx = 1;
+%                xx(1) = [1 2];
+%            end
+%        elseif abs(Floe(i).collision_force(2)/Floe(i).mass) > 0.35
+%            if Floe(i).area > 3500
+%                xx = 1;
+%                xx(1) = [1 2];
+%            end
+%        end
     end
     
 end
