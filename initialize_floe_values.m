@@ -7,7 +7,7 @@ R = regions(polyout);
 poly1 = R(1);
 poly1 = rmholes(poly1);
 %h = 0.2*rand+0.1128;
-h=2+(-1)^randi([0 1])*rand/2;
+h=2;%+(-1)^randi([0 1])*rand/2;
 if PACKING
     h = 0.15;
 end
