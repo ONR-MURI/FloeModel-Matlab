@@ -48,30 +48,34 @@ end
 
 %populate new floes with heights of exisiting floes
 N = length(subfloes);
-alive = ones(1,N);
+floenew.SubFloes = [];
+areaS = zeros(N,1);
+inertia = zeros(N,1);
+centers = zeros(N,2);
+[floex, floey] = centroid([floe.SubFloes.poly]);
 for ii = 1:N
-    poly = intersect(subfloes(ii),[floe.SubFloes.poly]);
-    [~,I] = max(area(poly));
+    [Xi,Yi] = centroid(subfloes(ii));
+    [I,~] = dsearchn([floex',floey'],[Xi,Yi]);
+    centers(ii,:) = [Xi,Yi];
+%     poly = intersect(subfloes(ii),[floe.SubFloes.poly]);
+%     [~,I] = min(abs(area(poly)/area(subfloes(ii))-1));
     floenew.SubFloes(ii).poly = subfloes(ii);
     floenew.SubFloes(ii).h = floe.SubFloes(I).h;
+    areaS(ii) = area(floenew.SubFloes(ii).poly);
+    inertia(ii) = PolygonMoments(floenew.SubFloes(ii).poly.Vertices,floenew.SubFloes(ii).h);
 end
 
 %% 
 
-N1 = length(floenew.SubFloes);
-areaS = zeros(N1,1);
-inertia = zeros(N1,1);
-centers = zeros(N1,2);
-for ii = 1:N1
-    areaS(ii) = area(floenew.SubFloes(ii).poly);
-    inertia(ii) = PolygonMoments(floenew.SubFloes(ii).poly.Vertices,floenew.SubFloes(ii).h);
-    [Xi,Yi] = centroid(floenew.SubFloes(ii).poly);
-    centers(ii,:) = [Xi,Yi];
-end
 floenew.Xm = sum(rho_ice*areaS.*cat(1,floenew.SubFloes.h).*centers(:,1))./floenew.mass;
 floenew.Ym = sum(rho_ice*areaS.*cat(1,floenew.SubFloes.h).*centers(:,2))./floenew.mass;
 floenew.inertia_moment = sum(inertia+cat(1,floenew.SubFloes.h).*sqrt((centers(:,1)-floenew.Xm).^2+(centers(:,2)-floenew.Ym).^2));
 floenew.rmax = sqrt(max(sum((floenew.poly.Vertices' - [floenew.Xi; floenew.Yi]).^2,1)));
+
+% if sum(floenew.h.*areaS)/floenew.area<sum([floe.SubFloes.h].*area([floe.SubFloes.poly]))/floe.area && length(floenew.SubFloes)<= length(floe.SubFloes)
+%     xx = 1;
+%     xx(1) = [1 2];
+% end
 
 warning('on',id)
 end

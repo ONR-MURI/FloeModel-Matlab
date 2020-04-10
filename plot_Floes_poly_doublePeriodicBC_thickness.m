@@ -94,7 +94,7 @@ end
 Maxh = max(hmax);
 Minh = min(hmin);
 title(['Time = ' num2str(Time) ' s']);
-hmax = log10(1+max(hmax));
+hmax = log10(30);
 
 for j=1:length(Floe)
     if Floe(j).alive
@@ -104,7 +104,7 @@ for j=1:length(Floe)
             if PERIODIC, poly_ghost=subtract(Floe(j).SubFloes(ii).poly,c2_boundary_poly); end
             
             if stressColor==1
-                plot(poly,'FaceColor',[0 1 0]*(log10(1+Floe(j).SubFloes(ii).h)/hmax),'FaceAlpha',0.5);
+                plot(poly,'FaceColor',[0 1 0]*(log10(Floe(j).SubFloes(ii).h)/hmax),'FaceAlpha',0.5);
                 if PERIODIC, plot(poly_ghost,'FaceColor','k','FaceAlpha',0.2,'EdgeColor',[1 1 1]*0.4); end
                 
                 
@@ -152,7 +152,7 @@ if sacked_floes>0, display(['Sacked floes: ' num2str(sacked_floes)]); end
 mycolors = [zeros(1,101); 0:0.01:1; zeros(1,101)];
 mycolors = mycolors';
 colormap(mycolors)
-caxis([log10(Minh) log10(Maxh)])
+caxis([0 1.5])
 colorbar
 
 end

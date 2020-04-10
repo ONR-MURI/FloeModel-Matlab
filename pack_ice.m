@@ -1,10 +1,13 @@
-function [floe2,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,SUBFLOES, PACKING)
+function [floenew,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,SUBFLOES)
 %UNTITLED2 Summary of this function goes here
 %% 
 id = 'MATLAB:polyshape:tinyBoundaryDropped';
 warning('off',id);
 floe2 = [];
+floenew = [];
 rho_ice = 920;
+height.mean = 0.15;
+height.delta = 0;
 [Ny,Nx,~] = size(Vd);
 x = min(c2_boundary(1,:)):(max(c2_boundary(1,:))-min(c2_boundary(1,:)))/Nx:max(c2_boundary(1,:));
 y = min(c2_boundary(2,:)):(max(c2_boundary(2,:))-min(c2_boundary(2,:)))/Ny:max(c2_boundary(2,:));
@@ -29,35 +32,43 @@ ramp = @(dhdt) heaviside(dhdt)*dhdt;
 
 %% 
 
-p = rand(1);
-if p <ramp(dhdt)
-    ii = randi([1, Nx]);
-    jj = randi([1, Ny]);
-    bound = [x(ii) x(ii) x(ii+1) x(ii+1) x(ii);y(jj) y(jj+1) y(jj+1) y(jj) y(jj)];
-    box = polyshape(bound(1,:), bound(2,:));
-    poly = intersect(box,[Floe(logical(potentialInteractions(jj,ii,:))).poly]);
-    floe.poly = union([poly]);
-    floe.poly = subtract(box,floe.poly);
-    floe.rmax = r_max;
-    if area(floe.poly) > 3500
-        [Xi,Yi] = centroid(box);
-        floe.Xi = Xi; floe.Yi = Yi;
-        N = 50;
-        [subfloes,~] = create_subfloes(floe,N,false);
-        if ~SUBFLOES
-            subfloes = floe.poly;
-        end
-        for kk = 1:length(subfloes)
-            areas(kk) = area(subfloes(kk));
-        end
-        [~,I] = max(areas);
-        floe2 = initialize_floe_values(subfloes(I),SUBFLOES,PACKING);
-        Vd(jj,ii,1) = Vd(jj,ii,1)-floe2.h*floe2.area*rho_ice;
+for ii = 1:Nx
+    for jj = 1:Ny
         
-        if floe2.poly.NumHoles > 0
-            xx = 1;
-            xx(1) = [1 2];
-        end
+        p = rand(1);
+        if p <ramp(dhdt)
+            bound = [x(ii) x(ii) x(ii+1) x(ii+1) x(ii);y(jj) y(jj+1) y(jj+1) y(jj) y(jj)];
+            box = polyshape(bound(1,:), bound(2,:));
+            poly = intersect(box,[Floe(logical(potentialInteractions(jj,ii,:))).poly]);
+            floe.poly = union([poly]);
+            floe.poly = subtract(box,floe.poly);
+            floe.rmax = r_max;
+            if area(floe.poly) > 3500
+                [Xi,Yi] = centroid(box);
+                floe.Xi = Xi; floe.Yi = Yi;
+                N = 50;
+                [subfloes,~] = create_subfloes(floe,N,false);
+                if ~SUBFLOES
+                    subfloes = floe.poly;
+                end
+                clear areas
+                for kk = 1:length(subfloes)
+                    areas(kk) = area(subfloes(kk));
+                end
+                [~,I] = max(areas);
+                floe2 = initialize_floe_values(subfloes(I),height, SUBFLOES);
+                floe2 = rmfield(floe2, 'potentialInteractions');
+                Vd(jj,ii,1) = Vd(jj,ii,1)-floe2.h*floe2.area*rho_ice;
+                
+                if floe2.poly.NumHoles > 0
+                    xx = 1;
+                    xx(1) = [1 2];
+                end
+                
+                floenew = [floenew floe2];
+                clear floe2;
+            end
+        end      
     end
 end
 

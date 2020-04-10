@@ -1,4 +1,4 @@
-function Floe = initialize_floe_values(poly1, SUBFLOES,PACKING)
+function Floe = initialize_floe_values(poly1, height, SUBFLOES)
 
 rho_ice=920;
 poly1 = translate(poly1, [(-1)^randi([0 1])*rand (-1)^randi([0 1])*rand]);
@@ -7,10 +7,7 @@ R = regions(polyout);
 poly1 = R(1);
 poly1 = rmholes(poly1);
 %h = 0.2*rand+0.1128;
-h=2;%+(-1)^randi([0 1])*rand/2;
-if PACKING
-    h = 0.15;
-end
+h=height.mean+(-1)^randi([0 1])*rand*height.delta;
 [Xi,Yi] = centroid(poly1);
     Floe.area = area(poly1);
     Floe.mass = 0;%Floe.area*h*rho_ice;

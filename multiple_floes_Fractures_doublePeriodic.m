@@ -11,7 +11,8 @@ PERIODIC=true;
 
 SUBFLOES = true;
 
-PACKING = false;
+PACKING = true;
+
 
 %Define ocean currents
 [ocean, c2_boundary]=initialize_ocean_Gyre(1e4, 2e5, 1e5,4e3);
@@ -21,10 +22,11 @@ c2_boundary_poly=polyshape(c2_boundary(1,:),c2_boundary(2,:));
 winds=[10 10];
 
 %Initialize Floe state
-%load('Floe_clean.mat','Floe');
+height.mean = 2;
+height.delta = 0.5; %max difference between a flow thickness and the mean floe value
 
 c=1; % could be a vector
-Floe = initialize_concentration(c,c2_boundary,SUBFLOES, 50);
+Floe = initialize_concentration(c,c2_boundary,SUBFLOES, height, 50);
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 %%
 
@@ -191,19 +193,14 @@ while im_num<nSnapshots
     Vd(:,:,2) = Vd(:,:,1);
     Vd(:,:,1) = Vdnew;
     if PACKING
-        [floe2,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,SUBFLOES,PACKING);
+        [floe2,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,SUBFLOES);
     end
+    Floe = [Floe floe2]; 
     %Vd(:,:,1)= Vd(:,:,1)+dissolvedNEW;
     
     Floe=Floe(Area> 1e6);
     if sum(Area<1e6)>0, display(['num of small floes killed:' num2str(sum(Area<1e6))]); end
     Time=Time+dt; i_step=i_step+1; %update time index
 
-    for ii = 1:length(Floe)
-        if Floe(ii).poly.NumRegions > 1
-            xx(1) = 1;
-            xx(1) = [1 2];
-        end
-    end
 end
 %%
