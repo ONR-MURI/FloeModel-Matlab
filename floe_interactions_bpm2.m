@@ -1,7 +1,7 @@
 function [ force_1, pcenter, worked] = floe_interactions_bpm2(c1, c2)
 %% 
 % Find Vertices of overlapping polygons
-Force_factor=5e2;
+Force_factor=1.25e3;
 polyout = intersect(c1,c2);
 if polyout.NumRegions>0
     polyout2 = sortregions(polyout,'area','descend');
@@ -19,7 +19,10 @@ worked=1;
 if areaPoly<10
     force_1=[0 0];
     pcenter=[0 0];   
-elseif areaPoly/area(c1)>0.75 || areaPoly/area(c2)>0.75
+elseif areaPoly/area(c1)>0.75 && c2.NumRegions < 1
+    force_1=[0 0];
+    pcenter=[0 0]; 
+elseif areaPoly/area(c2)>0.75 
     force_1=[0 0];
     pcenter=[0 0]; 
 else
@@ -36,7 +39,7 @@ else
         [pcenter(k,1),pcenter(k,2)] = centroid(R(k));
 
         [d_min1] = p_poly_dist(c0(:,1), c0(:,2), c1.Vertices(:,1), c1.Vertices(:,2));
-        [d_min2] = p_poly_dist(c0(:,1), c0(:,2), c2.Vertices(:,1), c2.Vertices(:,2));
+        [d_min2] = p_poly_dist(c0(:,1), c0(:,2), c2.Vertices(:,1), c2.Vertices(:,2));        
         check1 = zeros(length(c0),1); check2 = check1;
         check1(abs(d_min1)<1e-3) = 1;
         check2(abs(d_min2)<1e-3) = 1;
@@ -51,8 +54,20 @@ else
             in = logical(checkin2);
         end
         
+        if c2.NumHoles>0
+            holes = isnan(c2.Vertices(:,1));
+            II = find(holes==1);
+            [d_min2] = p_poly_dist(c0(:,1), c0(:,2), c2.Vertices(II+1:end,1), c2.Vertices(II+1:end,2));
+            check2(abs(d_min2)<1e-3) = 1;
+            [checkin2] = inpolygon(c0(:,1),c0(:,2),c2.Vertices(:,1),c2.Vertices(:,2));
+            checkin2(checkin2-check2<1) = 0;
+            in = logical(checkin2);
+            %Force_factor=1.5e3;
+        end
+        
+        on = logical(abs(in-1));
         ii = 1;
-        if sum(in) < 0.5
+        if sum(in) < 0.5 || sum(on) < 1.5
             force_1(k,:)= [0 0];
             overlap = false;
         else
@@ -68,21 +83,23 @@ else
             overlap = true;
 
         end
-        numReg = 0;
-        clear BreakStart; clear BreakEnd
-        for ii=2:length(in)
-            if in(ii) > in(ii-1)
-                numReg = numReg + 1;
-                BreakStart(numReg) = ii;
-            elseif in(ii)<in(ii-1)
-                BreakEnd(numReg) = ii-1;
-            end
-        end
-        if in(end)>in(1)
-            BreakEnd(numReg) = length(in);
-        end
+        
         
         if overlap
+            numReg = 0;
+            clear BreakStart; clear BreakEnd
+            for ii=2:length(in)
+                if in(ii) > in(ii-1)
+                    numReg = numReg + 1;
+                    BreakStart(numReg) = ii;
+                elseif in(ii)<in(ii-1)
+                    BreakEnd(numReg) = ii-1;
+                end
+            end
+            if in(end)>in(1)
+                BreakEnd(numReg) = length(in);
+            end
+        
             for jj = 1:numReg
                 if BreakEnd(jj) == length(in)
                     in1 = [c0(BreakStart(jj)-1:BreakEnd(jj),:); c0(1,:)];
@@ -117,6 +134,7 @@ else
                     force_dir = -force_dir;
                     worked = 0;
                 end
+                
             end
             
             force_1(k,:)=force_dir*area(R(k))*Force_factor;
