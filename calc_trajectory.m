@@ -1,4 +1,4 @@
-function floe=calc_trajectory(dt,ocean,winds,floe)
+function floe=calc_trajectory(dt,ocean,winds,floe,heat_flux)
 
 ext_force=floe.collision_force;
 ext_torque=floe.collision_torque;
@@ -59,7 +59,10 @@ else
 %checking out of bounds only for Y-direction as X-direction is periodic.
 %     if  ~PERIODIC && (max(floe.poly.Vertices(:,2))>max(Yo) || min(floe.poly.Vertices(:,2))<min(Yo)   )
 %     if (max(floe.poly.Vertices(:,2))>max(Yo) || min(floe.poly.Vertices(:,2))<min(Yo)   )
-        disp('Ice floe sacked: out of ocean grid bounds!'); floe=[];        
+        disp('Ice floe sacked: out of ocean grid bounds!'); 
+        xx = 1;
+        xx(1) = [1 2];
+        floe=[];        
     else
         
 %        A_alpha=imrotate(floe.A,-floe.alpha_i/pi*180,'bilinear','crop');
@@ -117,10 +120,14 @@ else
             
             A_rot=[cos(dalpha) -sin(dalpha); sin(dalpha) cos(dalpha)]; %rotation matrix
 %             Vertices=(A_rot*(floe.poly.Vertices - [floe.Xi floe.Yi])')'; %rotate floe contour around its old center of mass
+            dh = -heat_flux/floe.h;
             
             floe.poly=rotate(floe.poly,dalpha*180/pi,[floe.Xi, floe.Yi]);
+            floe.h = floe.h + dh;
             for ii = 1:length(floe.SubFloes)
                 floe.SubFloes(ii).poly=rotate(floe.SubFloes(ii).poly,dalpha*180/pi,[floe.Xi, floe.Yi]);
+                floe.SubFloes(ii).h = floe.SubFloes(ii).h + dh;
+                if floe.SubFloes(ii).h > 30; floe.SubFloes(ii).h = 30; end;
             end
             vorVert = (A_rot*([floe.vorX floe.vorY] - [floe.Xi floe.Yi])')';
             floe.vorX = vorVert(:,1)+floe.Xi; floe.vorY = vorVert(:,2)+floe.Yi;
@@ -146,6 +153,10 @@ else
             dVi_dt=(mean(Fy(floe_mask))*floe_area+ext_force(2))/floe_mass;
             dv=1.5*dt*dVi_dt - 0.5*dt*floe.dVi_p;
             floe.Vi=floe.Vi+dv;  floe.dVi_p=dVi_dt;
+            
+            if abs(du) > 10 || abs(dv) > 10
+                floe.alive = 0
+            end
             
             dksi_ice_dt=(mean(torque(floe_mask))*floe_area+ext_torque)/floe_inertia_moment;
             dksi=1.5*dt*dksi_ice_dt - 0.5*dt*floe.dksi_ice_p;

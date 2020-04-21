@@ -7,8 +7,8 @@ function [ocean, c2_boundary]=initialize_ocean_Gyre(transport, Lx, Ly,dXo)
 %dXo=2000; % in meters
 
 %Xo=(-Lx/2-2*dXo):dXo:(Lx/2+2*dXo); 
-Xo=(-2/3*Lx):dXo:(2/3*Lx);   %large extent in the x-dir for a channel
-Yo=(-2/3*Ly):dXo:(2/3*Ly); 
+Xo=-Lx:dXo:Lx;   %large extent in the x-dir for a channel
+Yo=-Ly:dXo:Ly; 
 
 [Xocn, Yocn]=meshgrid(Xo,Yo);
 

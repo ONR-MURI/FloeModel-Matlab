@@ -14,8 +14,15 @@ Y = floe.Yi+floe.rmax*(2*rand(N,1)-1);
 
 
 boundingbox=[-1 ,-1; 1,-1; 1,1; -1 ,1]*floe.rmax+[floe.Xi floe.Yi];
-[~, b] = polybnd_voronoi([X Y],boundingbox);
-
+%[~, b] = polybnd_voronoi([X Y],boundingbox);
+worked = 1;
+while worked > 0.5
+    [~, b,~,~,worked] = polybnd_voronoi([X Y],boundingbox);
+    if worked == 1
+        X = floe.Xi+floe.rmax*(2*rand(N,1)-1);
+        Y = floe.Yi+floe.rmax*(2*rand(N,1)-1);
+    end
+end
 %% 
 
 for i=1:length(b)

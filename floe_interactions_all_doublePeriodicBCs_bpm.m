@@ -1,4 +1,4 @@
-function [Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES)
+function [Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,heat_flux,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES)
 
 Lx= max(c2_boundary_poly.Vertices(:,1));
 Ly= max(c2_boundary_poly.Vertices(:,2));%c2 must be symmetric around x=0 for channel boundary conditions.
@@ -162,7 +162,7 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
     
     if ~PERIODIC
         [force_b, P_j, worked] = floe_interactions_bpm2(c1, c2_poly);
-        if sum(abs(force_b(:)))~=0 && abs(P_j(1))<(Lx-0.1) %; subtracting 0.1m to ensure that interactions with x=+-Lx boundary are excluded as this is a periodic boundary.
+        if sum(abs(force_b(:)))~=0 %; subtracting 0.1m to ensure that interactions with x=+-Lx boundary are excluded as this is a periodic boundary.
             % boundary will be recorded as floe number Inf;
             Floe(i).interactions=[Floe(i).interactions ; Inf*ones(size(force_b,1),1) force_b P_j zeros(size(force_b,1),1)];
             Floe(i).OverlapArea=area(c1)-area(intersect(c1,c2_boundary_poly)); % overlap area with the boundary only
@@ -245,6 +245,7 @@ if PERIODIC
     end
 end
 
+%% 
 
 %Do the timestepping for parent floes now that their forces and torques are known.
 for i=1:N0
@@ -282,7 +283,7 @@ for i=1:N0
         
 
         
-        tmp=calc_trajectory(dt,ocean, winds,Floe(i)); % calculate trajectory
+        tmp=calc_trajectory(dt,ocean, winds,Floe(i),heat_flux); % calculate trajectory
         if (isempty(tmp) || isnan(Floe(i).Xi) )
             Floe(i).alive=0; 
             SackedOB = SackedOB +1;
@@ -300,8 +301,8 @@ end
 if RIDGING
     
     for i=1:N0
-        floe = Floe(i);
-        if ~isempty(Floe(i).interactions)
+        
+        if Floe(i).alive
             
             if ~isempty(Floe(i).potentialInteractions)
                 

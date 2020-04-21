@@ -8,42 +8,13 @@ x=[-1 -1 1 1 -1]*Lx*2;
 y=[-1 1 1 -1 -1]*Ly*2;
 polybound = polyshape(x,y);
 c2_poly = subtract(polybound,c2_boundary_poly);
-if isempty(Floe1.SubFloes)
-    SUBFLOES = true;
-    potentialInteractions = Floe1.potentialInteractions;
-    Floe1 = initialize_floe_values(Floe1.poly, SUBFLOES);
-    Floe1.potentialInteractions = potentialInteractions;
-elseif isempty(Floe2.SubFloes)
-    SUBFLOES = true;
-    potentialInteractions = Floe2.potentialInteractions;
-    Floe2 = initialize_floe_values(Floe2.poly, SUBFLOES);
-    Floe2.potentialInteractions = potentialInteractions;
-end
 poly1 = union([Floe1.SubFloes.poly]);
 poly2 = union([Floe2.SubFloes.poly]);
-if area(subtract(Floe1.poly,poly1))/area(Floe1.poly) > 0.15
-    polynew = subtract(Floe1.poly,poly1);
-    polyout = sortregions(polynew,'area','descend');
-    R = regions(polyout);
-    polynew = R(1);
-    Floe1.SubFloes(length(Floe1.SubFloes)+1).poly = rmholes(polynew);
-    Floe1.SubFloes(length(Floe1.SubFloes)).h = mean(cat(1,Floe1.SubFloes.h));
-    poly1 = union([Floe1.SubFloes.poly]);
-elseif area(subtract(Floe2.poly,poly2))/area(Floe2.poly) > 0.15
-    polynew = subtract(Floe2.poly,poly2);
-    polyout = sortregions(polynew,'area','descend');
-    R = regions(polyout);
-    polynew = R(1);
-    Floe2.SubFloes(length(Floe2.SubFloes)+1).poly = rmholes(polynew);
-    Floe2.SubFloes(length(Floe2.SubFloes)).h = mean(cat(1,Floe2.SubFloes.h));
-    poly2 = union([Floe2.SubFloes.poly]);
-end
-
-Hmin1 = min(cat(1,Floe1.SubFloes.h));
-Hmin2 = min(cat(1,Floe2.SubFloes.h));
 
 polyout = intersect(poly1,poly2);
 areaPoly = area(polyout);
+Atot = Floe1.area+Floe2.area;
+frac = areaPoly/Atot;
 aPoly = area(intersect(Floe1.poly,Floe2.poly));
 rho_ice=920;
 rho_l = 997;
@@ -164,5 +135,14 @@ elseif length(Floe2.poly.Vertices) > 500
     Floe2 = FloeSimplify(Floe2, 250,SUBFLOES);
 end
 
+if Floe1.alive + Floe2.alive > 1
+    ramp = @(frac) heaviside(frac)*frac;
+    p = rand(1);
+    if p <ramp(frac)
+        Floe1 = FuseFloes(floe1,floe2,SUBFLOES);
+        Floe2.alive = 0;
+        disp('Ice floes have fused!');
+    end
+end
 
 end

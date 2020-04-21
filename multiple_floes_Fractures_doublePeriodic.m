@@ -3,15 +3,15 @@ close all; clear all;
 addpath ~/Downloads/dengwirda-inpoly-ebf47d6/ 
 
 %% Initialize model vars
-RIDGING=true; 
+RIDGING=false; 
 
-FRACTURES=true;
+FRACTURES=false;
 
 PERIODIC=true;
 
-SUBFLOES = true;
+SUBFLOES = false;
 
-PACKING = true;
+PACKING = false;
 
 
 %Define ocean currents
@@ -25,8 +25,8 @@ winds=[10 10];
 height.mean = 2;
 height.delta = 0.5; %max difference between a flow thickness and the mean floe value
 
-c=1; % could be a vector
-Floe = initialize_concentration(c,c2_boundary,SUBFLOES, height, 50);
+target_concentration=1; % could be a vector
+Floe = initialize_concentration(target_concentration,c2_boundary,SUBFLOES, height, 50);
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 %%
 
@@ -44,7 +44,9 @@ ifPlot = true; %Plot floe figures or not?
 
 SackedOB = 0; %initialize number of floes sacked for being out of bounds at zero
 
-dhdt = 0.1; %Rate at which ice thickness increases thermodynamically per day
+dhdt = 0.25; %Sets probability for ice replenishing open space
+
+heat_flux = 0.05/(24*3600); %Rate at which ice thickness increases thermodynamically per day 
 
 % specify coarse grid size
 Lx= 2*max(ocean.Xo);Ly= 2*max(ocean.Yo);
@@ -54,7 +56,7 @@ Nx=10; Ny=fix(Nx*Ly/Lx);
 dissolvedNEW=zeros(Ny,Nx);
 
 % Calc interactions and plot initial state
-[Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES); % find interaction points
+[Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,heat_flux,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES); % find interaction points
 Floe=Floe(logical(cat(1,Floe.alive)));
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 
@@ -65,7 +67,7 @@ Floe=Floe(logical(cat(1,Floe.alive)));
 
 %Calc high and low-res Eulerian fields
 %[x,y, cFine0, cCoarse0,  U_Fine0,V_Fine0, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
-[c,vel,accel] = calc_eulerian_data(Floe,20,20,c2_boundary);
+[eularian_data] = calc_eulerian_data2(Floe,Nx,Ny,c2_boundary);
 
 coarseMean=zeros(5,Ny,Nx,nSnapshots);
 coarseSnap=zeros(5,Ny,Nx,nSnapshots);
@@ -107,6 +109,33 @@ while im_num<nSnapshots
 
     if mod(i_step,nDTOut)==0  %plot the state after a number of timesteps
                 
+        
+        
+        %calculating and saving corase grid variables
+        
+        [eularian_data] = calc_eulerian_data2(Floe,Nx,Ny,c2_boundary);
+        coarseSnap(1,:,:,im_num)=eularian_data.c;
+        coarseSnap(2,:,:,im_num)=eularian_data.u;
+        coarseSnap(3,:,:,im_num)=eularian_data.v;
+        coarseSnap(4,:,:,im_num)=eularian_data.du;
+        coarseSnap(5,:,:,im_num)=eularian_data.dv;
+        coarseSnap(6,:,:,im_num)=eularian_data.mom_x;
+        coarseSnap(7,:,:,im_num)=eularian_data.mom_y;
+        coarseSnap(8,:,:,im_num)=eularian_data.force_x;
+        coarseSnap(9,:,:,im_num)=eularian_data.force_y;
+        
+        save('coarseData.mat','coarseSnap','coarseMean');
+        save('Floe.mat','Floe');
+        
+        if PACKING
+            [floe2,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,target_concentration,SUBFLOES);
+            Floe = [Floe floe2];
+            %         if length(floe2) > 0
+            %             xx = 1;
+            %             xx(1) = [1 2];
+            %         end
+        end
+        
         if ifPlot
             fig=plot_Floes_poly_doublePeriodicBC(fig,Time,Floe, ocean, c2_boundary_poly, PERIODIC); % plots model state
             saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
@@ -128,22 +157,6 @@ while im_num<nSnapshots
         end
         
         %calculating and saving corase grid variables
-        
-        [eularian_data] = calc_eulerian_data2(Floe,Nx,Ny,c2_boundary);
-        coarseSnap(1,:,:,im_num)=eularian_data.c;
-        coarseSnap(2,:,:,im_num)=eularian_data.u;
-        coarseSnap(3,:,:,im_num)=eularian_data.v;
-        coarseSnap(4,:,:,im_num)=eularian_data.du;
-        coarseSnap(5,:,:,im_num)=eularian_data.dv;
-        coarseSnap(6,:,:,im_num)=eularian_data.mom_x;
-        coarseSnap(7,:,:,im_num)=eularian_data.mom_y;
-        coarseSnap(8,:,:,im_num)=eularian_data.force_x;
-        coarseSnap(9,:,:,im_num)=eularian_data.force_y;
-        
-        save('coarseData.mat','coarseSnap','coarseMean');
-        save('Floe.mat','Floe');
-        
-        %calculating and saving corase grid variables
         %[x,y, cFine0, cCoarse0,  U_Fine0,V_Fine0, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
 %         [~,~, ~, cCoarse0,  ~,~, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact );
 %         EulCoarse(1,:,im_num)= cCoarse0(:);
@@ -154,7 +167,7 @@ while im_num<nSnapshots
     end
     
     %Calculate forces and torques and intergrate forward
-    [Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds, c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES);
+    [Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,heat_flux, c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES);
     
     
     if FRACTURES
@@ -192,10 +205,8 @@ while im_num<nSnapshots
     Vdnew = Dissolved_Ice(Vd,coarseMean,im_num,dissolvedNEW,c2_boundary,dt);
     Vd(:,:,2) = Vd(:,:,1);
     Vd(:,:,1) = Vdnew;
-    if PACKING
-        [floe2,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,SUBFLOES);
-    end
-    Floe = [Floe floe2]; 
+    
+     
     %Vd(:,:,1)= Vd(:,:,1)+dissolvedNEW;
     
     Floe=Floe(Area> 1e6);
