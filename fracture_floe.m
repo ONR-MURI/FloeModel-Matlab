@@ -14,8 +14,15 @@ Y = floe.Yi+floe.rmax*(2*rand(N,1)-1);
 
 
 boundingbox=[-1 ,-1; 1,-1; 1,1; -1 ,1]*floe.rmax+[floe.Xi floe.Yi];
-[~, b] = polybnd_voronoi([X Y],boundingbox);
-
+%[~, b] = polybnd_voronoi([X Y],boundingbox);
+worked = 1;
+while worked > 0.5
+    [~, b,~,~,worked] = polybnd_voronoi([X Y],boundingbox);
+    if worked == 1
+        X = floe.Xi+floe.rmax*(2*rand(N,1)-1);
+        Y = floe.Yi+floe.rmax*(2*rand(N,1)-1);
+    end
+end
 %% 
 
 for i=1:length(b)
@@ -51,7 +58,17 @@ for i=1:length(b)
                     Floes.SubFloes(j).poly = polyout;
                     Floes.SubFloes(j).h = floe.SubFloes(jj).h;
                     areaS(j) = area(Floes.SubFloes(j).poly);
-                    inertia(j) = PolygonMoments(Floes.SubFloes(j).poly.Vertices,Floes.SubFloes(j).h);
+                    if Floes.SubFloes(j).poly.NumHoles > 0
+                        breaks = isnan(polyout.Vertices(:,1));
+                        I = find(breaks == 1);
+                        I = [0 I' length(breaks)+1];
+                        inertia(j) = 0;
+                        for kk = length(I) -1
+                            inertia(j) = inertia(j) + PolygonMoments(Floes.SubFloes(j).poly.Vertices(I(kk)+1:I(kk+1)-1,:),Floes.SubFloes(j).h);
+                        end
+                    else
+                        inertia(j) = PolygonMoments(Floes.SubFloes(j).poly.Vertices,Floes.SubFloes(j).h);
+                    end
                     [Xi,Yi] = centroid(Floes.SubFloes(j).poly);
                     centers(j,:) = [Xi,Yi];
                     j = j+1;
@@ -97,7 +114,17 @@ for i=1:length(b)
                     FloeNEW.SubFloes(j).poly = polyout;
                     FloeNEW.SubFloes(j).h = floe.SubFloes(jj).h;
                     areaS(j) = area(FloeNEW.SubFloes(j).poly);
-                    inertia(j) = PolygonMoments(FloeNEW.SubFloes(j).poly.Vertices,FloeNEW.SubFloes(j).h);
+                    if FloeNEW.SubFloes(j).poly.NumHoles > 0
+                        breaks = isnan(polyout.Vertices(:,1));
+                        I = find(breaks == 1);
+                        I = [0 I' length(breaks)+1];
+                        inertia(j) = 0;
+                        for kk = length(I) -1
+                            inertia(j) = inertia(j) + PolygonMoments(FloeNEW.SubFloes(j).poly.Vertices(I(kk)+1:I(kk+1)-1,:),Floe.NEWSubFloes(j).h);
+                        end
+                    else
+                        inertia(j) = PolygonMoments(FloeNEW.SubFloes(j).poly.Vertices,FloeNEW.SubFloes(j).h);
+                    end
                     [Xi,Yi] = centroid(FloeNEW.SubFloes(j).poly);
                     centers(j,:) = [Xi,Yi];
                     j = j+1;

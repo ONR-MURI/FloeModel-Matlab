@@ -8,39 +8,8 @@ x=[-1 -1 1 1 -1]*Lx*2;
 y=[-1 1 1 -1 -1]*Ly*2;
 polybound = polyshape(x,y);
 c2_poly = subtract(polybound,c2_boundary_poly);
-if isempty(Floe1.SubFloes)
-    SUBFLOES = true;
-    potentialInteractions = Floe1.potentialInteractions;
-    Floe1 = initialize_floe_values(Floe1.poly, SUBFLOES);
-    Floe1.potentialInteractions = potentialInteractions;
-elseif isempty(Floe2.SubFloes)
-    SUBFLOES = true;
-    potentialInteractions = Floe2.potentialInteractions;
-    Floe2 = initialize_floe_values(Floe2.poly, SUBFLOES);
-    Floe2.potentialInteractions = potentialInteractions;
-end
 poly1 = union([Floe1.SubFloes.poly]);
 poly2 = union([Floe2.SubFloes.poly]);
-if area(subtract(Floe1.poly,poly1))/area(Floe1.poly) > 0.15
-    polynew = subtract(Floe1.poly,poly1);
-    polyout = sortregions(polynew,'area','descend');
-    R = regions(polyout);
-    polynew = R(1);
-    Floe1.SubFloes(length(Floe1.SubFloes)+1).poly = rmholes(polynew);
-    Floe1.SubFloes(length(Floe1.SubFloes)).h = mean(cat(1,Floe1.SubFloes.h));
-    poly1 = union([Floe1.SubFloes.poly]);
-elseif area(subtract(Floe2.poly,poly2))/area(Floe2.poly) > 0.15
-    polynew = subtract(Floe2.poly,poly2);
-    polyout = sortregions(polynew,'area','descend');
-    R = regions(polyout);
-    polynew = R(1);
-    Floe2.SubFloes(length(Floe2.SubFloes)+1).poly = rmholes(polynew);
-    Floe2.SubFloes(length(Floe2.SubFloes)).h = mean(cat(1,Floe2.SubFloes.h));
-    poly2 = union([Floe2.SubFloes.poly]);
-end
-
-Hmin1 = min(cat(1,Floe1.SubFloes.h));
-Hmin2 = min(cat(1,Floe2.SubFloes.h));
 
 polyout = intersect(poly1,poly2);
 areaPoly = area(polyout);
@@ -51,15 +20,18 @@ E = max([Floe1.E, Floe2.E]);
 sigma_m = max([Floe1.sigma_m, Floe2.sigma_m]);
 nu = 0.29;
 g = 9.81;
-hc = 2;%14.2*(1-nu^2)/(rho_l*g)*sigma_m^2/E;
+hc = 1.5;%14.2*(1-nu^2)/(rho_l*g)*sigma_m^2/E;
 disolved = 0;
 
 %check to make sure one floe is not inside the other
-if aPoly/area(Floe1.poly)>0.9
+if aPoly/area(Floe1.poly)>0.9 && aPoly/area(Floe2.poly)>0.9
+    x = 1;
+    x(1) = [1 2];
+elseif aPoly/area(Floe1.poly)>0.75
     dissolvedNEW = dissolvedNEW+calc_vol_dissolved(Floe1,Nx,Ny,c2_boundary_poly);
     disolved = 1;
     Floe1.alive = 0;
-elseif aPoly/area(Floe2.poly)>0.9
+elseif aPoly/area(Floe2.poly)>0.75
     dissolvedNEW = dissolvedNEW+calc_vol_dissolved(Floe2,Nx,Ny,c2_boundary_poly);
     disolved = 1;
     Floe2.alive = 0;
@@ -98,6 +70,34 @@ if disolved == 0 && areaPoly > 500
         [Floe1, Floe2] = ridge_values_update(Floe1,Floe2, overlap1, overlap2, V2, A1);
     elseif Floe1.h < hc && Floe2.h >= hc
         [Floe2, Floe1] = ridge_values_update(Floe2,Floe1, overlap2, overlap1, V1, A2);
+    end
+end
+
+for ii = 1:length(Floe1)
+    if Floe1(ii).poly.NumRegions > 1
+        xx = 1;
+        xx(1) = [1 2];
+    end
+end
+for ii = 1:length(Floe2)
+    if Floe2(ii).poly.NumRegions > 1
+        xx = 1;
+        xx(1) = [1 2];
+    end
+end
+
+if ~isempty(Floe1)
+    if min([Floe1.inertia_moment]) == 0
+        xx = 1;
+        xx(1) = [1 2];xx = 1;
+        xx(1) = [1 2];
+    end
+end
+if ~isempty(Floe2)
+    if min([Floe2.inertia_moment]) == 0
+%         xx = 1;
+%         xx(1) = [1 2];
+        Floe2.alive = 0
     end
 end
 
@@ -147,7 +147,17 @@ if ~PERIODIC
         centers = zeros(Nw,2);
         for ii = 1:Nw
             areaS(ii) = area(Floe1.SubFloes(ii).poly);
-            inertia(ii) = PolygonMoments(Floe1.SubFloes(ii).poly.Vertices,Floe1.SubFloes(ii).h);
+            if Floe1.SubFloes(ii).poly.NumHoles > 0
+                breaks = isnan(polyout.Vertices(:,1));
+                I = find(breaks == 1);
+                I = [0 I' length(breaks)+1];
+                inertia(ii) = 0;
+                for kk = length(I) -1
+                    inertia(ii) = inertia(ii) + PolygonMoments(Floe1.SubFloes(ii).poly.Vertices(I(kk)+1:I(kk+1)-1,:),Floe1.SubFloes(ii).h);
+                end
+            else
+                inertia(ii) = PolygonMoments(Floe1.SubFloes(ii).poly.Vertices,Floe1.SubFloes(ii).h);
+            end
             [Xi,Yi] = centroid(Floe1.SubFloes(ii).poly);
             centers(ii,:) = [Xi,Yi];
         end
@@ -158,11 +168,46 @@ if ~PERIODIC
     end
 end
 
-if length(Floe1.poly.Vertices) > 500
-    Floe1 = FloeSimplify(Floe1, 250,SUBFLOES);
-elseif length(Floe2.poly.Vertices) > 500
-    Floe2 = FloeSimplify(Floe2, 250,SUBFLOES);
+if ~isempty(Floe1)
+    if min([Floe1.inertia_moment]) == 0
+        xx = 1;
+        xx(1) = [1 2];
+    end
+end
+if ~isempty(Floe2)
+    if min([Floe2.inertia_moment]) == 0
+        xx = 1;
+        xx(1) = [1 2];
+    end
 end
 
+for ii = 1:length(Floe1)
+    if Floe1(ii).poly.NumRegions > 1
+        xx = 1;
+        xx(1) = [1 2];
+    end
+end
+for ii = 1:length(Floe2)
+    if Floe2(ii).poly.NumRegions > 1
+        xx = 1;
+        xx(1) = [1 2];
+    end
+end
+% if length(Floe1.poly.Vertices) > 500
+%     Floe1 = FloeSimplify(Floe1, 250,SUBFLOES);
+% elseif length(Floe2.poly.Vertices) > 500
+%     Floe2 = FloeSimplify(Floe2, 250,SUBFLOES);
+% end
 
+if ~isempty(Floe1)
+    if min([Floe1.inertia_moment]) == 0 && max([Floe1.alive]) == 1
+        xx = 1;
+        xx(1) = [1 2];
+    end
+    if ~isempty(Floe2)
+        if min([Floe2.inertia_moment]) == 0 && max([Floe1.alive]) == 1
+            xx = 1;
+            xx(1) = [1 2];
+        end
+    end
 end

@@ -125,7 +125,8 @@ if showContactPoints
 end
 
 colormap('gray'); caxis([0 1]);
-axis([min(ocean.Xo) max(ocean.Xo) min(ocean.Yo) max(ocean.Yo)])
+axis([-Lx-Lx/10 Lx+Lx/10 -Ly-Ly/10 Ly+Ly/10])
+%axis([min(ocean.Xo) max(ocean.Xo) min(ocean.Yo) max(ocean.Yo)])
 xlabel('m');ylabel('m');
 set(gca,'Ydir','normal');
 

@@ -1,4 +1,4 @@
-function [Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES)
+function [Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,heat_flux,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES)
 
 Lx= max(c2_boundary_poly.Vertices(:,1));
 Ly= max(c2_boundary_poly.Vertices(:,2));%c2 must be symmetric around x=0 for channel boundary conditions.
@@ -18,6 +18,7 @@ if PERIODIC
     ghostFloeX=[];
     ghostFloeY=[];
     parent=[];
+    translation = [];
     
     x=cat(1,Floe.Xi);
     y=cat(1,Floe.Yi);
@@ -37,6 +38,7 @@ if PERIODIC
             ghostFloeX(end).vorX=Floe(i).vorX-2*Lx*sign(x(i));
             ghostFloeX(end).vorbox(:,1)=Floe(i).vorbox(:,1)-2*Lx*sign(x(i));
             parent=[parent  i];
+            translation = [translation; -2*Lx*sign(x(i)) 0];
             
         end
         
@@ -63,6 +65,7 @@ if PERIODIC
             ghostFloeY(end).vorY=Floe(i).vorY-2*Ly*sign(y(i));
             ghostFloeY(end).vorbox(:,2)=Floe(i).vorbox(:,2)-2*Ly*sign(y(i));
             parent=[parent  i];
+            translation = [translation; 0 -2*Ly*sign(y(i))];
             
         end
         
@@ -107,6 +110,7 @@ for i=1:N  %do interactions with boundary in a separate parfor loop
             end
             
         end
+
         
     end
     
@@ -120,6 +124,8 @@ for i=1:N  %do interactions with boundary in a separate parfor loop
 end
 
 %%
+c2_boundary = c2_boundary_poly.Vertices';
+
 
 for i=1:N  %now the interactions could be calculated in a parfor loop!
     
@@ -136,7 +142,15 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
             
             c2=Floe(i).potentialInteractions(k).c;
             
-            [force_j,P_j,worked] = floe_interactions_bpm2(c1,c2);
+            [force_j,P_j,worked,live] = floe_interactions_bpm2(c1,c2);
+            
+            if live(1) == 0
+                dissolvedNEW = dissolvedNEW+calc_vol_dissolved(Floe(i),Nx,Ny,c2_boundary_poly);
+                Floe(i).alive = 0;
+            elseif live(2) == 0
+                dissolvedNEW = dissolvedNEW+calc_vol_dissolved(Floe(floeNum),Nx,Ny,c2_boundary_poly);
+                Floe(floeNum).alive = 0;
+            end
             
             %if ~worked, disp(['potential contact issue for floes (' num2str(i) ',' num2str(floeNum) ')' ]); end
             
@@ -161,8 +175,12 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
     end
     
     if ~PERIODIC
-        [force_b, P_j, worked] = floe_interactions_bpm2(c1, c2_poly);
-        if sum(abs(force_b(:)))~=0 && abs(P_j(1))<(Lx-0.1) %; subtracting 0.1m to ensure that interactions with x=+-Lx boundary are excluded as this is a periodic boundary.
+        [force_b, P_j, worked,live] = floe_interactions_bpm2(c1, c2_poly);
+        if live(1) == 0
+            dissolvedNEW = dissolvedNEW+calc_vol_dissolved(Floe(i),Nx,Ny,c2_boundary_poly);
+            Floe(i).alive = 0;
+        end
+        if sum(abs(force_b(:)))~=0 %; subtracting 0.1m to ensure that interactions with x=+-Lx boundary are excluded as this is a periodic boundary.
             % boundary will be recorded as floe number Inf;
             Floe(i).interactions=[Floe(i).interactions ; Inf*ones(size(force_b,1),1) force_b P_j zeros(size(force_b,1),1)];
             Floe(i).OverlapArea=area(c1)-area(intersect(c1,c2_boundary_poly)); % overlap area with the boundary only
@@ -170,12 +188,11 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
     end
 end
 
-%Floe=rmfield(Floe,{'potentialInteractions'});
 
 %%
 %Fill the lower part of the interacton matrix (floe_i,floe_j) for floes with j<i
 for i=1:N %this has to be done sequentially
-      
+    
     if ~isempty(Floe(i).interactions)
         
         a=Floe(i).interactions;
@@ -204,6 +221,7 @@ for i=1:N %this has to be done sequentially
 end
 
 %%
+
 % calculate all torques from forces including for ghost floes
 for i=1:N
     
@@ -220,18 +238,7 @@ for i=1:N
         
        Floe(i).collision_force=sum(Floe(i).interactions(:,2:3),1);
        Floe(i).collision_torque=sum(Floe(i).interactions(:,6),1);
-        
-%        if abs(Floe(i).collision_force(1)/Floe(i).mass) > 0.35
-%            if Floe(i).area > 3500
-%                xx = 1;
-%                xx(1) = [1 2];
-%            end
-%        elseif abs(Floe(i).collision_force(2)/Floe(i).mass) > 0.35
-%            if Floe(i).area > 3500
-%                xx = 1;
-%                xx(1) = [1 2];
-%            end
-%        end
+       
     end
     
 end
@@ -245,6 +252,8 @@ if PERIODIC
     end
 end
 
+%% 
+
 
 %Do the timestepping for parent floes now that their forces and torques are known.
 for i=1:N0
@@ -253,7 +262,6 @@ for i=1:N0
         
         if PERIODIC
             
-            floe = Floe(i);
             if abs(Floe(i).Xi)>Lx %if floe got out of periodic bounds, put it on the other end
                 %
                 Floe(i).poly=translate(Floe(i).poly,[-2*Lx*sign(Floe(i).Xi) 0]);
@@ -279,10 +287,9 @@ for i=1:N0
             end
             
         end
+       
         
-
-        
-        tmp=calc_trajectory(dt,ocean, winds,Floe(i)); % calculate trajectory
+        tmp=calc_trajectory(dt,ocean, winds,Floe(i),heat_flux,SUBFLOES); % calculate trajectory
         if (isempty(tmp) || isnan(Floe(i).Xi) )
             Floe(i).alive=0; 
             SackedOB = SackedOB +1;
@@ -292,37 +299,134 @@ for i=1:N0
         else
             Floe(i)=tmp;
         end
+        
 
     end
     
+
+    
 end
+
+floenew = [];
+SimpMin = @(A) 15*log10(A);%15+(A-1e4)*(1e9-1e4)/(200-15);
 
 if RIDGING
     
     for i=1:N0
-        floe = Floe(i);
-        if ~isempty(Floe(i).interactions)
+        
+        if Floe(i).alive
             
             if ~isempty(Floe(i).potentialInteractions)
                 
+                
                 for k = 1:length(Floe(i).potentialInteractions)
 
-                    [Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),dissolvedNEW] = ridging(dissolvedNEW,Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),Nx,Ny,c2_boundary_poly,PERIODIC,SUBFLOES);                  
+                                        
                     
-                    if Floe(i).poly.NumRegions > 1
-                        polyout = sortregions(Floe(i).poly,'area','descend');
-                        R = regions(polyout);
-                        polynew = R(1);
-                        Floe(i).poly = polynew;
-                    elseif Floe(Floe(i).potentialInteractions(k).floeNum).poly.NumRegions > 1
-                        polyout = sortregions(Floe(Floe(i).potentialInteractions(k).floeNum).poly,'area','descend');
-                        R = regions(polyout);
-                        polynew = R(1);
-                        Floe(Floe(i).potentialInteractions(k).floeNum).poly=polynew;
+                    if Floe(i).potentialInteractions(k).floeNum<= N0
+                        floeNum = Floe(i).potentialInteractions(k).floeNum;
+                        [Floe1,Floe2,dissolvedNEW] = ridging(dissolvedNEW,Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),Nx,Ny,c2_boundary_poly,PERIODIC,SUBFLOES);
+                    else
+                        floeNum = parent(Floe(i).potentialInteractions(k).floeNum - N0);
+                        trans = translation(Floe(i).potentialInteractions(k).floeNum-N0,:);
+                        if floeNum > N0
+                            trans = trans+translation(floeNum-N0,:);
+                            floeNum = parent(floeNum-N0);
+                        end
+                        Floe2 = Floe(floeNum);
+
+                            Floe2.poly=translate(Floe2.poly,trans);
+                            for ii = 1:length(Floe2.SubFloes)
+                                Floe2.SubFloes(ii).poly=translate(Floe2.SubFloes(ii).poly,trans);
+                            end
+                            Floe2.vorX=Floe2.vorX+trans(1);
+                            Floe2.vorbox(:,1)=Floe2.vorbox(:,1)+trans(1);
+                            Floe2.Xm=Floe2.Xm+trans(1);
+                            Floe2.Xi=Floe2.Xi+trans(1);
+
+                            Floe2.vorY=Floe2.vorY+trans(2);
+                            Floe2.vorbox(:,2)=Floe2.vorbox(:,2)+trans(2);
+                            Floe2.Ym=Floe2.Ym+trans(2);
+                            Floe2.Yi=Floe2.Yi+trans(2);
+
+                        overlap = intersect(Floe2.poly,Floe(Floe(i).potentialInteractions(k).floeNum).poly);
+                        if area(overlap)/Floe2.area>0.9
+                      
+                            [Floe1,Floe2,dissolvedNEW] = ridging(dissolvedNEW,Floe(i),Floe2,Nx,Ny,c2_boundary_poly,PERIODIC,SUBFLOES);
+                        else
+                            Floe1 = Floe(i);
+                        end
+                        
+                        if trans(1)
+                            for jj = 1:length(Floe2)
+                                Floe2(jj).poly=translate(Floe2(jj).poly,[-trans(1) 0]);
+                                for ii = 1:length(Floe2(jj).SubFloes)
+                                    Floe2(jj).SubFloes(ii).poly=translate(Floe2(jj).SubFloes(ii).poly,[-trans(1) 0]);
+                                end
+                                Floe2(jj).vorX=Floe2(jj).vorX-trans(1);
+                                Floe2(jj).vorbox(:,1)=Floe2(jj).vorbox(:,1)-trans(1);
+                                Floe2(jj).Xm=Floe2(jj).Xm-trans(1);
+                                Floe2(jj).Xi=Floe2(jj).Xi-trans(1);
+                            end
+                        end
+                        
+                        if trans(2)
+                            for jj = 1:length(Floe2)
+                                Floe2(jj).poly=translate(Floe2(jj).poly,[0 -trans(2)]);
+                                for ii = 1:length(Floe2(jj).SubFloes)
+                                    Floe2(jj).SubFloes(ii).poly=translate(Floe2(jj).SubFloes(ii).poly,[0 -trans(2)]);
+                                end
+                                Floe2(jj).vorY=Floe2(jj).vorY-trans(2);
+                                Floe2(jj).vorbox(:,2)=Floe2(jj).vorbox(:,2)-trans(2);
+                                Floe2(jj).Ym=Floe2(jj).Ym-trans(2);
+                                Floe2(jj).Yi=Floe2(jj).Yi-trans(2);
+                            end
+                        end
+                            
                     end
+                    
+                    
+                    for kk = 1:length(Floe1)
+                        floe = Floe1(kk);
+                        if length(floe.poly.Vertices) > SimpMin(floe.area)
+                            floe = FloeSimplify(floe, 250,SUBFLOES);
+                        end
+                        for jj = 1:length(floe)
+
+                            if kk == 1 && jj == 1
+                                Floe(i) = floe(jj);
+                            else
+                                floenew = [floenew floe(jj)];
+                            end
+                        end
+                    end
+                    
+                    for kk = 1:length(Floe2)
+                        floe = Floe2(kk);
+                        if length(floe.poly.Vertices) > SimpMin(floe.area)
+                            floe = FloeSimplify(floe, 250,SUBFLOES);
+                        end
+                        for jj = 1:length(floe)
+
+                            if kk == 1 && jj == 1
+                                Floe(floeNum) = floe(jj);
+                            else
+                                floenew = [floenew floe(jj)];
+                            end
+                        end
+                    end
+                    
+                    
                 end
-                
+            poly1 = Floe(Floe(i).potentialInteractions(1).floeNum).poly;
+            if length(Floe(i).potentialInteractions)>1
+                for kk = 2:length(Floe(i).potentialInteractions)
+                    poly1 = union(poly1,Floe(Floe(i).potentialInteractions(kk).floeNum).poly);
+                end
             end
+
+            end
+
         end
     end
     
@@ -330,6 +434,11 @@ if RIDGING
 end
 
 Floe=Floe(1:N0); % ditch the ghost floes.
+Floe = [Floe floenew];
 
 Floe=rmfield(Floe,{'potentialInteractions'});
+live = cat(1,Floe.alive);
+Floe(live==0)=[];
+
+
 end
