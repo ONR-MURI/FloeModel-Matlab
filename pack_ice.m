@@ -128,7 +128,7 @@ for ii = 1:Nx
             end
 %             polyu = union([poly(A>0)]);
             c = sum(A)/area(box);
-            if c<target
+            if c<0.99*target
                 atarget = (target*area(box)-sum(A));
                 if isempty(polyu)
                     floe.poly = box;
@@ -249,7 +249,7 @@ for ii = 1:Nx
                         floenew = [floenew floe2];
                         clear floe2;
                     end
-                    if count == N
+                    if count >= N
                         anew = atarget;
                     end
                     count = count+1;
