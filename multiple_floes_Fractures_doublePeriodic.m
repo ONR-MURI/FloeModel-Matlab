@@ -28,6 +28,8 @@ height.delta = 0.5; %max difference between a flow thickness and the mean floe v
 
 target_concentration=1; % could be a vector
 Floe = initialize_concentration(target_concentration, c2_boundary,ocean,SUBFLOES, PERIODIC,height, 75);
+figure
+plot([Floe.poly])
 % load FloeBase;
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 %%
@@ -156,6 +158,8 @@ while im_num<nSnapshots
         save('FloeStats.mat','FloeStats','Amax')
         
         if mod(i_step,nDTOut)==0 && PACKING
+            height.mean = 0.2;
+            height.delta = 0;
             [Floe,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,target_concentration,ocean,SUBFLOES, PERIODIC);
         end
 

@@ -1,4 +1,4 @@
-function [Floe,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,target,ocean, SUBFLOES, PERIODIC)
+function [Floe,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,target,ocean, height, SUBFLOES, PERIODIC)
 %UNTITLED2 Summary of this function goes here
 %% 
 id = 'MATLAB:polyshape:tinyBoundaryDropped';
@@ -79,8 +79,6 @@ end
 floe2 = [];
 floenew = [];
 rho_ice = 920;
-height.mean = 0.2;
-height.delta = 0;
 [Ny,Nx,~] = size(Vd);
 x = min(c2_boundary(1,:)):(max(c2_boundary(1,:))-min(c2_boundary(1,:)))/Nx:max(c2_boundary(1,:));
 y = min(c2_boundary(2,:)):(max(c2_boundary(2,:))-min(c2_boundary(2,:)))/Ny:max(c2_boundary(2,:));
@@ -130,7 +128,7 @@ for ii = 1:Nx
             end
 %             polyu = union([poly(A>0)]);
             c = sum(A)/area(box);
-            if c<0.95
+            if c<target
                 atarget = (target*area(box)-sum(A));
                 if isempty(polyu)
                     floe.poly = box;
