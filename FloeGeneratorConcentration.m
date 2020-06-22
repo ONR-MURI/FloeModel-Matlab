@@ -5,7 +5,7 @@ function [Floe2]= FloeGeneratorConcentration(Floe,c2_boundary,Target,N,SUBFLOES,
 ddx = 250;
 id ='MATLAB:polyshape:boundary3Points';
 warning('off',id)
-SHIFT = true;
+SHIFT = false;
 %load FloeVoronoi;
 N = floor(4*N);%floor(((max(c2_boundary(2,:))-min(c2_boundary(2,:)))*(max(c2_boundary(2,:))-min(c2_boundary(2,:))))/(mean(cat(1,Floe.area))/4));
 N0 = fix(N^(1/3));

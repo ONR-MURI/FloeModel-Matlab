@@ -1,6 +1,6 @@
 function [Floe] = initialize_concentration(c,c2_boundary,ocean,SUBFLOES,height,NumFloes)
 %% 
-SHIFT = true;
+SHIFT = false;
 PERIODIC = false;
 [Ny, Nx] = size(c);
 N = floor(NumFloes/sum(sum(c)));
