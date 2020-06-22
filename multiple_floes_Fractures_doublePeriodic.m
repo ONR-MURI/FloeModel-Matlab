@@ -3,38 +3,40 @@ close all; clear all;
 addpath ~/Downloads/dengwirda-inpoly-ebf47d6/ 
 
 %% Initialize model vars
-RIDGING=true; 
+RIDGING=false; 
 
-FRACTURES=true;
+FRACTURES=false;
 
 PERIODIC=true;
 
 SUBFLOES = false;
 
-PACKING = true;
+PACKING = false;
 
-WELDING = true;
+WELDING = false;
 
 %Define ocean currents
-[ocean, c2_boundary]=initialize_ocean_Gyre(1e4, 2e5, 1e5,4e3);
+transport=0*1e4;
+Lx=2e5; Ly=1e5; dXo=4e3;
+[ocean, c2_boundary]=initialize_ocean_Gyre(transport, Lx, Ly,dXo);
 c2_boundary_poly=polyshape(c2_boundary(1,:),c2_boundary(2,:));
 
 %Define 10m winds
-winds=[10 10];
+winds=[5 0];
 
 %Initialize Floe state
 height.mean = 2;
 height.delta = 0.5; %max difference between a flow thickness and the mean floe value
 
-target_concentration=1; % could be a vector
-Floe = initialize_concentration(target_concentration,c2_boundary,SUBFLOES, height, 75);
+target_concentration=0.1; % could be a vector
+Floe = initialize_concentration(target_concentration,c2_boundary,SUBFLOES, height, 50);
 %load FloeBase;
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 %%
 
-dt=10; %Time step in sec
+dt=20; %Time step in sec
 
-nDTOut=50; %Output frequency (in number of time steps)
+nDTOut=10; %Output frequency (in number of time steps)
 
 nSnapshots=10000; %Total number of model snapshots to save
 
@@ -186,16 +188,17 @@ while im_num<nSnapshots
         if ifPlot
             fig=plot_Floes_poly_doublePeriodicBC(fig,Time,Floe, ocean, c2_boundary_poly, PERIODIC); % plots model state
             saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
-            figure(fig3);
-            fig3=plot_Floes_poly_doublePeriodicBC_thickness(fig,Time,Floe, ocean, c2_boundary_poly, PERIODIC); 
-            saveas(fig,['./figs/' num2str(im_num,'t%03.f') '.jpg'],'jpg');
+            %figure(fig3);
+            %fig3=plot_Floes_poly_doublePeriodicBC_thickness(fig3,Time,Floe, ocean, c2_boundary_poly, PERIODIC); 
+            %saveas(fig3,['./figs/' num2str(im_num,'t%03.f') '.jpg'],'jpg');
             if im_num>1
             if (~isvalid(fig2)), fig2=figure; end
             figure(fig2);
-            imagesc(Vdnew/gridArea/1e3); axis xy
+            %imagesc(Vdnew/gridArea/1e3); axis xy
+            imagesc(squeeze(coarseMean(2,:,:,im_num))); axis xy
             u=squeeze(coarseMean(2,:,:,im_num));
             v=squeeze(coarseMean(3,:,:,im_num));
-            colormap('gray');colorbar;
+            colormap('gray'); colorbar;
             hold on; quiver(u,v,'r')
             drawnow
             figure(fig);
