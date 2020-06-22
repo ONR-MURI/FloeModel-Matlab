@@ -11,9 +11,9 @@ PERIODIC=true;
 
 SUBFLOES = false;
 
-PACKING = true;
+PACKING = false;
 
-WELDING = true;
+WELDING = false;
 
 %Define ocean currents
 [ocean, c2_boundary]=initialize_ocean_Gyre(1e4, 2e5, 1e5,4e3);
@@ -27,8 +27,8 @@ height.mean = 2;
 height.delta = 0.5; %max difference between a flow thickness and the mean floe value
 
 target_concentration=1; % could be a vector
-Floe = initialize_concentration(target_concentration,c2_boundary,SUBFLOES, height, 75);
-%load FloeBase;
+Floe = initialize_concentration(target_concentration, c2_boundary,ocean,SUBFLOES, PERIODIC,height, 75);
+% load FloeBase;
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 %%
 
@@ -65,8 +65,6 @@ htot = repmat(cat(1,Floe.h),nDTOut);
 %initialize dissolved ice at zero
 dissolvedNEW=zeros(Ny,Nx);
 Vd = zeros(Ny,Nx,2);
-
-[Floe,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,target_concentration,ocean,SUBFLOES, PERIODIC);
 
 % Calc interactions and plot initial state
 [Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,heat_flux,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES); % find interaction points

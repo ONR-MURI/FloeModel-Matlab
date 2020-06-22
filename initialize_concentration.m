@@ -1,4 +1,4 @@
-function [Floe] = initialize_concentration(c,c2_boundary,SUBFLOES,height,NumFloes)
+function [Floe] = initialize_concentration(c,c2_boundary,ocean,SUBFLOES,PERIODIC,height,NumFloes)
 %% 
 SHIFT = true;
 [Ny, Nx] = size(c);
@@ -19,5 +19,16 @@ for jj = 1:Ny
         Floe = [Floe dFloe];
     end
 end
+
+if Nx > 10 && Ny > 10
+    Vd = zeros(Ny,Nx);
+elseif Nx > 10
+    Vd = zeros(10,Nx);
+elseif Ny > 10
+    Vd = zeros(Ny,10);
+else
+    Vd = zeros(10,10);
+end
+[Floe,~] = pack_ice(Floe,c2_boundary,1.1,Vd,flipud(c),ocean,SUBFLOES, PERIODIC);
 end
 

@@ -79,7 +79,7 @@ end
 floe2 = [];
 floenew = [];
 rho_ice = 920;
-height.mean = 1.5;
+height.mean = 0.2;
 height.delta = 0;
 [Ny,Nx,~] = size(Vd);
 x = min(c2_boundary(1,:)):(max(c2_boundary(1,:))-min(c2_boundary(1,:)))/Nx:max(c2_boundary(1,:));

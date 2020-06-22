@@ -109,10 +109,5 @@ floenew = rmfield(floenew,'potentialInteractions');
 % floenew.potentialInteractions = floe1.potentialInteractions;
 
 
-if floenew.poly.NumRegions>1
-    xx = 1;
-    xx(1) = [1 2];
-end
-
 end
 
