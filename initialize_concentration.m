@@ -1,6 +1,7 @@
-function [Floe] = initialize_concentration(c,c2_boundary,SUBFLOES,height,NumFloes)
+function [Floe] = initialize_concentration(c,c2_boundary,ocean,SUBFLOES,height,NumFloes)
 %% 
-SHIFT = true;
+SHIFT = false;
+PERIODIC = false;
 [Ny, Nx] = size(c);
 N = floor(NumFloes/sum(sum(c)));
 c = flipud(c);
@@ -16,8 +17,12 @@ for jj = 1:Ny
         Floe0.alive = 0;
         boundary = [x(ii) x(ii) x(ii+1) x(ii+1) x(ii); y(jj) y(jj+1) y(jj+1) y(jj) y(jj)];
         [dFloe]= FloeGeneratorConcentration(Floe0,boundary,c(jj,ii),N,SUBFLOES,height);
+        if sum(cat(1,dFloe.area))/area(polyshape(boundary(1,:),boundary(2,:)))<c(jj,ii)
+            [dFloe,~] = pack_ice(dFloe,boundary,1.1,0,c(jj,ii),ocean,height,SUBFLOES, PERIODIC);
+        end
         Floe = [Floe dFloe];
     end
 end
+
 end
 

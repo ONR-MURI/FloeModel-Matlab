@@ -2,10 +2,10 @@ function [XX,YY] = PointGenerator(N,c2_boundary,SD,N0)
 %UNTITLED5 Summary of this function goes here
 %   Detailed explanation goes here
 %N0 = fix(N^(2/3));
-Lx = max(c2_boundary(1,:));
-Ly = max(c2_boundary(2,:));
-X = -Lx + 2*Lx*rand(1,N0);
-Y = -Ly + 2*Ly*rand(1,N0);
+Lx = max(c2_boundary(1,:))-min(c2_boundary(1,:));
+Ly = max(c2_boundary(2,:))-min(c2_boundary(2,:));
+X = min(c2_boundary(1,:)) + Lx*rand(1,N0);
+Y = min(c2_boundary(2,:)) +Ly*rand(1,N0);
 XY = randn(fix(N/N0),fix(N/N0));
 XX = []; YY = [];
 for ii = 1:N0
@@ -27,4 +27,3 @@ end
 % xlim([-Lx Lx])
 % ylim([-Ly Ly])
 end
-
