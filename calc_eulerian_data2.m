@@ -1,4 +1,69 @@
-function [eularian_data] = calc_eulerian_data2(Floe,Nx,Ny,c2_boundary)
+function [eularian_data] = calc_eulerian_data2(Floe,Nx,Ny,c2_boundary,PERIODIC)
+
+live = cat(1,Floe.alive);
+Floe(live==0)=[];
+
+Lx= max(c2_boundary(1,:));
+Ly= max(c2_boundary(2,:));%c2 must be symmetric around x=0 for channel boundary conditions.
+
+if PERIODIC
+    
+    ghostFloeX=[];
+    ghostFloeY=[];
+    parent=[];
+    
+    x=cat(1,Floe.Xi);
+    y=cat(1,Floe.Yi);
+    alive=cat(1,Floe.alive);
+    
+    for i=1:length(Floe)
+        
+        %   if alive(i) && (x(i)>Lx-rmax(i)) || (x(i)<-Lx+rmax(i))
+        if alive(i) && (max(abs(Floe(i).poly.Vertices(:,1)))>Lx)
+            
+            ghostFloeX=[ghostFloeX  Floe(i)];
+            ghostFloeX(end).poly=translate(Floe(i).poly,[-2*Lx*sign(x(i)) 0]);
+            for ii = 1:length(Floe(i).SubFloes)
+                ghostFloeX(end).SubFloes(ii).poly=translate(Floe(i).SubFloes(ii).poly,[-2*Lx*sign(x(i)) 0]);
+            end
+            ghostFloeX(end).Xi=Floe(i).Xi-2*Lx*sign(x(i));
+            ghostFloeX(end).vorX=Floe(i).vorX-2*Lx*sign(x(i));
+            ghostFloeX(end).vorbox(:,1)=Floe(i).vorbox(:,1)-2*Lx*sign(x(i));
+            parent=[parent  i];
+            
+        end
+        
+        
+    end
+    
+    Floe=[Floe ghostFloeX];
+    
+    x=cat(1,Floe.Xi);
+    y=cat(1,Floe.Yi);
+    alive=cat(1,Floe.alive);
+    
+    for i=1:length(Floe)
+        
+        %   if alive(i) && (x(i)>Lx-rmax(i)) || (x(i)<-Lx+rmax(i))
+        if alive(i) && (max(abs(Floe(i).poly.Vertices(:,2)))>Ly)
+            
+            ghostFloeY=[ghostFloeY  Floe(i)];
+            ghostFloeY(end).poly=translate(Floe(i).poly,[0 -2*Ly*sign(y(i))]);
+            for ii = 1:length(Floe(i).SubFloes)
+                ghostFloeY(end).SubFloes(ii).poly=translate(Floe(i).SubFloes(ii).poly,[0 -2*Ly*sign(y(i))]);
+            end
+            ghostFloeY(end).Yi=Floe(i).Yi-2*Ly*sign(y(i));
+            ghostFloeY(end).vorY=Floe(i).vorY-2*Ly*sign(y(i));
+            ghostFloeY(end).vorbox(:,2)=Floe(i).vorbox(:,2)-2*Ly*sign(y(i));
+            parent=[parent  i];
+            
+        end
+        
+    end
+    
+    Floe=[Floe ghostFloeY];
+    
+end
 
 x = min(c2_boundary(1,:)):(max(c2_boundary(1,:))-min(c2_boundary(1,:)))/Nx:max(c2_boundary(1,:));
 y = min(c2_boundary(2,:)):(max(c2_boundary(2,:))-min(c2_boundary(2,:)))/Ny:max(c2_boundary(2,:));
@@ -32,6 +97,8 @@ for ii = 1:length(Floe)
     pint(pint<0) = 1;
     potentialInteractions(:,:,ii) = pint;
 end
+%% 
+
 for ii = 1:Nx
     for jj = 1:Ny
         if sum(logical(potentialInteractions(jj,ii,:)))>0

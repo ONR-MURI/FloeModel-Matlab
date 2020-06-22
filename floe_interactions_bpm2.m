@@ -1,7 +1,8 @@
-function [ force_1, pcenter, worked] = floe_interactions_bpm2(c1, c2)
+function [ force_1, pcenter, worked,live] = floe_interactions_bpm2(c1, c2)
 %% 
 % Find Vertices of overlapping polygons
-Force_factor=1.25e3;
+live = [1 1];
+Force_factor=1.1e3;
 polyout = intersect(c1,c2);
 if polyout.NumRegions>0
     polyout2 = sortregions(polyout,'area','descend');
@@ -14,6 +15,21 @@ end
 
 worked=1;
 %% 
+if areaPoly/area(c1)>0.99 && areaPoly/area(c2)>0.99
+    x = 1;
+    x(1) = [1 2];
+elseif areaPoly/area(c1)>0.5 && area(c1)/area(c2)<0.05
+    force_1=[0 0];
+    pcenter=[0 0];  
+    areaPoly = 0;
+    live(1) = 0;
+elseif areaPoly/area(c2)>0.5 && area(c2)/area(c2)>0.05
+    force_1=[0 0];
+    pcenter=[0 0];
+    areaPoly = 0;
+    live(2) = 0;
+end
+
 
 %Calculate forces on different overlapping areas
 if areaPoly<10
@@ -34,8 +50,9 @@ else
     
     %% 
     
-    for k=1:N_contact       
-        c0 = R(k).Vertices;
+    for k=1:N_contact      
+        poly = rmholes(R(k));
+        c0 = poly.Vertices;
         [pcenter(k,1),pcenter(k,2)] = centroid(R(k));
 
         [d_min1] = p_poly_dist(c0(:,1), c0(:,2), c1.Vertices(:,1), c1.Vertices(:,2));
@@ -120,7 +137,11 @@ else
                 f_dir(jj,:) = -sum(dir.*[dl dl]);
             end
             f_dir = sum(f_dir,1);
-            force_dir=f_dir/norm(f_dir);
+            if norm(f_dir) < 0.001
+                force_dir = 0
+            else
+                force_dir=f_dir/norm(f_dir);
+            end
                         
             if max(max(abs(force_dir)))>0
                 displace = 5*force_dir;

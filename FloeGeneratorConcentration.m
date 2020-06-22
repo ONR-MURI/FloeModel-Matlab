@@ -5,14 +5,21 @@ function [Floe2]= FloeGeneratorConcentration(Floe,c2_boundary,Target,N,SUBFLOES,
 ddx = 250;
 id ='MATLAB:polyshape:boundary3Points';
 warning('off',id)
+SHIFT = true;
 %load FloeVoronoi;
 N = floor(4*N);%floor(((max(c2_boundary(2,:))-min(c2_boundary(2,:)))*(max(c2_boundary(2,:))-min(c2_boundary(2,:))))/(mean(cat(1,Floe.area))/4));
+N0 = fix(N^(1/3));
+if N0<10
+    N0 = 10;
+end
 x = min(c2_boundary(1,:)):ddx:max(c2_boundary(1,:));
 y = min(c2_boundary(2,:)):ddx:max(c2_boundary(2,:));
 dx = max(x)-min(x);
 dy = max(y)-min(y);
-X = min(c2_boundary(1,:))-dx/2+2*rand(1,N)*dx;
-Y = min(c2_boundary(2,:))-dy/2+2*rand(1,N)*dy;
+[X,Y] = PointGenerator(N,c2_boundary,35*ddx,N0);
+Y = Y';
+% X = min(c2_boundary(1,:))-dx/2+2*rand(1,N)*dx;
+% Y = min(c2_boundary(2,:))-dy/2+2*rand(1,N)*dy;
 
 %Remove any points form inside current floes
 for ii = 1:length(Floe)
@@ -46,9 +53,13 @@ poly3 = polyshape(xb,yb);
 polyout = subtract(poly3,poly2);
 
 %calculate current concentration
-live = cat(1,Floe.alive);
-Floe(logical(abs(live-1)))= [];
-Area = sum(cat(1,Floe.area));
+if ~isempty(Floe)
+    live = cat(1,Floe.alive);
+    Floe(logical(abs(live-1)))= [];
+    Area = sum(cat(1,Floe.area));
+else
+    Area = 0;
+end
 cnow = Area/((max(c2_boundary(2,:))-min(c2_boundary(2,:)))*(max(c2_boundary(1,:))-min(c2_boundary(1,:))));
 
 %randomize order for polygons to be added as floes
@@ -60,10 +71,17 @@ R = randperm(length(C));
 Anew = 0;
 ii = 1;
 ind = 1;
-x=cat(1,Floe.Xi);
-y=cat(1,Floe.Yi);
-rmax=cat(1,Floe.rmax);
-alive=cat(1,Floe.alive);
+if ~isempty(Floe)
+    x=cat(1,Floe.Xi);
+    y=cat(1,Floe.Yi);
+    rmax=cat(1,Floe.rmax);
+    alive=cat(1,Floe.alive);
+else
+    x = [];
+    y = [];
+    rmax = [];
+    alive = [];
+end
 while cnow < Target
     %Take set of vertices from Voronoi and generate polyshape for floe
     if ii>length(R)
@@ -121,7 +139,7 @@ while cnow < Target
                     Anew = area(poly1,jj)+Anew;
                     polynew = polyshape(c0(1,I(jj)+1:I(jj+1)-1),c0(2,I(jj)+1:I(jj+1)-1));
                     cnow = (Area+Anew)/((max(c2_boundary(2,:))-min(c2_boundary(2,:)))*(max(c2_boundary(1,:))-min(c2_boundary(1,:))));
-                    [Floe2(ind)] = initialize_floe_values(polynew, height, SUBFLOES);
+                    [Floe2(ind)] = initialize_floe_values(polynew, height,SHIFT, SUBFLOES);
                     Floe2(ind).potentialInteractions = FloeNEW(ii).potentialInteractions;
                     ind = ind+1;
                 end

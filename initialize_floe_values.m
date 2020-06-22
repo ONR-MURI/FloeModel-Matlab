@@ -1,11 +1,13 @@
-function Floe = initialize_floe_values(poly1, height, SUBFLOES)
+function Floe = initialize_floe_values(poly1, height,SHIFT, SUBFLOES)
 
 rho_ice=920;
-poly1 = translate(poly1, [(-1)^randi([0 1])*rand (-1)^randi([0 1])*rand]);
+if SHIFT
+    poly1 = translate(poly1, [(-1)^randi([0 1])*rand (-1)^randi([0 1])*rand]);
+end
 polyout = sortregions(poly1,'area','descend');
 R = regions(polyout);
 poly1 = R(1);
-poly1 = rmholes(poly1);
+%poly1 = rmholes(poly1);
 %h = 0.2*rand+0.1128;
 h=height.mean+(-1)^randi([0 1])*rand*height.delta;
 [Xi,Yi] = centroid(poly1);
@@ -57,7 +59,17 @@ h=height.mean+(-1)^randi([0 1])*rand*height.delta;
             x = 1;
             x(1) = [1 2];
         end
-        inertia(ii) = PolygonMoments(Floe.SubFloes(ii).poly.Vertices,Floe.SubFloes(ii).h);
+        if Floe.SubFloes(ii).poly.NumHoles > 0
+            breaks = isnan(polynew.Vertices(:,1));
+            I = find(breaks == 1);
+            I = [0 I' length(breaks)+1];
+            inertia(ii) = 0;
+            for jj = length(I) -1
+                inertia(ii) = inertia(ii) + PolygonMoments(Floe.SubFloes(ii).poly.Vertices(I(jj)+1:I(jj+1)-1,:),Floe.SubFloes(ii).h);
+            end
+        else
+            inertia(ii) = PolygonMoments(Floe.SubFloes(ii).poly.Vertices,Floe.SubFloes(ii).h);
+        end
         [Xi,Yi] = centroid(Floe.SubFloes(ii).poly);
         centers(ii,:) = [Xi,Yi];
     end

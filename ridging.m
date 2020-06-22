@@ -13,8 +13,6 @@ poly2 = union([Floe2.SubFloes.poly]);
 
 polyout = intersect(poly1,poly2);
 areaPoly = area(polyout);
-Atot = Floe1.area+Floe2.area;
-frac = areaPoly/Atot;
 aPoly = area(intersect(Floe1.poly,Floe2.poly));
 rho_ice=920;
 rho_l = 997;
@@ -22,15 +20,18 @@ E = max([Floe1.E, Floe2.E]);
 sigma_m = max([Floe1.sigma_m, Floe2.sigma_m]);
 nu = 0.29;
 g = 9.81;
-hc = 2;%14.2*(1-nu^2)/(rho_l*g)*sigma_m^2/E;
+hc = 1.5;%14.2*(1-nu^2)/(rho_l*g)*sigma_m^2/E;
 disolved = 0;
 
 %check to make sure one floe is not inside the other
-if aPoly/area(Floe1.poly)>0.9
+if aPoly/area(Floe1.poly)>0.9 && aPoly/area(Floe2.poly)>0.9
+    x = 1;
+    x(1) = [1 2];
+elseif aPoly/area(Floe1.poly)>0.75
     dissolvedNEW = dissolvedNEW+calc_vol_dissolved(Floe1,Nx,Ny,c2_boundary_poly);
     disolved = 1;
     Floe1.alive = 0;
-elseif aPoly/area(Floe2.poly)>0.9
+elseif aPoly/area(Floe2.poly)>0.75
     dissolvedNEW = dissolvedNEW+calc_vol_dissolved(Floe2,Nx,Ny,c2_boundary_poly);
     disolved = 1;
     Floe2.alive = 0;
@@ -69,6 +70,34 @@ if disolved == 0 && areaPoly > 500
         [Floe1, Floe2] = ridge_values_update(Floe1,Floe2, overlap1, overlap2, V2, A1);
     elseif Floe1.h < hc && Floe2.h >= hc
         [Floe2, Floe1] = ridge_values_update(Floe2,Floe1, overlap2, overlap1, V1, A2);
+    end
+end
+
+for ii = 1:length(Floe1)
+    if Floe1(ii).poly.NumRegions > 1
+        xx = 1;
+        xx(1) = [1 2];
+    end
+end
+for ii = 1:length(Floe2)
+    if Floe2(ii).poly.NumRegions > 1
+        xx = 1;
+        xx(1) = [1 2];
+    end
+end
+
+if ~isempty(Floe1)
+    if min([Floe1.inertia_moment]) == 0
+        xx = 1;
+        xx(1) = [1 2];xx = 1;
+        xx(1) = [1 2];
+    end
+end
+if ~isempty(Floe2)
+    if min([Floe2.inertia_moment]) == 0
+%         xx = 1;
+%         xx(1) = [1 2];
+        Floe2.alive = 0
     end
 end
 
@@ -118,7 +147,17 @@ if ~PERIODIC
         centers = zeros(Nw,2);
         for ii = 1:Nw
             areaS(ii) = area(Floe1.SubFloes(ii).poly);
-            inertia(ii) = PolygonMoments(Floe1.SubFloes(ii).poly.Vertices,Floe1.SubFloes(ii).h);
+            if Floe1.SubFloes(ii).poly.NumHoles > 0
+                breaks = isnan(polyout.Vertices(:,1));
+                I = find(breaks == 1);
+                I = [0 I' length(breaks)+1];
+                inertia(ii) = 0;
+                for kk = length(I) -1
+                    inertia(ii) = inertia(ii) + PolygonMoments(Floe1.SubFloes(ii).poly.Vertices(I(kk)+1:I(kk+1)-1,:),Floe1.SubFloes(ii).h);
+                end
+            else
+                inertia(ii) = PolygonMoments(Floe1.SubFloes(ii).poly.Vertices,Floe1.SubFloes(ii).h);
+            end
             [Xi,Yi] = centroid(Floe1.SubFloes(ii).poly);
             centers(ii,:) = [Xi,Yi];
         end
@@ -129,20 +168,46 @@ if ~PERIODIC
     end
 end
 
-if length(Floe1.poly.Vertices) > 500
-    Floe1 = FloeSimplify(Floe1, 250,SUBFLOES);
-elseif length(Floe2.poly.Vertices) > 500
-    Floe2 = FloeSimplify(Floe2, 250,SUBFLOES);
+if ~isempty(Floe1)
+    if min([Floe1.inertia_moment]) == 0
+        xx = 1;
+        xx(1) = [1 2];
+    end
 end
-
-if Floe1.alive + Floe2.alive > 1
-    ramp = @(frac) heaviside(frac)*frac;
-    p = rand(1);
-    if p <ramp(frac)
-        Floe1 = FuseFloes(floe1,floe2,SUBFLOES);
-        Floe2.alive = 0;
-        disp('Ice floes have fused!');
+if ~isempty(Floe2)
+    if min([Floe2.inertia_moment]) == 0
+        xx = 1;
+        xx(1) = [1 2];
     end
 end
 
+for ii = 1:length(Floe1)
+    if Floe1(ii).poly.NumRegions > 1
+        xx = 1;
+        xx(1) = [1 2];
+    end
+end
+for ii = 1:length(Floe2)
+    if Floe2(ii).poly.NumRegions > 1
+        xx = 1;
+        xx(1) = [1 2];
+    end
+end
+% if length(Floe1.poly.Vertices) > 500
+%     Floe1 = FloeSimplify(Floe1, 250,SUBFLOES);
+% elseif length(Floe2.poly.Vertices) > 500
+%     Floe2 = FloeSimplify(Floe2, 250,SUBFLOES);
+% end
+
+if ~isempty(Floe1)
+    if min([Floe1.inertia_moment]) == 0 && max([Floe1.alive]) == 1
+        xx = 1;
+        xx(1) = [1 2];
+    end
+    if ~isempty(Floe2)
+        if min([Floe2.inertia_moment]) == 0 && max([Floe1.alive]) == 1
+            xx = 1;
+            xx(1) = [1 2];
+        end
+    end
 end
