@@ -27,7 +27,7 @@ height.mean = 2;
 height.delta = 0.5; %max difference between a flow thickness and the mean floe value
 
 target_concentration=1; % could be a vector
-Floe = initialize_concentration(target_concentration, c2_boundary,ocean,SUBFLOES, PERIODIC,height, 75);
+Floe = initialize_concentration(target_concentration, c2_boundary,ocean,SUBFLOES,height, 75);
 figure
 plot([Floe.poly])
 % load FloeBase;
