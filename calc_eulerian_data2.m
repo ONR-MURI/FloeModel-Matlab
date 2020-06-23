@@ -1,5 +1,7 @@
 function [eularian_data] = calc_eulerian_data2(Floe,Nx,Ny,c2_boundary,PERIODIC)
 
+id = 'MATLAB:polyshape:boolOperationFailed';
+warning('off',id)
 live = cat(1,Floe.alive);
 Floe(live==0)=[];
 
@@ -122,5 +124,7 @@ for ii = 1:Nx
         end
     end
 end
+
+warning('on',id)
 end
 
