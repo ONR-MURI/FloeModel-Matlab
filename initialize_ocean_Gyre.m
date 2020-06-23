@@ -1,4 +1,9 @@
+
 function [ocean, c2_boundary]=initialize_ocean_Gyre(transport, Lx, Ly,dXo)
+
+ocean.fCoriolis=1.4e-4; % Coriolis parameter.
+
+ocean.turn_angle=15*pi/180; % turning angle between the stress and surface current due to the Ekman spiral; the angle is positive!
 
 % transport=1e3; % horizontal transport, in m^2/s (controls ocean currents) 
 % defining ocean currents

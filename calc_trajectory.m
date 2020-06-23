@@ -47,11 +47,13 @@ Yi=floe.Yi;
 
 rho_ice=920; % kg/m3
 rho0=1027;   % ocean density
-Cd=3e-3;
+Cd=5.5e-3;
 
 % ice-water drag coefficient
 rho_air=1.2;
-Cd_atm=1e-3;
+Cd_atm=1.6e-3;
+
+fc=ocean.fCoriolis; %coriolis parameter
 
 %% ice floe params
 
@@ -88,6 +90,7 @@ floe.Xm = sum(rho_ice*areaS.*cat(1,floe.SubFloes.h).*centers(:,1))./floe.mass;
 floe.Ym = sum(rho_ice*areaS.*cat(1,floe.SubFloes.h).*centers(:,2))./floe.mass;
 floe.h = sum(rho_ice*areaS.*cat(1,floe.SubFloes.h).*cat(1,floe.SubFloes.h))./floe.mass;
 floe.inertia_moment = sum(inertia+cat(1,floe.SubFloes.h).*sqrt((centers(:,1)-floe.Xm).^2+(centers(:,2)-floe.Ym).^2));
+
 
 %%
 U10=winds(1); % atmospheric winds
@@ -126,7 +129,7 @@ else
         else
         
             
-            [theta,rho] = cart2pol(Xg-Xi,Yg-Yi);
+            [theta,rho] = cart2pol(Xg-Xi,Yg-Yi); % rho is the radius from the center of the floe; theta is the angle
             
             
             Uice=floe.Ui-rho*floe.ksi_ice.*sin(theta); % X-dir floe velocity (variable within the ice floe)
@@ -140,14 +143,29 @@ else
             Uocn_interp=interp2(Xo(x_ind),Yo(y_ind), Uocn(y_ind,x_ind),Xg,Yg);
             Vocn_interp=interp2(Xo(x_ind),Yo(y_ind), Vocn(y_ind,x_ind),Xg,Yg);
             
-            Fx_atm=rho_air*Cd_atm*sqrt(U10^2+V10^2)*U10;
+            % all forces are per unit area, units of N/m^2;
+            Fx_atm=rho_air*Cd_atm*sqrt(U10^2+V10^2)*U10; % wind drag (no turning angle here!)
             Fy_atm=rho_air*Cd_atm*sqrt(U10^2+V10^2)*V10;
             
-            Fx=rho0*Cd*sqrt((Uocn_interp-Uice).^2+(Vocn_interp-Vice).^2).*(Uocn_interp-Uice)+Fx_atm; % ice-water drag forces in X and Y-dir
-            Fy=rho0*Cd*sqrt((Uocn_interp-Uice).^2+(Vocn_interp-Vice).^2).*(Vocn_interp-Vice)+Fy_atm;
-            
+            Fx_pressureGrad=-(floe_mass/floe_area)*fc*Vocn_interp; % SSH tilt term
+            Fy_pressureGrad=+(floe_mass/floe_area)*fc*Uocn_interp;        
+        
+            du=Uocn_interp-Uice; dv=Vocn_interp-Vice;        
+        
+            tau_ocnX=rho0*Cd*sqrt(du.^2+dv.^2).*( cos(ocean.turn_angle)*du+sin(ocean.turn_angle)*dv); % ocean stress with the turning angle
+            tau_ocnY=rho0*Cd*sqrt(du.^2+dv.^2).*(-sin(ocean.turn_angle)*du+cos(ocean.turn_angle)*dv);
+        
+            Fx=tau_ocnX+Fx_atm+Fx_pressureGrad; % adding up all forces except the Coriolis force
+            Fy=tau_ocnY+Fy_atm+Fy_pressureGrad;
+        
             % updating the ice floe vorticity with averaged torques over the ice floe area
             torque=(-Fx.*sin(theta)+Fy.*cos(theta)).*rho;  % torque
+        
+            %adding the remaining Coriolis force; it has no torque.
+            Fx=Fx+(floe_mass/floe_area)*fc*floe.Vi;
+            Fy=Fy-(floe_mass/floe_area)*fc*floe.Ui;
+            
+            
             
             %choosing a time step based on advection and vorticity criteria
             %   dt_max=min([ abs(0.05*max(1e-5,abs(floe.ksi_ice))/(mean(torque(floe_mask))*floe_area/floe_inertia_moment))   0.35*dXo/sqrt(floe.Ui^2+floe.Vi^2)]);
