@@ -47,11 +47,11 @@ Yi=floe.Yi;
 
 rho_ice=920; % kg/m3
 rho0=1027;   % ocean density
-Cd=3e-3;
+Cd=5.5e-3;
 
 % ice-water drag coefficient
 rho_air=1.2;
-Cd_atm=1e-3;
+Cd_atm=1.6e-3;
 
 fc=ocean.fCoriolis; %coriolis parameter
 
@@ -91,7 +91,6 @@ floe.Ym = sum(rho_ice*areaS.*cat(1,floe.SubFloes.h).*centers(:,2))./floe.mass;
 floe.h = sum(rho_ice*areaS.*cat(1,floe.SubFloes.h).*cat(1,floe.SubFloes.h))./floe.mass;
 floe.inertia_moment = sum(inertia+cat(1,floe.SubFloes.h).*sqrt((centers(:,1)-floe.Xm).^2+(centers(:,2)-floe.Ym).^2));
 
-floe_thickness=floe.h;
 
 %%
 U10=winds(1); % atmospheric winds
@@ -148,8 +147,8 @@ else
             Fx_atm=rho_air*Cd_atm*sqrt(U10^2+V10^2)*U10; % wind drag (no turning angle here!)
             Fy_atm=rho_air*Cd_atm*sqrt(U10^2+V10^2)*V10;
             
-            Fx_pressureGrad=-rho_ice*floe_thickness*fc*Vocn_interp; % SSH tilt term
-            Fy_pressureGrad=+rho_ice*floe_thickness*fc*Uocn_interp;        
+            Fx_pressureGrad=-(floe_mass/floe_area)*fc*Vocn_interp; % SSH tilt term
+            Fy_pressureGrad=+(floe_mass/floe_area)*fc*Uocn_interp;        
         
             du=Uocn_interp-Uice; dv=Vocn_interp-Vice;        
         
@@ -163,8 +162,9 @@ else
             torque=(-Fx.*sin(theta)+Fy.*cos(theta)).*rho;  % torque
         
             %adding the remaining Coriolis force; it has no torque.
-            Fx=Fx+rho_ice*floe_thickness*fc*floe.Vi;
-            Fy=Fy-rho_ice*floe_thickness*fc*floe.Ui;
+            Fx=Fx+(floe_mass/floe_area)*fc*floe.Vi;
+            Fy=Fy-(floe_mass/floe_area)*fc*floe.Ui;
+            
             
             
             %choosing a time step based on advection and vorticity criteria

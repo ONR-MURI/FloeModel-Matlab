@@ -68,7 +68,7 @@ if (fig==0 || ~isvalid(fig))
     fig=figure('Position',[100 100 1000 1000*ratio],'visible','on');  
     set(fig,'PaperSize',12*[1 ratio],'PaperPosition',12*[0 0 1 ratio]);
 end
-
+figure(fig);
 clf(fig);
 
 dn=1; % plot every dn'th velocity vector

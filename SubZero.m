@@ -26,13 +26,11 @@ winds=[5 0];
 
 %Initialize Floe state
 height.mean = 2;
-height.delta = 0.5; %max difference between a flow thickness and the mean floe value
+height.delta = 1; %max difference between a flow thickness and the mean floe value
 
-target_concentration=0.1; % could be a vector
-Floe = initialize_concentration(target_concentration,c2_boundary,SUBFLOES, height, 50);
-%load FloeBase;
-target_concentration=1; % could be a vector
-Floe = initialize_concentration(target_concentration, c2_boundary,ocean,SUBFLOES,height, 75);
+
+target_concentration=0.2; % could be a vector
+Floe = initialize_concentration(target_concentration, c2_boundary,ocean,SUBFLOES,height, 30);
 % load FloeBase;
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 %%
@@ -51,13 +49,14 @@ ifPlot = true; %Plot floe figures or not?
 
 SackedOB = 0; %initialize number of floes sacked for being out of bounds at zero
 
-dhdt = 1; %Sets probability for ice replenishing open space
+dhdt = 0; %Sets probability for ice replenishing open space
 
 heat_flux = -2.1*18/(334*1000*1000)*(100*3600*24); %Rate at which ice thickness increases thermodynamically in cm/day (once divided by h)
+heat_flux = 0;
 
 % specify coarse grid size
 Lx= 2*max(ocean.Xo);Ly= 2*max(ocean.Yo);
-Nx=10; Ny=fix(Nx*Ly/Lx);
+Nx=20; Ny=fix(Nx*Ly/Lx);
 
 %Track floe states
 %NumFloes = zeros(1,nSnapshots);
@@ -108,11 +107,11 @@ tic;
 gridArea=area(c2_boundary_poly)/Nx/Ny;
 Vdnew=zeros(Ny, Nx);
 fig2=figure;
-fig3 = figure;
+fig3=figure;
 while im_num<nSnapshots
      
     %c2_boundary=c2_boundary*(1+0.0005); % shrink by % every 10 steps
-    display(i_step);
+    %display(i_step);
     if mod(i_step,10)==0
         disp(newline);
         toc
@@ -125,7 +124,7 @@ while im_num<nSnapshots
         tic
     end
 
-    if mod(i_step,nDTOut/2)==0  %plot the state after a number of timesteps
+    if mod(i_step,nDTOut)==0  %plot the state after a number of timesteps
                 
         
         
@@ -190,7 +189,7 @@ while im_num<nSnapshots
         
         if ifPlot
             fig=plot_Floes_poly_doublePeriodicBC(fig,Time,Floe, ocean, c2_boundary_poly, PERIODIC); % plots model state
-            saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
+            %saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
             %figure(fig3);
             %fig3=plot_Floes_poly_doublePeriodicBC_thickness(fig3,Time,Floe, ocean, c2_boundary_poly, PERIODIC); 
             %saveas(fig3,['./figs/' num2str(im_num,'t%03.f') '.jpg'],'jpg');
@@ -198,13 +197,10 @@ while im_num<nSnapshots
             if (~isvalid(fig2)), fig2=figure; end
             figure(fig2);
             %imagesc(Vdnew/gridArea/1e3); axis xy
-            imagesc(squeeze(coarseMean(2,:,:,im_num))); axis xy
-            u=squeeze(coarseMean(2,:,:,im_num));
-            v=squeeze(coarseMean(3,:,:,im_num));
+            imagesc(1:Nx,1:Ny,eularian_data.c); axis ij
             colormap('gray'); colorbar;
-            hold on; quiver(u,v,'r')
+            hold on; quiver(eularian_data.u,eularian_data.v,'r')
             drawnow
-            figure(fig);
             end
 
         end
@@ -287,4 +283,5 @@ while im_num<nSnapshots
     Time=Time+dt; i_step=i_step+1; %update time index
 
 end
-%%
+
+
