@@ -100,17 +100,20 @@ for ii = 1:length(Floe)
     potentialInteractions(:,:,ii) = pint;
 end
 %% 
-
+% xx = 1;
+% xx(1) = [1 2];
 for ii = 1:Nx
     for jj = 1:Ny
         if sum(logical(potentialInteractions(jj,ii,:)))>0
             bound = [x(ii) x(ii) x(ii+1) x(ii+1) x(ii);y(jj) y(jj+1) y(jj+1) y(jj) y(jj)];
             box = polyshape(bound(1,:), bound(2,:));
             overlap = intersect(box,[Floe(logical(potentialInteractions(jj,ii,:))).poly]);
-            polyu = union([overlap]);
             Aover = area(overlap);
+            polyu = union([overlap(Aover>0)]);
             Area = area(polyu);
-            eularian_data.c(jj,ii) = Area/area(box);
+            if sum(Area) > 0
+                eularian_data.c(jj,ii) = Area/area(box);
+            end     
         end
         if eularian_data.c(jj,ii) > 0
             eularian_data.u(jj,ii) = sum(U(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
