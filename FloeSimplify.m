@@ -6,6 +6,8 @@ id ='MATLAB:polyshape:repairedBySimplify';
 warning('off',id)
 id2 = 'MATLAB:polyshape:boolOperationFailed';
 warning('off',id2)
+id3 ='MATLAB:polyshape:boundary3Points';
+warning('off',id3)
 floes = [];
 rho_ice = 920;
 if floe.poly.NumHoles > 0
@@ -23,8 +25,11 @@ n=(fix(floe.rmax/ddx)+1); n=ddx*(-n:n);
 P = [Xg(:) Yg(:)];
 
  vertnew = DouglasPeucker(floe.poly.Vertices,SimpMin(floe.area));
+ if length(vertnew) >= length(floe.poly.Vertices)
+     vertnew = DouglasPeucker(floe.poly.Vertices,2*SimpMin(floe.area));
+ end
  polynew = polyshape(vertnew);
- if sum(area(intersect(floe.poly,polynew)))/floe.area < 0.5 && area(polynew) > 3500
+ if sum(area(intersect(floe.poly,polynew)))/floe.area < 0.5 && area(polynew) > 1e6
      xx = 1;
      xx(1) = [1 2];
  end
@@ -147,5 +152,6 @@ end
 
 warning('on',id)
 warning('on',id2)
+warning('on',id3)
 end
 

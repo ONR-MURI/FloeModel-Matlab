@@ -26,8 +26,9 @@ winds=[10 10];
 height.mean = 2;
 height.delta = 0.5; %max difference between a flow thickness and the mean floe value
 
-target_concentration=1; % could be a vector
+target_concentration=0.7; % could be a vector
 Floe = initialize_concentration(target_concentration, c2_boundary,ocean,SUBFLOES,height, 75);
+% load FloeBase
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 %%
 
