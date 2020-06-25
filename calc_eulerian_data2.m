@@ -29,8 +29,11 @@ for ii = 1:Nx
             box = polyshape(bound(1,:), bound(2,:));
             overlap = intersect(box,[Floe(logical(potentialInteractions(jj,ii,:))).poly]);
             Aover = area(overlap);
-            Area = sum(Aover);
-            c(jj,ii) = Area/area(box);
+            if sum(Aover) > 0
+                polyu = union([overlap(Aover>0)]);
+                Area = area(polyu);
+                c(jj,ii) = Area/area(box);
+            end     
         end
         if c(jj,ii) > 0
             vel.u(jj,ii) = sum(cat(1,Floe(logical(potentialInteractions(jj,ii,:))).Ui)'.*Aover)./Area;

@@ -107,28 +107,76 @@ else
  %      A_rot=[cos(dalpha) -sin(dalpha); sin(dalpha) cos(dalpha)]; %rotation matrix
  %      floe.poly.Vertices=(A_rot*(floe.poly.Vertices - [floe.Xi floe.Yi])')'; %rotate floe contour around its old center of mass
 
-        floe.poly=rotate(floe.poly,dalpha*180/pi,[floe.Xi, floe.Yi]);
-        dx=1.5*dt*floe.Ui-0.5*dt*floe.dXi_p;
-        floe.Xi=floe.Xi+dx;  floe.dXi_p=floe.Ui;
-        
-        dy=1.5*dt*floe.Vi-0.5*dt*floe.dYi_p;
-        floe.Yi=floe.Yi+dy;  floe.dYi_p=floe.Vi;
-        
-        floe.poly.Vertices= floe.poly.Vertices + [dx dy];  % shift by its updated center coordinate
-        
-        % updating the ice floe velocities with mean forces and torques
-        dUi_dt=(mean(Fx(floe_mask))*floe_area+ext_force(1))/floe_mass;
-        du=1.5*dt*dUi_dt-0.5*dt*floe.dUi_p;
-        floe.Ui=floe.Ui+du;  floe.dUi_p=dUi_dt;
-        
-        dVi_dt=(mean(Fy(floe_mask))*floe_area+ext_force(2))/floe_mass;
-        dv=1.5*dt*dVi_dt - 0.5*dt*floe.dVi_p;
-        floe.Vi=floe.Vi+dv;  floe.dVi_p=dVi_dt;
-        
-        dksi_ice_dt=(mean(torque(floe_mask))*floe_area+ext_torque)/floe_inertia_moment;
-        dksi=1.5*dt*dksi_ice_dt - 0.5*dt*floe.dksi_ice_p;
-        floe.ksi_ice=floe.ksi_ice+dksi; floe.dksi_ice_p=dksi_ice_dt;
-        
+            
+            vorVert = (A_rot*([floe.vorX floe.vorY] - [floe.Xi floe.Yi])')';
+            floe.vorX = vorVert(:,1)+floe.Xi; floe.vorY = vorVert(:,2)+floe.Yi;
+            dx=1.5*dt*floe.Ui-0.5*dt*floe.dXi_p;
+            floe.Xi=floe.Xi+dx; floe.Xm=floe.Xm+dx;  floe.dXi_p=floe.Ui;
+            floe.vorX = floe.vorX + dx; floe.vorbox(:,1) = floe.vorbox(:,1) + dx;
+            
+            dy=1.5*dt*floe.Vi-0.5*dt*floe.dYi_p;
+            floe.Yi=floe.Yi+dy;  floe.Ym=floe.Ym+dy;floe.dYi_p=floe.Vi;
+%             for ii = 1:length(floe.SubFloes)
+%                 floe.SubFloes(ii).poly = translate(floe.SubFloes(ii).poly,[dx dy]);
+%             end
+            floe.vorY = floe.vorY + dy; floe.vorbox(:,2) = floe.vorbox(:,2) + dy;
+            
+            
+            %floe.poly.Vertices= floe.poly.Vertices + [dx dy];  % shift by its updated center coordinate
+            floe.poly = translate(floe.poly,[dx,dy]);
+            
+            polyout = sortregions(floe.poly,'area','descend');
+            R = regions(polyout);
+            floe.poly = R(1);
+            
+            if SUBFLOES
+                for ii = 1:length(floe.SubFloes)
+                    floe.SubFloes(ii).poly=rotate(floe.SubFloes(ii).poly,dalpha*180/pi,[floe.Xi, floe.Yi]);
+                    floe.SubFloes(ii).poly = translate(floe.SubFloes(ii).poly,[dx dy]);
+                    floe.SubFloes(ii).h = floe.SubFloes(ii).h + dh;
+                    if floe.SubFloes(ii).h > 30; floe.SubFloes(ii).h = 30; end;
+                end
+            else
+                floe.SubFloes = [];
+                floe.SubFloes.poly = floe.poly;
+                floe.SubFloes.h = floe.h;
+            end
+            
+            % updating the ice floe velocities with mean forces and torques
+            dUi_dt=(mean(Fx(floe_mask))*floe_area+ext_force(1))/floe_mass;
+            du=1.5*dt*dUi_dt-0.5*dt*floe.dUi_p;
+            if abs(du) > 1 
+                du = sign(du);
+            end
+            floe.Ui=floe.Ui+du;  floe.dUi_p=dUi_dt;
+            if abs(floe.Ui) > 5
+                xx = 1;
+                xx(1) = [1 2];
+            end
+            
+            dVi_dt=(mean(Fy(floe_mask))*floe_area+ext_force(2))/floe_mass;
+            dv=1.5*dt*dVi_dt - 0.5*dt*floe.dVi_p;
+            if abs(dv) > 1 
+                dv = sign(dv);
+            end
+            floe.Vi=floe.Vi+dv;  floe.dVi_p=dVi_dt;
+            if  abs(floe.Vi) > 5
+                xx = 1;
+                xx(1) = [1 2];
+            end
+                       
+            dksi_ice_dt=(mean(torque(floe_mask))*floe_area+ext_torque)/floe.inertia_moment;
+            dksi=1.5*dt*dksi_ice_dt - 0.5*dt*floe.dksi_ice_p;
+            floe.ksi_ice=floe.ksi_ice+dksi; floe.dksi_ice_p=dksi_ice_dt;
+            
+            
+            if ~isempty(floe.potentialInteractions)
+                if area(intersect(floe.poly,union([floe.potentialInteractions.c])))/floe.area > 0.5
+                    floe.alive=0;
+                end
+            end
+        end
+
     end
 end
 
