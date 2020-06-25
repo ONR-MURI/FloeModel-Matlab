@@ -109,10 +109,10 @@ for ii = 1:Nx
             box = polyshape(bound(1,:), bound(2,:));
             overlap = intersect(box,[Floe(logical(potentialInteractions(jj,ii,:))).poly]);
             Aover = area(overlap);
-            polyu = union([overlap(Aover>0)]);
-            Area = area(polyu);
-            if sum(Area) > 0
-                eularian_data.c(jj,ii) = Area/area(box);
+            if sum(Aover) > 0
+                polyu = union([overlap(Aover>0)]);
+                Area = area(polyu);
+                c(jj,ii) = Area/area(box);
             end     
         end
         if eularian_data.c(jj,ii) > 0
@@ -127,7 +127,8 @@ for ii = 1:Nx
         end
     end
 end
-
+xx = 1;
+xx(1) = [1 2];
 warning('on',id)
 end
 
