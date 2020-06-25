@@ -73,10 +73,6 @@ y = fliplr(y);
 dx = abs(x(2)-x(1));
 dy = abs(y(2)-y(1));
 eularian_data.c = zeros(Ny,Nx);
-eularian_data.vel.u = eularian_data.c;
-eularian_data.vel.v = eularian_data.c;
-eularian_data.accel.du = eularian_data.c;
-eularian_data.accel.dv = eularian_data.c;
 [xx,yy] = meshgrid(0.5*(x(1:end-1)+x(2:end)),0.5*(y(1:end-1)+y(2:end)));
 xf = cat(1,Floe.Xi);
 yf = cat(1,Floe.Yi);
@@ -109,10 +105,10 @@ for ii = 1:Nx
             box = polyshape(bound(1,:), bound(2,:));
             overlap = intersect(box,[Floe(logical(potentialInteractions(jj,ii,:))).poly]);
             Aover = area(overlap);
-            if sum(Aover) > 0
-                polyu = union([overlap(Aover>0)]);
-                Area = area(polyu);
-                c(jj,ii) = Area/area(box);
+            polyu = union([overlap(Aover>0)]);
+            Area = area(polyu);
+            if sum(Area) > 0
+                eularian_data.c(jj,ii) = Area/area(box);
             end     
         end
         if eularian_data.c(jj,ii) > 0
@@ -127,8 +123,7 @@ for ii = 1:Nx
         end
     end
 end
-xx = 1;
-xx(1) = [1 2];
+
 warning('on',id)
 end
 
