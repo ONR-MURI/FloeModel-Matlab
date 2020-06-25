@@ -3,7 +3,6 @@ function [Floe] = MeldFloes(Floe,dhdt,Amax,SUBFLOES,Nx,Ny,c2_boundary,PERIODIC)
 %   Detailed explanation goes here
 FloeOld = Floe;
 i = 1; 
-count = 0;
 floenew = [];
 ramp = @(frac) heaviside(frac)*frac;
 SimpMin = @(A) 15*log10(A);
@@ -18,23 +17,12 @@ while i < length(Floe)
                     areaPoly = area(polyout);
                     frac = (Floe(i).area+Floe(j).area)/Amax;
                     p = rand(1);
-%                     if areaPoly/Floe(i).area > 0.99
-%                         p=0;
-%                     elseif areaPoly/Floe(j).area > 0.99
-%                         p=0;
-%                     end
-                    %                     if p <ramp((1-frac)^5*dhdt) && polyout.NumRegions ==1 %areaPoly>0
+                    if areaPoly/Floe(i).area > 0.99
+                        p=0;
+                    elseif areaPoly/Floe(j).area > 0.99
+                       p=0;
+                    end
                     if p <ramp((1-frac)^5*dhdt) && polyout.NumRegions ==1 %areaPoly>0
-%                         [p ramp((1-frac)^5*dhdt)]
-%                         if areaPoly/Floe(i).area > 0.99
-%                             p=0;
-%                             xx = 1;
-%                             xx(1) = [1 2];
-%                         elseif areaPoly/Floe(j).area > 0.99
-%                             p=0;
-%                             xx = 1;
-%                             xx(1) = [1 2];
-%                         end
                         floeold = Floe(i);
                         floe2 = Floe(j);
                         floe = FuseFloes(Floe(i),Floe(j),SUBFLOES);
@@ -51,7 +39,7 @@ while i < length(Floe)
                                 floenew = [floenew floe(jj)];
                             end
                         end
-                        count = count+1;
+                        
 
                     end
                 

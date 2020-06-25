@@ -1,4 +1,4 @@
-function [vornb,vorvx,Aaug,baug] = polybnd_voronoi(pos,bnd_pnts)
+function [vornb,vorvx,Aaug,baug,worked] = polybnd_voronoi(pos,bnd_pnts)
 % -------------------------------------------------------------------------
 % -------------------------------------------------------------------------
 % [Voronoi neighbor,Voronoi vertices] = voronoi_3d(points, boundary)
@@ -22,6 +22,7 @@ function [vornb,vorvx,Aaug,baug] = polybnd_voronoi(pos,bnd_pnts)
 %       con2vert.m (Michael Keder)
 % -------------------------------------------------------------------------
 % Written by Hyongju Park, hyongju@gmail.com / park334@illinois.edu
+worked = 0;
 
 K = convhull(bnd_pnts);
 bnd_pnts = bnd_pnts(K,:);
@@ -74,9 +75,13 @@ end
 for i =1:size(pos,1)
    V{i}= MY_con2vert(Aaug{i},baug{i});
     
-   try ID{i} = convhull(V{i});
-   catch ID{i} = convhull(V{i});
+   if length(V{i}) > 2
+       try ID{i} = convhull(V{i});
+       catch ID{i} = convhull(V{i});
+       end
+       vorvx{i} = V{i}(ID{i},:);
+   else
+       vorvx{i} = nan;
+       worked = 1;
    end
-   
-   vorvx{i} = V{i}(ID{i},:);
 end

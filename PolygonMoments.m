@@ -1,4 +1,4 @@
-function IzzAC = PolygonMoments (xy,h)
+function Izz = PolygonMoments (xy,h)
 if nargin==0
 error('*** PolygonMoments: missing all arguments')
 elseif nargin==1
@@ -29,14 +29,14 @@ Polygon.MAy=1/6 *sum(wi.*(x(1:N) + x(2:N+1)));
 Polygon.Ixx=1/12*sum(wi.*(  (y(1:N)+y(2:N+1)).^2 - y(1:N).*y(2:N+1)));
 Polygon.Iyy=1/12*sum(wi.*(  (x(1:N)+x(2:N+1)).^2 - x(1:N).*x(2:N+1)));
 Polygon.Ixy=1/24*sum(wi.*( (x(1:N)+x(2:N+1)).*(y(1:N)+y(2:N+1))  + x(1:N).*y(1:N) + x(2:N+1).*y(2:N+1) ));
-Izz=Polygon.Ixx+Polygon.Iyy;
+Izz=abs(Polygon.Ixx+Polygon.Iyy)*h*rho_ice;
 % coordinates of the area centroid:
-Polygon.ACx=Polygon.MAy/Polygon.Area;
-Polygon.ACy=Polygon.MAx/Polygon.Area;
-% area moments in the area centroid:
-Polygon.IxxAC=Polygon.Ixx-Polygon.ACy^2*Polygon.Area;
-Polygon.IyyAC=Polygon.Iyy-Polygon.ACx^2*Polygon.Area;
-Polygon.IxyAC=Polygon.Ixy-Polygon.ACx*Polygon.ACy*Polygon.Area;
-IzzAC=abs(Polygon.IxxAC+Polygon.IyyAC)*h*rho_ice;
+% Polygon.ACx=Polygon.MAy/Polygon.Area;
+% Polygon.ACy=Polygon.MAx/Polygon.Area;
+% % area moments in the area centroid:
+% Polygon.IxxAC=Polygon.Ixx-Polygon.ACy^2*Polygon.Area;
+% Polygon.IyyAC=Polygon.Iyy-Polygon.ACx^2*Polygon.Area;
+% Polygon.IxyAC=Polygon.Ixy-Polygon.ACx*Polygon.ACy*Polygon.Area;
+% IzzAC=abs(Polygon.IxxAC+Polygon.IyyAC)*h*rho_ice;
 
 end
