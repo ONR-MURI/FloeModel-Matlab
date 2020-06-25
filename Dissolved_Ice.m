@@ -86,4 +86,5 @@ Vd_new(3:Ny-2,3:Nx-2) = Vd_new(3:Ny-2,3:Nx-2)-dt*Advec;
 
 %end
 Vd_new = Vd_new(3:Ny-2,3:Nx-2);
+Vd_new(Vd_new<0) = 0;
 end
