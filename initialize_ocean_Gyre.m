@@ -1,4 +1,9 @@
+
 function [ocean, c2_boundary]=initialize_ocean_Gyre(transport, Lx, Ly,dXo)
+
+ocean.fCoriolis=1.4e-4; % Coriolis parameter.
+
+ocean.turn_angle=15*pi/180; % turning angle between the stress and surface current due to the Ekman spiral; the angle is positive!
 
 % transport=1e3; % horizontal transport, in m^2/s (controls ocean currents) 
 % defining ocean currents
@@ -6,8 +11,9 @@ function [ocean, c2_boundary]=initialize_ocean_Gyre(transport, Lx, Ly,dXo)
 % ocean grid;
 %dXo=2000; % in meters
 
-Xo=(-Lx/2-2*dXo):dXo:(Lx/2+2*dXo); 
-Yo=(-Ly/2-2*dXo):dXo:(Ly/2+2*dXo); 
+%Xo=(-Lx/2-2*dXo):dXo:(Lx/2+2*dXo); 
+Xo=-Lx:dXo:Lx;   %large extent in the x-dir for a channel
+Yo=-Ly:dXo:Ly; 
 
 [Xocn, Yocn]=meshgrid(Xo,Yo);
 
@@ -20,7 +26,7 @@ c2_boundary = [x; y];
 psi_ocean=transport*sin(2*pi*Xocn/Lx).*sin(2*pi*Yocn/Ly); 
 
 
-figure; imagesc(psi_ocean);
+%figure; imagesc(psi_ocean);
 %title('Ocean Streamfunction');
 
 %calculating ocean velocity field 
