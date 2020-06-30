@@ -35,7 +35,7 @@ Dissolved_new(3:Ny-2,3:Nx-2) = dissolved_new;
 x = min(c2_boundary(1,:)):(max(c2_boundary(1,:))-min(c2_boundary(1,:)))/(Nx-2):max(c2_boundary(1,:));
 y = min(c2_boundary(2,:)):(max(c2_boundary(2,:))-min(c2_boundary(2,:)))/(Ny-2):max(c2_boundary(2,:));
 delx = abs(x(2)-x(1));
-dely = abs(y(2)-y(1));
+dely = -abs(y(2)-y(1));
 
 %% Find differentiation matrix for x
 d2x = zeros(Nx,Nx);
