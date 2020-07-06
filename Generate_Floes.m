@@ -1,12 +1,11 @@
-function [Floe2]= FloeGeneratorConcentration(Floe,c2_boundary,Target,N,SUBFLOES,height)
-%% 
+function [Floe2]= Generate_Floes(Floe,c2_boundary,Target,N,SUBFLOES,height)
+%%This function generates new floes to match some target concentration 
 
 %Generate set of random points
 ddx = 250;
 id ='MATLAB:polyshape:boundary3Points';
 warning('off',id)
 SHIFT = false;
-%load FloeVoronoi;
 N = floor(4*N);%floor(((max(c2_boundary(2,:))-min(c2_boundary(2,:)))*(max(c2_boundary(2,:))-min(c2_boundary(2,:))))/(mean(cat(1,Floe.area))/4));
 N0 = fix(N^(1/3));
 if N0<10
@@ -18,15 +17,9 @@ dx = max(x)-min(x);
 dy = max(y)-min(y);
 [X,Y] = PointGenerator(N,c2_boundary,35*ddx,N0);
 Y = Y';
-% X = min(c2_boundary(1,:))-dx/2+2*rand(1,N)*dx;
-% Y = min(c2_boundary(2,:))-dy/2+2*rand(1,N)*dy;
 
 %Remove any points form inside current floes
 for ii = 1:length(Floe)
-%     edge = [1:length(Floe(ii).poly.Vertices); 2:length(Floe(ii).poly.Vertices) 1];
-%     [stat,~] = inpoly2([X',Y'],Floe(ii).poly.Vertices,edge') ;
-%     X(stat) = [];
-%     Y(stat) = [];
     [In] =inpolygon(X,Y,Floe(ii).poly.Vertices(:,1),Floe(ii).poly.Vertices(:,2));
     X(In) = [];
     Y(In) = [];
@@ -64,7 +57,6 @@ cnow = Area/((max(c2_boundary(2,:))-min(c2_boundary(2,:)))*(max(c2_boundary(1,:)
 
 %randomize order for polygons to be added as floes
 R = randperm(length(C));
-% R = randperm(length(FloeV));
 
 
 % Loop until target concentration is reached
@@ -82,12 +74,13 @@ else
     rmax = [];
     alive = [];
 end
+
+%Loop through adding in floes until the target concentration is reached
 while cnow < Target
     %Take set of vertices from Voronoi and generate polyshape for floe
     if ii>length(R)
         Anew = 0;
     elseif R(ii) > length(C)
-%     elseif R(ii) > length(FloeV)
         Anew = 0;
     else
         if C{R(ii)}(1) ==1 %avoid V(1,:) which is inf
@@ -99,9 +92,10 @@ while cnow < Target
         Vnow2 = V(C{R(ii)},2);
         Vnow2(isnan(Vnow2))=[];
         poly1 = polyshape(Vnow1,Vnow2);
-%         poly1 = FloeV(R(ii));
         
-        % Generator Potential Interactions for newly created floes
+        % Generator Potential Interactions for newly created floes and
+        % remove any overlapping regions from exisiting floes. Calculate
+        % values for floe properties
         FloeNEW(ii).potentialInteractions=[];
         [xi, yi] = centroid(poly1);
         r_max = sqrt(max(sum((poly1.Vertices' - [xi;yi]).^2,1)));
@@ -112,7 +106,6 @@ while cnow < Target
                     if area(poly1)>0
                         FloeNEW(ii).potentialInteractions(k).floeNum=j;
                         FloeNEW(ii).potentialInteractions(k).c=Floe(j).poly;
-%                         [In] =inpolygon(poly1.Vertices(:,1),poly1.Vertices(:,2),Floe(jj).poly.Vertices(:,1),Floe(jj).poly.Vertices(:,2));
                         edge = [1:length(Floe(j).poly.Vertices); 2:length(Floe(j).poly.Vertices) 1];
                         [stat,~] = inpoly2([poly1.Vertices(:,1),poly1.Vertices(:,2)],Floe(j).poly.Vertices,edge') ;
                         k=k+1;
@@ -148,7 +141,6 @@ while cnow < Target
     end
     
     if ii >= length(C)
-%     if ii >= length(FloeV)
         cnow = 1;
     end
     ii = ii+1;

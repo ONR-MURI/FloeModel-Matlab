@@ -1,4 +1,8 @@
 function [FloeWhole,FloeNEW] = ridge_values_update(FloeWhole,FloeLess, overlap1, overlap2, V, Area)
+%%This function calculates the values for the floes after their shapes and
+%%mass get updated after ridging
+
+%Store a copy of this structure for later reference
 Floe2 = FloeLess;
 
 %   Calculate values for Floe gaining the new ice
@@ -43,8 +47,6 @@ FloeNEW = [];
 for kk = 1:length(R)
     FloeLess = Floe2;
     poly2new = R(kk);
-    %shift = [(-1)^randi([0 1])*rand (-1)^randi([0 1])*rand];
-    %poly2new = translate(poly2new, shift);
     FloeLess.poly = poly2new;
     FloeLess.area = area(poly2new);
     [Xi,Yi] = centroid(poly2new);
@@ -62,13 +64,11 @@ for kk = 1:length(R)
             R2 = regions(polyout);
             poly2new = R2(1);
             poly2new = rmholes(poly2new);
-            %poly2new = translate(poly2new, shift);
             FloeLess.SubFloes(overlap2(ii)).poly = poly2new;
             if length(R2) > 1
                 poly2new = R2(2);
                 poly2new = rmholes(poly2new);
                 if area(poly2new) > 1000
-%                     poly2new = translate(poly2new, shift);
                     FloeLess.SubFloes(length(FloeLess.SubFloes)+1).poly = poly2new;
                     FloeLess.SubFloes(length(FloeLess.SubFloes)).h = FloeLess.SubFloes(overlap2(ii)).h;
                 end
@@ -105,22 +105,9 @@ for kk = 1:length(R)
     FloeLess.Ym = sum(rho_ice*areaS.*cat(1,FloeLess.SubFloes.h).*centers(:,2))./FloeLess.mass;
     FloeLess.inertia_moment = sum(inertia+cat(1,FloeLess.SubFloes.h).*sqrt((centers(:,1)-FloeLess.Xm).^2+(centers(:,2)-FloeLess.Ym).^2));
     FloeLess.rmax = sqrt(max(sum((FloeLess.poly.Vertices' - [FloeLess.Xi; FloeLess.Yi]).^2,1)));
-    % if isempty(FloeLess.SubFloes)
-    %     SUBFLOES = true;
-    %     FloeLess = initialize_floe_values(FloeLess.poly,SUBFLOES);
-    %     disp('SubFloes term is empty');
-    % end
+
     FloeNEW = [FloeNEW FloeLess];
-%     if kk > 1
-%         xx = 1;
-%         xx(1) = [1 2];
-%     end
 end
-for ii = 1:length(FloeNEW)
-    if FloeNEW(ii).poly.NumRegions > 1
-        xx = 1;
-        xx(1) = [1 2];
-    end
-end
+
 end
 

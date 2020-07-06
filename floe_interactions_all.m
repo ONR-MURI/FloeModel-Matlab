@@ -1,5 +1,10 @@
-function [Floe,dissolvedNEW, SackedOB] = floe_interactions_all_doublePeriodicBCs_bpm(Floe, ocean, winds,heat_flux,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES)
+function [Floe,dissolvedNEW, SackedOB] = floe_interactions_all(Floe, ocean, winds,heat_flux,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES)
+%This function time steps the floe model forward by creating ghost floes if
+%periodic. Then calculating the forces between all interacting floes and
+%using the forces to time step each individual floes forward. Once these
+%floes have been advanced if ridging is allowed this process is run
 
+%Create a polyshape for the boundary 
 Lx= max(c2_boundary_poly.Vertices(:,1));
 Ly= max(c2_boundary_poly.Vertices(:,2));%c2 must be symmetric around x=0 for channel boundary conditions.
 x=[-1 -1 1 1 -1]*Lx*2; 
@@ -7,11 +12,10 @@ y=[-1 1 1 -1 -1]*Ly*2;
 polybound = polyshape(x,y);
 c2_poly = subtract(polybound,c2_boundary_poly);
 
-%%
-N0=length(Floe);
+%% Create ghost floes in the case that periodicity is being used
 
-Lx= max(c2_boundary_poly.Vertices(:,1));
-Ly= max(c2_boundary_poly.Vertices(:,2));%c2 must be symmetric around x=0 for channel boundary conditions.
+%Identify the length of original floe variable before creating ghost floes
+N0=length(Floe);
 
 if PERIODIC
     
@@ -75,13 +79,15 @@ if PERIODIC
     
 end
 
+%Find length of new Floe variable including the ghost floes
 N=length(Floe);
 x=cat(1,Floe.Xi);
 y=cat(1,Floe.Yi);
 rmax=cat(1,Floe.rmax);
 alive=cat(1,Floe.alive);
 
-for i=1:N  %do interactions with boundary in a separate parfor loop
+%Idenfity all interacting floes
+for i=1:N 
     
     Floe(i).interactions=[];
     
@@ -97,13 +103,10 @@ for i=1:N  %do interactions with boundary in a separate parfor loop
     
     if ( alive(i) && ~isnan(x(i)) )
         for j=1:N
-            %display(j);
             if j>i && alive(j)
                                 
                 if sqrt((x(i)-x(j))^2 + (y(i)-y(j))^2)<(rmax(i)+rmax(j)) % if floes are potentially overlapping
                 Floe(i).potentialInteractions(k).floeNum=j;
-%                Floe(i).potentialInteractions(k).c=[Floe(j).c_alpha(1,:)+Floe(j).Xi; Floe(j).c_alpha(2,:)+Floe(j).Yi];
-           %     Floe(i).potentialInteractions(k).c=Floe(j).poly;
                 k=k+1;
             
                 end
@@ -123,9 +126,7 @@ for i=1:N  %do interactions with boundary in a separate parfor loop
     end
 end
 
-%%
-c2_boundary = c2_boundary_poly.Vertices';
-
+%% Calculate forces between interacting floes
 
 for i=1:N  %now the interactions could be calculated in a parfor loop!
     
@@ -136,52 +137,40 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
         NpotInter=length(Floe(i).potentialInteractions);
         for k=1:NpotInter
             
-            floeNum=Floe(i).potentialInteractions(k).floeNum;
-            
-            %Floe(i).potentialInteractions(k).overlapArea=0;
-            
+            %Create polyshape for interacting floes
+            floeNum=Floe(i).potentialInteractions(k).floeNum;            
             c2=Floe(i).potentialInteractions(k).c;
             
-            [force_j,P_j,worked,live] = floe_interactions_bpm2(c1,c2);
+            %Calcualte the forces between the two
+            [force_j,P_j,worked,live] = floe_interactions_poly(c1,c2);
             
+            %If any floes do not survive interactions put their mass in
+            %dissolved variable
             if live(1) == 0
-                dissolvedNEW = dissolvedNEW+calc_vol_dissolved(Floe(i),Nx,Ny,c2_boundary_poly);
+                dissolvedNEW = dissolvedNEW+calc_dissolved_mass(Floe(i),Nx,Ny,c2_boundary_poly);
                 Floe(i).alive = 0;
             elseif live(2) == 0
-                dissolvedNEW = dissolvedNEW+calc_vol_dissolved(Floe(floeNum),Nx,Ny,c2_boundary_poly);
+                dissolvedNEW = dissolvedNEW+calc_dissolved_mass(Floe(floeNum),Nx,Ny,c2_boundary_poly);
                 Floe(floeNum).alive = 0;
             end
             
-            %if ~worked, disp(['potential contact issue for floes (' num2str(i) ',' num2str(floeNum) ')' ]); end
             
             if sum(abs(force_j(:)))~=0 && abs(P_j(1))<Lx && abs(P_j(2))<Ly %make sure to count only interactions inside the domain, even for ghost floes
                 Floe(i).interactions=[Floe(i).interactions ; floeNum*ones(size(force_j,1),1) force_j P_j zeros(size(force_j,1),1)];
-              %  Floe(i).potentialInteractions(k).overlapArea=area(intersect(c1,c2));
             end
             
         end
-%         if NpotInter > 1
-%             c2 = union([Floe(i).potentialInteractions.c]);
-%         else
-%             c2 = Floe(i).potentialInteractions.c;
-%         end
-%         
-%         [force_j,P_j,worked] = floe_interactions_bpm2(c1,c2);
-%                 
-%         if sum(abs(force_j))~=0
-%             Floe(i).interactions=[Floe(i).interactions ; ones(size(force_j,1),1) force_j P_j zeros(size(force_j,1),1)];
-%         end
         
     end
     
+    %If not periodic then calculate interactions with boundary
     if ~PERIODIC
-        [force_b, P_j, worked,live] = floe_interactions_bpm2(c1, c2_poly);
+        [force_b, P_j, worked,live] = floe_interactions_poly(c1, c2_poly);
         if live(1) == 0
-            dissolvedNEW = dissolvedNEW+calc_vol_dissolved(Floe(i),Nx,Ny,c2_boundary_poly);
+            dissolvedNEW = dissolvedNEW+calc_dissolved_mass(Floe(i),Nx,Ny,c2_boundary_poly);
             Floe(i).alive = 0;
         end
         if sum(abs(force_b(:)))~=0 %; subtracting 0.1m to ensure that interactions with x=+-Lx boundary are excluded as this is a periodic boundary.
-            % boundary will be recorded as floe number Inf;
             Floe(i).interactions=[Floe(i).interactions ; Inf*ones(size(force_b,1),1) force_b P_j zeros(size(force_b,1),1)];
             Floe(i).OverlapArea=area(c1)-area(intersect(c1,c2_boundary_poly)); % overlap area with the boundary only
         end
@@ -239,6 +228,10 @@ for i=1:N
        Floe(i).collision_force=sum(Floe(i).interactions(:,2:3),1);
        Floe(i).collision_torque=sum(Floe(i).interactions(:,6),1);
        
+       if isinf(Floe(i).collision_torque) || isinf(max(abs(Floe(i).collision_force)))
+           xx =1;
+           xx(1) = [1 2];
+       end
     end
     
 end
@@ -253,7 +246,6 @@ if PERIODIC
 end
 
 %% 
-
 
 %Do the timestepping for parent floes now that their forces and torques are known.
 for i=1:N0
@@ -275,7 +267,6 @@ for i=1:N0
             end
             
             if abs(Floe(i).Yi)>Ly %if floe got out of periodic bounds, put it on the other end
-                %
                 Floe(i).poly=translate(Floe(i).poly,[0 -2*Ly*sign(Floe(i).Yi)]);
                 Floe(i).Ym=Floe(i).Ym-2*Ly*sign(Floe(i).Yi);
                 for ii = 1:length(Floe(i).SubFloes)
@@ -294,7 +285,7 @@ for i=1:N0
             Floe(i).alive=0; 
             SackedOB = SackedOB +1;
         elseif Floe(i).alive == 0
-            dissolvedNEW = calc_vol_dissolved(Floe(i),Nx,Ny,c2_boundary_poly);
+            dissolvedNEW = calc_dissolved_mass(Floe(i),Nx,Ny,c2_boundary_poly);
             Floe(i) = [];
         else
             Floe(i)=tmp;
@@ -307,26 +298,31 @@ for i=1:N0
     
 end
 
+%% Now performing ridging
+
 floenew = [];
-SimpMin = @(A) 15*log10(A);%15+(A-1e4)*(1e9-1e4)/(200-15);
+SimpMin = @(A) 15*log10(A);%create function for limit on number of vertices a floe can have
 
 if RIDGING
-    
+    %Create a function to control probability that ridging will occur
+    overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
+    keep=rand(length(Floe),1)>overlapArea;
     for i=1:N0
         
-        if Floe(i).alive
+        if Floe(i).alive && keep(i)
             
             if ~isempty(Floe(i).potentialInteractions)
                 
                 
                 for k = 1:length(Floe(i).potentialInteractions)
-
-                                        
+               
                     
                     if Floe(i).potentialInteractions(k).floeNum<= N0
                         floeNum = Floe(i).potentialInteractions(k).floeNum;
-                        [Floe1,Floe2,dissolvedNEW] = ridging(dissolvedNEW,Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),Nx,Ny,c2_boundary_poly,PERIODIC,SUBFLOES);
+                        [Floe1,Floe2,dissolvedNEW] = ridging(dissolvedNEW,Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),Nx,Ny,c2_boundary_poly,PERIODIC);
                     else
+                        %Identify parent floes that can ridge and move them
+                        %to ghost cell location
                         floeNum = parent(Floe(i).potentialInteractions(k).floeNum - N0);
                         trans = translation(Floe(i).potentialInteractions(k).floeNum-N0,:);
                         if floeNum > N0
@@ -334,29 +330,30 @@ if RIDGING
                             floeNum = parent(floeNum-N0);
                         end
                         Floe2 = Floe(floeNum);
-
-                            Floe2.poly=translate(Floe2.poly,trans);
-                            for ii = 1:length(Floe2.SubFloes)
-                                Floe2.SubFloes(ii).poly=translate(Floe2.SubFloes(ii).poly,trans);
-                            end
-                            Floe2.vorX=Floe2.vorX+trans(1);
-                            Floe2.vorbox(:,1)=Floe2.vorbox(:,1)+trans(1);
-                            Floe2.Xm=Floe2.Xm+trans(1);
-                            Floe2.Xi=Floe2.Xi+trans(1);
-
-                            Floe2.vorY=Floe2.vorY+trans(2);
-                            Floe2.vorbox(:,2)=Floe2.vorbox(:,2)+trans(2);
-                            Floe2.Ym=Floe2.Ym+trans(2);
-                            Floe2.Yi=Floe2.Yi+trans(2);
-
+                        
+                        Floe2.poly=translate(Floe2.poly,trans);
+                        for ii = 1:length(Floe2.SubFloes)
+                            Floe2.SubFloes(ii).poly=translate(Floe2.SubFloes(ii).poly,trans);
+                        end
+                        Floe2.vorX=Floe2.vorX+trans(1);
+                        Floe2.vorbox(:,1)=Floe2.vorbox(:,1)+trans(1);
+                        Floe2.Xm=Floe2.Xm+trans(1);
+                        Floe2.Xi=Floe2.Xi+trans(1);
+                        
+                        Floe2.vorY=Floe2.vorY+trans(2);
+                        Floe2.vorbox(:,2)=Floe2.vorbox(:,2)+trans(2);
+                        Floe2.Ym=Floe2.Ym+trans(2);
+                        Floe2.Yi=Floe2.Yi+trans(2);
+                        
                         overlap = intersect(Floe2.poly,Floe(Floe(i).potentialInteractions(k).floeNum).poly);
                         if area(overlap)/Floe2.area>0.9
-                      
-                            [Floe1,Floe2,dissolvedNEW] = ridging(dissolvedNEW,Floe(i),Floe2,Nx,Ny,c2_boundary_poly,PERIODIC,SUBFLOES);
+                            
+                            [Floe1,Floe2,dissolvedNEW] = ridging(dissolvedNEW,Floe(i),Floe2,Nx,Ny,c2_boundary_poly,PERIODIC);
                         else
                             Floe1 = Floe(i);
                         end
                         
+                        %Translate back to original floe location
                         if trans(1)
                             for jj = 1:length(Floe2)
                                 Floe2(jj).poly=translate(Floe2(jj).poly,[-trans(1) 0]);
@@ -382,17 +379,18 @@ if RIDGING
                                 Floe2(jj).Yi=Floe2(jj).Yi-trans(2);
                             end
                         end
-                            
+                        
                     end
                     
-                    
+                    %Check if any floe simplification is necessary
                     for kk = 1:length(Floe1)
                         floe = Floe1(kk);
+                        ddx = 100;
                         if length(floe.poly.Vertices) > SimpMin(floe.area)
-                            floe = FloeSimplify(floe, 250,SUBFLOES);
+                            floe = FloeSimplify(floe, ddx,SUBFLOES);
                         end
                         for jj = 1:length(floe)
-
+                            
                             if kk == 1 && jj == 1
                                 Floe(i) = floe(jj);
                             else
@@ -404,10 +402,10 @@ if RIDGING
                     for kk = 1:length(Floe2)
                         floe = Floe2(kk);
                         if length(floe.poly.Vertices) > SimpMin(floe.area)
-                            floe = FloeSimplify(floe, 250,SUBFLOES);
+                            floe = FloeSimplify(floe, ddx,SUBFLOES);
                         end
                         for jj = 1:length(floe)
-
+                            
                             if kk == 1 && jj == 1
                                 Floe(floeNum) = floe(jj);
                             else
@@ -418,15 +416,15 @@ if RIDGING
                     
                     
                 end
-            poly1 = Floe(Floe(i).potentialInteractions(1).floeNum).poly;
-            if length(Floe(i).potentialInteractions)>1
-                for kk = 2:length(Floe(i).potentialInteractions)
-                    poly1 = union(poly1,Floe(Floe(i).potentialInteractions(kk).floeNum).poly);
-                end
+%                 poly1 = Floe(Floe(i).potentialInteractions(1).floeNum).poly;
+%                 if length(Floe(i).potentialInteractions)>1
+%                     for kk = 2:length(Floe(i).potentialInteractions)
+%                         poly1 = union(poly1,Floe(Floe(i).potentialInteractions(kk).floeNum).poly);
+%                     end
+%                 end
+                
             end
-
-            end
-
+            
         end
     end
     
@@ -434,11 +432,11 @@ if RIDGING
 end
 
 Floe=Floe(1:N0); % ditch the ghost floes.
-Floe = [Floe floenew];
+Floe = [Floe floenew]; %add on any new floes that were if ridging caused one floe to become multiple
 
-Floe=rmfield(Floe,{'potentialInteractions'});
+Floe=rmfield(Floe,{'potentialInteractions'}); %remove potential interactions field
 live = cat(1,Floe.alive);
-Floe(live==0)=[];
+Floe(live==0)=[]; %remove any floes that got dissolved so they do not take up space
 
 
 end

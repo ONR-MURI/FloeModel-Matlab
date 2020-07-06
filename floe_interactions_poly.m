@@ -1,6 +1,7 @@
-function [ force_1, pcenter, worked,live] = floe_interactions_bpm2(c1, c2)
-%% 
-% Find Vertices of overlapping polygons
+function [ force_1, pcenter, worked,live] = floe_interactions_poly(c1, c2)
+%% This function calculates the forces between two interaction floes
+
+% Find overlapping areas between polygons
 live = [1 1];
 Force_factor=1.1e3;
 polyout = intersect(c1,c2);
@@ -14,7 +15,8 @@ else
 end
 
 worked=1;
-%% 
+
+%Make sure one polygon is not entirely within the other
 if areaPoly/area(c1)>0.99 && areaPoly/area(c2)>0.99
     x = 1;
     x(1) = [1 2];
@@ -30,8 +32,7 @@ elseif areaPoly/area(c2)>0.5 && area(c2)/area(c2)>0.05
     live(2) = 0;
 end
 
-
-%Calculate forces on different overlapping areas
+%If overlapping area is to small then set forces to zero
 if areaPoly<10
     force_1=[0 0];
     pcenter=[0 0];   
@@ -42,19 +43,18 @@ elseif areaPoly/area(c2)>0.75
     force_1=[0 0];
     pcenter=[0 0]; 
 else
-    %% 
-    
+    %Idenfity the number of overlapping regions between the polygons
     N_contact = length(R);
     force_1=zeros(N_contact,2);
     pcenter = zeros(N_contact,2);
     
-    %% 
-    
+    %Calculate the force from each of these overlaps
     for k=1:N_contact      
         poly = rmholes(R(k));
         c0 = poly.Vertices;
         [pcenter(k,1),pcenter(k,2)] = centroid(R(k));
 
+        %Idenfity the vertices of overlapping polygons
         [d_min1] = p_poly_dist(c0(:,1), c0(:,2), c1.Vertices(:,1), c1.Vertices(:,2));
         [d_min2] = p_poly_dist(c0(:,1), c0(:,2), c2.Vertices(:,1), c2.Vertices(:,2));        
         check1 = zeros(length(c0),1); check2 = check1;
@@ -71,6 +71,8 @@ else
             in = logical(checkin2);
         end
         
+        %Check to see if there are any holes in the polyshape that need to
+        %be dealt with
         if c2.NumHoles>0
             holes = isnan(c2.Vertices(:,1));
             II = find(holes==1);
@@ -82,6 +84,7 @@ else
             %Force_factor=1.5e3;
         end
         
+        %Identify points that are on edges versus in the polygons
         on = logical(abs(in-1));
         ii = 1;
         if sum(in) < 0.5 || sum(on) < 1.5
@@ -100,7 +103,6 @@ else
             overlap = true;
 
         end
-        
         
         if overlap
             numReg = 0;
@@ -136,13 +138,17 @@ else
                 dl = sqrt((in1(1:end-1,1)-in1(2:end,1)).^2 + (in1(1:end-1,2)-in1(2:end,2)).^2);
                 f_dir(jj,:) = -sum(dir.*[dl dl]);
             end
+            
+            %Find direction from all regions that contribute to this one
             f_dir = sum(f_dir,1);
             if norm(f_dir) < 0.001
-                force_dir = 0
+                force_dir = 0;
             else
                 force_dir=f_dir/norm(f_dir);
             end
-                        
+            
+            %Check to make sure force will actually push the two floes
+            %apart
             if max(max(abs(force_dir)))>0
                 displace = 5*force_dir;
                 C1(:,1) = c1.Vertices(:,1) + displace(1);

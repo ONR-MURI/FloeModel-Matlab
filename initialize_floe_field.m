@@ -1,5 +1,7 @@
-function [Floe] = initialize_concentration(c,c2_boundary,ocean,SUBFLOES,height,NumFloes)
-%% 
+function [Floe] = initialize_floe_field(c,c2_boundary,ocean,SUBFLOES,height,NumFloes)
+%% This function is used to generate the initial floe field
+
+%Identify the grids to align with the concentrations specified by the input
 SHIFT = false;
 PERIODIC = false;
 [Ny, Nx] = size(c);
@@ -10,13 +12,15 @@ y = min(c2_boundary(2,:)):(max(c2_boundary(2,:))-min(c2_boundary(2,:)))/Ny:max(c
 xf = [-1 -1 1 1 -1];
 yf = [-1 1 1 -1 -1];
 Floe = [];
+
+%Loop through all the regions of the domain to create new floes
 for jj = 1:Ny
     for ii = 1:Nx
         polynew=polyshape(mean([x(ii),(ii+1)]) +xf,mean([y(jj),y(jj+1)]) + yf);
         Floe0 = initialize_floe_values(polynew, height,SHIFT,SUBFLOES);
         Floe0.alive = 0;
         boundary = [x(ii) x(ii) x(ii+1) x(ii+1) x(ii); y(jj) y(jj+1) y(jj+1) y(jj) y(jj)];
-        [dFloe]= FloeGeneratorConcentration(Floe0,boundary,c(jj,ii),N,SUBFLOES,height);
+        [dFloe]= Generate_Floes(Floe0,boundary,c(jj,ii),N,SUBFLOES,height);
         if sum(cat(1,dFloe.area))/area(polyshape(boundary(1,:),boundary(2,:)))<c(jj,ii)
             [dFloe,~] = pack_ice(dFloe,boundary,1.1,0,c(jj,ii),ocean,height,SUBFLOES, PERIODIC);
         end

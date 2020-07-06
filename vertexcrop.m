@@ -1,4 +1,7 @@
 function [vx,vy] = vertexcrop(x,y,vx,vy)
+%%This function removes any points outside the domain and replaces them
+%%with points intersection the boundary for floe initialization
+
 nnx=0.25*abs(max(x)-min(x));
 nny=0.25*abs(max(y)-min(y));
 for ii = length(vx):-1:1

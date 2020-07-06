@@ -1,5 +1,4 @@
-
-function [ocean, c2_boundary]=initialize_ocean_Gyre(transport, Lx, Ly,dXo)
+function [ocean, c2_boundary, heat_flux,h0]=couple_ocean(transport, Lx, Ly,dXo,dt)
 
 ocean.fCoriolis=1.4e-4; % Coriolis parameter.
 
@@ -41,5 +40,10 @@ ocean.Xo=Xo;
 ocean.Yo=Yo;
 ocean.Uocn=Uocn;
 ocean.Vocn=Vocn;
+
+Tice = -20; Tocean = 2;
+heat_flux = 7.4*10^(-4)*(Tice-Tocean)/(72); %cm^2/s
+heat_flux = heat_flux/100^2;
+h0 = real(sqrt(-2*dt*heat_flux));
 
 end

@@ -1,4 +1,9 @@
-function Vd_new = Dissolved_Ice(Vd,coarseMean,im_num,dissolved_new,c2_boundary,dt)
+function Vd_new = Advect_Dissolved_Ice(Vd,coarseMean,im_num,dissolved_new,c2_boundary,dt)
+%This function takes in the the variable containing the mass of dissolved
+%sea ice on an eularian grid as well as the coarse mean eularian velocity.
+%The dissolved mass of sea ice is then advected around the floe field per
+%this information.
+
 %% find current terms
 U = squeeze(coarseMean(2,:,:,im_num));
 V = squeeze(coarseMean(3,:,:,im_num));
@@ -28,8 +33,8 @@ Vdcurrent(:,Nx-1:Nx) = [Vdcurrent(:,Nx-2) Vdcurrent(:,Nx-2)];
 %define strength of diffusion
 diffusion = 1e4;
 
-Dissolved_new = zeros(Ny,Nx);
-Dissolved_new(3:Ny-2,3:Nx-2) = dissolved_new;
+DissolvedNew = zeros(Ny,Nx);
+DissolvedNew(3:Ny-2,3:Nx-2) = dissolved_new;
 
 %% Define grid
 x = min(c2_boundary(1,:)):(max(c2_boundary(1,:))-min(c2_boundary(1,:)))/(Nx-2):max(c2_boundary(1,:));
@@ -77,7 +82,7 @@ Vshift = zeros(Ny-3,Nx-4);
 Vshift(2:end-1,:) = 0.5*(v(3:Ny-3,3:Nx-2)+v(4:Ny-2,3:Nx-2));
 %% Time step new equation for dissolved ice. Adams Basheforth for NL terms and Crank-Nicolsen for linear terms
 %Calculate RHS first without advection terms
-RHS = Vdcurrent(:)+Dissolved_new(:)+dt*diffusion*(kron(Ix,d2y)+kron(d2x,Iy))*Vdcurrent(:);
+RHS = Vdcurrent(:)+DissolvedNew(:)+dt*diffusion*(kron(Ix,d2y)+kron(d2x,Iy))*Vdcurrent(:);
 Vd_new = reshape(RHS,Ny,Nx);
 
 %calculate advection terms
@@ -86,4 +91,5 @@ Vd_new(3:Ny-2,3:Nx-2) = Vd_new(3:Ny-2,3:Nx-2)-dt*Advec;
 
 %end
 Vd_new = Vd_new(3:Ny-2,3:Nx-2);
+Vd_new(Vd_new<0) = 0;
 end

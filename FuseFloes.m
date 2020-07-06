@@ -1,6 +1,6 @@
 function [floenew] = FuseFloes(floe1,floe2,SUBFLOES)
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
+%This function takes two input floes and fuses them together while
+%conserving mass and momentum
 id ='MATLAB:polyshape:repairedBySimplify';
 warning('off',id)
 SHIFT = false;
@@ -8,6 +8,7 @@ rho_ice = 920;
 height.mean = 1.5;
 height.delta = 0;
 
+%Create and initialize the new shape
 polynew = union(floe1.poly, floe2.poly);
 polyout = sortregions(polynew,'area','descend');
 R = regions(polyout);
@@ -32,6 +33,7 @@ floenew.vorbox = [Xmin, Ymin; Xmin Ymax; Xmax, Ymax; Xmax, Ymin];
 [~, b] = polybnd_voronoi([X Y],floenew.vorbox);
 k = 1;
 
+%Loop through identify the regions of the new subfloes
 if SUBFLOES
     for i=1:length(b)
         if ~isnan(b{i}(1))
@@ -62,8 +64,6 @@ for ii = 1:N
     [Xi,Yi] = centroid(subfloes(ii));
     [I,~] = dsearchn([floex',floey'],[Xi,Yi]);
     centers(ii,:) = [Xi,Yi];
-%     poly = intersect(subfloes(ii),[floe.SubFloes.poly]);
-%     [~,I] = min(abs(area(poly)/area(subfloes(ii))-1));
     floenew.SubFloes(ii).poly = subfloes(ii);
     if SUBFLOES
         floenew.SubFloes(ii).h = h(I);
@@ -84,13 +84,7 @@ for ii = 1:N
     end
 end
 
-%% 
-% floenew.mass = sum(rho_ice*areaS.*cat(1,floenew.SubFloes.h));
-% test = abs(floenew.mass-floe1.mass-floe2.mass)/(floe1.mass+floe2.mass);
-% if test>0.01
-%     x = 1;
-%     x(1) = [1 2];
-% end
+%% Calculate new properties to conserve the momemtum of the existing floes
 floenew.Xm = sum(rho_ice*areaS.*cat(1,floenew.SubFloes.h).*centers(:,1))./floenew.mass;
 floenew.Ym = sum(rho_ice*areaS.*cat(1,floenew.SubFloes.h).*centers(:,2))./floenew.mass;
 floenew.inertia_moment = sum(inertia+cat(1,floenew.SubFloes.h).*sqrt((centers(:,1)-floenew.Xm).^2+(centers(:,2)-floenew.Ym).^2));
@@ -106,8 +100,11 @@ floenew.dYi_p = (floe1.dYi_p*floe1.mass + floe2.dYi_p*floe2.mass)/(floenew.mass)
 floenew.dksi_ice_p = (floe1.dksi_ice_p*floe1.inertia_moment + floe2.dksi_ice_p*floe2.inertia_moment)/(floenew.inertia_moment);
 floenew.h = (floe1.h*floe1.mass+floe2.h*floe2.mass)/floenew.mass;%floenew.mass/(floenew.area*rho_ice);
 floenew = rmfield(floenew,'potentialInteractions');
-% floenew.potentialInteractions = floe1.potentialInteractions;
 
+if isinf(floenew.ksi_ice)
+    xx = 1;
+    xx(1) = [1 2];
+end
 
 end
 

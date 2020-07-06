@@ -16,7 +16,7 @@ PACKING = true;
 WELDING = true;
 
 %Define ocean currents
-[ocean, c2_boundary]=initialize_ocean_Gyre(1e4, 2e5, 1e5,4e3);
+[ocean, c2_boundary]=couple_ocean(1e4, 2e5, 1e5,4e3);
 c2_boundary_poly=polyshape(c2_boundary(1,:),c2_boundary(2,:));
 
 %Define 10m winds
@@ -27,7 +27,7 @@ height.mean = 2;
 height.delta = 0.5; %max difference between a flow thickness and the mean floe value
 
 target_concentration=1; % could be a vector
-Floe = initialize_concentration(target_concentration, c2_boundary,ocean,SUBFLOES,height, 75);%
+Floe = initialize_floe_field(target_concentration, c2_boundary,ocean,SUBFLOES,height, 75);%
 %load FloeBase;
 %plot_Floes_poly(0,0, Floe, ocean, c2_boundary);
 %%
@@ -187,14 +187,15 @@ while im_num<nSnapshots
         Floe(live==0)=[];
         
         if ifPlot
-            fig=plot_Floes_poly_doublePeriodicBC(fig,Time,Floe, ocean, c2_boundary_poly, PERIODIC); % plots model state
+%             fig=plot_Floes_poly_doublePeriodicBC(fig,Time,Floe, ocean, c2_boundary_poly, PERIODIC); % plots model state
+            [fig, fig2]=plot_Floes_poly_doublePeriodicBC(fig,fig2, Time,Floe, ocean, c2_boundary_poly, PERIODIC);
             saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
-            figure(fig3);
-            fig3=plot_Floes_poly_doublePeriodicBC_thickness(fig,Time,Floe, ocean, c2_boundary_poly, PERIODIC); 
+            figure(fig2);
+%             fig3=plot_Floes_poly_doublePeriodicBC_thickness(fig,Time,Floe, ocean, c2_boundary_poly, PERIODIC); 
             saveas(fig,['./figs/' num2str(im_num,'t%03.f') '.jpg'],'jpg');
             if im_num>1
-            if (~isvalid(fig2)), fig2=figure; end
-            figure(fig2);
+%             if (~isvalid(fig2)), fig2=figure; end
+            figure(fig3);
             imagesc(Vdnew/gridArea/1e3); axis xy
             u=squeeze(coarseMean(2,:,:,im_num));
             v=squeeze(coarseMean(3,:,:,im_num));
@@ -225,7 +226,7 @@ while im_num<nSnapshots
     if mod(i_step-1,nDTOut)==0
         Floe2 = Floe;
         if WELDING
-            meldrate = 0.2;%Set rate at which floes will meld
+            meldrate = 0.05;%Set rate at which floes will meld
             A=cat(1,Floe.area);
             if max(A) > Amax
                 Amax = max(A);

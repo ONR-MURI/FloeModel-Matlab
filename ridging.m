@@ -1,5 +1,7 @@
-function [Floe1,Floe2,dissolvedNEW]= ridging(dissolvedNEW,Floe1,Floe2,Nx,Ny,c2_boundary_poly,PERIODIC,SUBFLOES)
-%% 
+function [Floe1,Floe2,dissolvedNEW]= ridging(dissolvedNEW,Floe1,Floe2,Nx,Ny,c2_boundary_poly,PERIODIC)
+%% This function takes in two floes and based upon the thickness of the two floes will perform a ridging operation
+
+%Create polyshapes for the boundary in a nonperiodic case as well as polyshapes for the union of all subfloes 
 floe1 = Floe1;
 floe2 = Floe2;
 Lx= max(c2_boundary_poly.Vertices(:,1));
@@ -11,9 +13,12 @@ c2_poly = subtract(polybound,c2_boundary_poly);
 poly1 = union([Floe1.SubFloes.poly]);
 poly2 = union([Floe2.SubFloes.poly]);
 
+%Find area of overlap
 polyout = intersect(poly1,poly2);
 areaPoly = area(polyout);
 aPoly = area(intersect(Floe1.poly,Floe2.poly));
+
+%Find critical thickness
 rho_ice=920;
 rho_l = 997;
 E = max([Floe1.E, Floe2.E]);
@@ -23,22 +28,25 @@ g = 9.81;
 hc = 0.5;%14.2*(1-nu^2)/(rho_l*g)*sigma_m^2/E;
 disolved = 0;
 
-%check to make sure one floe is not inside the other
+%check to make sure one floe is not inside the other and add mass to
+%dissolved if it is
 if aPoly/area(Floe1.poly)>0.9 && aPoly/area(Floe2.poly)>0.9
     x = 1;
     x(1) = [1 2];
 elseif aPoly/area(Floe1.poly)>0.75
-    dissolvedNEW = dissolvedNEW+calc_vol_dissolved(Floe1,Nx,Ny,c2_boundary_poly);
+    dissolvedNEW = dissolvedNEW+calc_dissolved_mass(Floe1,Nx,Ny,c2_boundary_poly);
     disolved = 1;
     Floe1.alive = 0;
 elseif aPoly/area(Floe2.poly)>0.75
-    dissolvedNEW = dissolvedNEW+calc_vol_dissolved(Floe2,Nx,Ny,c2_boundary_poly);
+    dissolvedNEW = dissolvedNEW+calc_dissolved_mass(Floe2,Nx,Ny,c2_boundary_poly);
     disolved = 1;
     Floe2.alive = 0;
 end
-%% 
+%% If there is enough overlap then allow ridging to happen
 
 if disolved == 0 && areaPoly > 500
+    
+    %Determine overlap in the different subfloes
     kk=1;
     V1 = 0; V2 = 0;
     A1 = 0; A2 = 0;
@@ -57,6 +65,8 @@ if disolved == 0 && areaPoly > 500
             overlap2(kk) = ii; kk = kk+1; 
         end
     end
+    
+    %Use the thicknesses to determine how mass will be transfered
     Floe1.h = mean(cat(1,Floe1.SubFloes(overlap1).h));
     Floe2.h = mean(cat(1,Floe2.SubFloes(overlap2).h));
     if Floe1.h>= hc && Floe2.h >= hc
@@ -73,34 +83,7 @@ if disolved == 0 && areaPoly > 500
     end
 end
 
-for ii = 1:length(Floe1)
-    if Floe1(ii).poly.NumRegions > 1
-        xx = 1;
-        xx(1) = [1 2];
-    end
-end
-for ii = 1:length(Floe2)
-    if Floe2(ii).poly.NumRegions > 1
-        xx = 1;
-        xx(1) = [1 2];
-    end
-end
-
-if ~isempty(Floe1)
-    if min([Floe1.inertia_moment]) == 0
-        xx = 1;
-        xx(1) = [1 2];xx = 1;
-        xx(1) = [1 2];
-    end
-end
-if ~isempty(Floe2)
-    if min([Floe2.inertia_moment]) == 0
-%         xx = 1;
-%         xx(1) = [1 2];
-        Floe2.alive = 0
-    end
-end
-
+%Perform ridging with boundary
 if ~PERIODIC
     poly1 = union([Floe1.SubFloes.poly]);
     Abound = area(intersect(poly1,c2_poly));
@@ -116,6 +99,8 @@ if ~PERIODIC
     if Ainbound < 1000
         Floe1.alive = 0;
     elseif Abound>0 && Ainbound >= 1000
+        %Calculate new floe properties after the mass transfer and shape is
+        %updated
         [poly1new] = subtract(Floe1.poly,c2_poly);
         polyout = sortregions(poly1new,'area','descend');
         R = regions(polyout);
@@ -168,46 +153,5 @@ if ~PERIODIC
     end
 end
 
-if ~isempty(Floe1)
-    if min([Floe1.inertia_moment]) == 0
-        xx = 1;
-        xx(1) = [1 2];
-    end
-end
-if ~isempty(Floe2)
-    if min([Floe2.inertia_moment]) == 0
-        xx = 1;
-        xx(1) = [1 2];
-    end
-end
 
-for ii = 1:length(Floe1)
-    if Floe1(ii).poly.NumRegions > 1
-        xx = 1;
-        xx(1) = [1 2];
-    end
-end
-for ii = 1:length(Floe2)
-    if Floe2(ii).poly.NumRegions > 1
-        xx = 1;
-        xx(1) = [1 2];
-    end
-end
-% if length(Floe1.poly.Vertices) > 500
-%     Floe1 = FloeSimplify(Floe1, 250,SUBFLOES);
-% elseif length(Floe2.poly.Vertices) > 500
-%     Floe2 = FloeSimplify(Floe2, 250,SUBFLOES);
-% end
-
-if ~isempty(Floe1)
-    if min([Floe1.inertia_moment]) == 0 && max([Floe1.alive]) == 1
-        xx = 1;
-        xx(1) = [1 2];
-    end
-    if ~isempty(Floe2)
-        if min([Floe2.inertia_moment]) == 0 && max([Floe1.alive]) == 1
-            xx = 1;
-            xx(1) = [1 2];
-        end
-    end
 end

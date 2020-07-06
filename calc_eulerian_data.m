@@ -1,13 +1,15 @@
-function [eularian_data] = calc_eulerian_data2(Floe,Nx,Ny,c2_boundary,PERIODIC)
-
+function [eularian_data] = calc_eulerian_data(Floe,Nx,Ny,c2_boundary,PERIODIC)
+%% Function to take information of all floes and average them over a corase grained area
 id = 'MATLAB:polyshape:boolOperationFailed';
 warning('off',id)
+
+%Identify only the live floes
 live = cat(1,Floe.alive);
 Floe(live==0)=[];
 
+%Create ghost floes for periodic floe states
 Lx= max(c2_boundary(1,:));
 Ly= max(c2_boundary(2,:));%c2 must be symmetric around x=0 for channel boundary conditions.
-
 if PERIODIC
     
     ghostFloeX=[];
@@ -67,6 +69,7 @@ if PERIODIC
     
 end
 
+%Create coarse grid and coarse floe variables
 x = min(c2_boundary(1,:)):(max(c2_boundary(1,:))-min(c2_boundary(1,:)))/Nx:max(c2_boundary(1,:));
 y = min(c2_boundary(2,:)):(max(c2_boundary(2,:))-min(c2_boundary(2,:)))/Ny:max(c2_boundary(2,:));
 y = fliplr(y);
@@ -88,6 +91,9 @@ dV = cat(1,Floe.dVi_p);
 dV(isnan(dV)==1)=0;
 r_max = sqrt((dx/2)^2+(dy/2)^2);
 rmax = cat(1,Floe.rmax);
+
+%Idenfity all floes that could potentially have a piece that overlaps the
+%corase areas
 potentialInteractions = zeros(Ny,Nx,length(Floe));
 for ii = 1:length(Floe)
     pint = sqrt((xx-xf(ii)).^2+(yy-yf(ii)).^2)-(rmax(ii)+r_max);
@@ -95,22 +101,29 @@ for ii = 1:length(Floe)
     pint(pint<0) = 1;
     potentialInteractions(:,:,ii) = pint;
 end
-%% 
-% xx = 1;
-% xx(1) = [1 2];
+%% Loop to find coarse averages
+
 for ii = 1:Nx
     for jj = 1:Ny
         if sum(logical(potentialInteractions(jj,ii,:)))>0
+            %Create polyshape for the coarse area of interest
             bound = [x(ii) x(ii) x(ii+1) x(ii+1) x(ii);y(jj) y(jj+1) y(jj+1) y(jj) y(jj)];
             box = polyshape(bound(1,:), bound(2,:));
+            
+            %Find all floes from the potentially interacting ones that have
+            %a piece in this area
             overlap = intersect(box,[Floe(logical(potentialInteractions(jj,ii,:))).poly]);
             Aover = area(overlap);
-            polyu = union([overlap(Aover>0)]);
-            Area = area(polyu);
-            if sum(Area) > 0
+            
+            %Calculate the concentration of floe in this area
+            if sum(Aover) > 0
+                polyu = union([overlap(Aover>0)]);
+                Area = area(polyu);
                 eularian_data.c(jj,ii) = Area/area(box);
             end     
         end
+        
+        %Now find all other variables of interest
         if eularian_data.c(jj,ii) > 0
             eularian_data.u(jj,ii) = sum(U(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
             eularian_data.v(jj,ii) = sum(V(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
