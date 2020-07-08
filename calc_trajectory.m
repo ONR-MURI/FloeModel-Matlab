@@ -68,8 +68,10 @@ floe.h = sum(rho_ice*areaS.*cat(1,floe.SubFloes.h).*cat(1,floe.SubFloes.h))./flo
 floe.inertia_moment = sum(inertia+cat(1,floe.SubFloes.h).*sqrt((centers(:,1)-floe.Xm).^2+(centers(:,2)-floe.Ym).^2));
 
 %%
-U10=winds(1); % atmospheric winds
-V10=winds(2); % constant here
+% U10=winds(1); % atmospheric winds
+% V10=winds(2); % constant here
+Uatm = winds.U;
+Vatm = winds.V;
 
 if isnan(floe.Xi)||isnan(floe.alpha_i)||isnan(floe.ksi_ice), disp('Ice floe sacked: NaN state vars.'); floe=[]; x = 1;
     x(1) = [1 2];
@@ -103,16 +105,19 @@ else
             Uice=floe.Ui-rho*floe.ksi_ice.*sin(theta); % X-dir floe velocity (variable within the ice floe)
             Vice=floe.Vi+rho*floe.ksi_ice.*cos(theta); % Y-dir velocity
             
-            % interpolating ocean currents onto ice floe grid.
+            % interpolating ocean and atm currents onto ice floe grid.
             x_ind=logical((Xo <= Xi+R_floe+2*dXo).*(Xo >= Xi-R_floe-2*dXo));
             y_ind=logical((Yo <= Yi+R_floe+2*dXo).*(Yo >= Yi-R_floe-2*dXo));
             
             Uocn_interp=interp2(Xo(x_ind),Yo(y_ind), Uocn(y_ind,x_ind),Xg,Yg);
             Vocn_interp=interp2(Xo(x_ind),Yo(y_ind), Vocn(y_ind,x_ind),Xg,Yg);
             
+            Uatm_interp=interp2(Xo(x_ind),Yo(y_ind), Uatm(y_ind,x_ind),Xg,Yg);
+            Vatm_interp=interp2(Xo(x_ind),Yo(y_ind), Vatm(y_ind,x_ind),Xg,Yg);
+            
             % all forces are per unit area, units of N/m^2;
-            Fx_atm=rho_air*Cd_atm*sqrt(U10^2+V10^2)*U10; % wind drag (no turning angle here!)
-            Fy_atm=rho_air*Cd_atm*sqrt(U10^2+V10^2)*V10;
+            Fx_atm = rho_air*Cd_atm*sqrt(Uatm_interp.^2.+Vatm_interp.^2).*Uatm_interp;  % wind drag (no turning angle here!)
+            Fy_atm = rho_air*Cd_atm*sqrt(Uatm_interp.^2.+Vatm_interp.^2).*Vatm_interp;
             
             Fx_pressureGrad=-(floe_mass/floe_area)*fc*Vocn_interp; % SSH tilt term
             Fy_pressureGrad=+(floe_mass/floe_area)*fc*Uocn_interp;        
