@@ -17,14 +17,17 @@ WELDING = true;
 
 %% Set the floe domain and couple with Ocean and Atmosphere
 
-%Define ocean currents
+%Define coupling paramters
+dXo = 4e3; dXa = dXo;
+transport=1e4; Lx=2e5; Ly=1e5;
 dt=10; %Time step in sec
 
-[ocean, c2_boundary,heat_flux,h0]=couple_ocean(1e4, 2e5, 1e5,4e3,dt);
+%Define ocean currents
+[ocean, c2_boundary,heat_flux.oc,h0]=couple_ocean(transport, Lx, Ly,dXo,dt);
 c2_boundary_poly=polyshape(c2_boundary(1,:),c2_boundary(2,:));
 
-%Define 10m winds
-winds=[10 10];
+%Define Atmosphere
+[OU, QG, winds, heat_flux.atm]=couple_atm(Lx,Ly,dXa);
 
 %% Initialize the model
 
@@ -103,6 +106,16 @@ gridArea=area(c2_boundary_poly)/Nx/Ny;
 Vdnew=zeros(Ny, Nx);
 fig2=figure;
 fig3 = figure;
+
+%Update the winds
+if QG
+    [psi12,pv12,qp] = AtmQG(0.7,pvold,i_step,1000,N,dt*nDTOut);
+    psi1 = real(ifft2(psi12));
+    psi_winds = psi1(:,:,2); % the second layer winds enteracting with ices
+    winds = UpdateWinds(psi_winds,Lx,Ly,dXa);
+    pvold = pv12;
+end
+
 while im_num<nSnapshots
      
     display(i_step);
@@ -137,6 +150,23 @@ while im_num<nSnapshots
         save('coarseData.mat','coarseSnap','coarseMean');
         save('Floe.mat','Floe');
         
+        %Update the winds
+        if OU
+            disp('Running atmosphere OU equations...');
+            [tpsi] = OU2D(theta, omega, sigma, mu, psivar, psi, N, dt*nDTOut);
+            psi = real(ifft2(tpsi));
+            winds = UpdateWinds(psi,Lx,Ly,dXa);
+            psi = tpsi;
+        elseif QG
+            disp('Running atmosphere QG equations...');
+            [psi12,pv12,qp] = AtmQG(0.7,pvold,i_step,10,N,dt*nDTOut);
+            psi1 = real(ifft2(psi12));
+            psi_winds = 0.5* ( psi1(:,:,1) + psi1(:,:,2) ); % barotropic mode
+            winds = UpdateWinds(psi_winds,Lx,Ly,dXa);
+            pvold = pv12;
+        end
+            
+        
         %Floe thickness and area statistics
         [A1,A2] = hist(Atot,10);
         [h1,h2] = hist(htot,10);
@@ -153,7 +183,7 @@ while im_num<nSnapshots
         
         %Run packing function
         if mod(i_step,nDTOut)==0 && PACKING && h0>0
-            height.mean = h0;
+            height.mean = h0*nDTOut;
             height.delta = 0;
             [Floe,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,target_concentration,ocean,height, SUBFLOES, PERIODIC);
 
@@ -263,7 +293,7 @@ while im_num<nSnapshots
     Area=cat(1,Floe.area);
     dissolvedNEW = calc_dissolved_mass(Floe(Area<3e5),Nx,Ny,c2_boundary_poly)+dissolvedNEW;
     if dhdt > 0
-        dissolvedNEW = dissolvedNEW - (1-eularian_data.c)*gridArea*heat_flux/(0.2*100*24*3600)*dt; %saying here that open water is being populated by sea ice growth consistent with 0.2 m thick ice
+        dissolvedNEW = dissolvedNEW + (1-eularian_data.c)*gridArea*h0; %saying here that open water is being populated by sea ice growth consistent with 0.2 m thick ice
     end
     Vdnew = Advect_Dissolved_Ice(Vd,coarseMean,im_num,dissolvedNEW,c2_boundary,dt);
     dissolvedNEW=zeros(Ny,Nx);

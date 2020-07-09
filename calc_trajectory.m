@@ -44,7 +44,7 @@ areaS = zeros(N,1);
 inertia = zeros(N,1);
 centers = zeros(N,2);
 for ii = 1:N
-    floe.SubFloes(ii).h = floe.SubFloes(ii).h-heat_flux*dt/(floe.SubFloes(ii).h);
+    floe.SubFloes(ii).h = floe.SubFloes(ii).h-heat_flux.oc*dt/(floe.SubFloes(ii).h);
     areaS(ii) = area(floe.SubFloes(ii).poly);
     if floe.SubFloes(ii).poly.NumHoles > 0
         breaks = isnan(floe.SubFloes(ii).poly.Vertices(:,1));
