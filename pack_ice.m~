@@ -205,8 +205,31 @@ for ii = 1:Nx
                                 Floe(in(kk)).alive = 0;
                                 polyu = subtract(polyu,Floe(in).poly);
                             end
+                            if floe2.poly.NumHoles > 0
+                                xx = 1;
+                                xx(1) = [1 2];
+                            end
+                        elseif ~isempty(polyu)
+                            if area(intersect(floe2.poly,polyu))/floe2.area > 0.25
+                                xx = 1;
+                                xx(1) = [1 2];
+                            end
                         end
-                                                
+                        
+                        [eularian_data] = calc_eulerian_data(Floe,Nx,Ny,c2_boundary,PERIODIC);
+                        if max(max(eularian_data.c))>1.1
+                            xx = 1;
+                            xx(1) = [1 2];
+                        end
+                        
+                        if ~isempty(floenew)
+                            overlapNew = intersect(floe2.poly,[floenew.poly]);
+                            if max(area(overlapNew)/floe2.area) > 0.75
+                                xx = 1;
+                                xx(1) = [1 2];
+                            end
+                        end
+                        
                         floenew = [floenew floe2];
                         clear floe2;
                     end
@@ -237,6 +260,10 @@ for ii = 1:length(floenew)
         else
             floenew(ii) = Floe1;
         end
+    end
+    if floenew(ii).poly.NumRegions>1
+        xx = 1;
+        xx(1) = [1 2];
     end
 end
 if numel(fieldnames(Floe))>31

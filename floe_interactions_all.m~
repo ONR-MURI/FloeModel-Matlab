@@ -149,6 +149,7 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
             if live(1) == 0
                 Floe(i).alive = 0;
             elseif live(2) == 0
+%                 dissolvedNEW = dissolvedNEW+calc_dissolved_mass(Floe(floeNum),Nx,Ny,c2_boundary_poly);
                 Floe(floeNum).alive = 0;
             end
             
@@ -165,6 +166,7 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
     if ~PERIODIC
         [force_b, P_j, worked,live] = floe_interactions_poly(c1, c2_poly);
         if live(1) == 0
+%             dissolvedNEW = dissolvedNEW+calc_dissolved_mass(Floe(i),Nx,Ny,c2_boundary_poly);
             Floe(i).alive = 0;
         end
         if sum(abs(force_b(:)))~=0 %; subtracting 0.1m to ensure that interactions with x=+-Lx boundary are excluded as this is a periodic boundary.
@@ -281,6 +283,9 @@ for i=1:N0
         if (isempty(tmp) || isnan(Floe(i).Xi) )
             Floe(i).alive=0; 
             SackedOB = SackedOB +1;
+        elseif Floe(i).alive == 0
+%             dissolvedNEW = calc_dissolved_mass(Floe(i),Nx,Ny,c2_boundary_poly);
+            Floe(i) = [];
         else
             Floe(i)=tmp;
         end
@@ -313,7 +318,7 @@ if RIDGING
                     
                     if Floe(i).potentialInteractions(k).floeNum<= N0
                         floeNum = Floe(i).potentialInteractions(k).floeNum;
-                        [Floe1,Floe2] = ridging(Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),c2_boundary_poly,PERIODIC);
+                        [Floe1,Floe2,dissolvedNEW] = ridging(dissolvedNEW,Floe(i),Floe(Floe(i).potentialInteractions(k).floeNum),Nx,Ny,c2_boundary_poly,PERIODIC);
                     else
                         %Identify parent floes that can ridge and move them
                         %to ghost cell location
@@ -342,7 +347,7 @@ if RIDGING
                         overlap = intersect(Floe2.poly,Floe(Floe(i).potentialInteractions(k).floeNum).poly);
                         if area(overlap)/Floe2.area>0.9
                             
-                            [Floe1,Floe2] = ridging(Floe(i),Floe2,c2_boundary_poly,PERIODIC);
+                            [Floe1,Floe2,dissolvedNEW] = ridging(dissolvedNEW,Floe(i),Floe2,Nx,Ny,c2_boundary_poly,PERIODIC);
                         else
                             Floe1 = Floe(i);
                         end
@@ -410,7 +415,12 @@ if RIDGING
                     
                     
                 end
-
+%                 poly1 = Floe(Floe(i).potentialInteractions(1).floeNum).poly;
+%                 if length(Floe(i).potentialInteractions)>1
+%                     for kk = 2:length(Floe(i).potentialInteractions)
+%                         poly1 = union(poly1,Floe(Floe(i).potentialInteractions(kk).floeNum).poly);
+%                     end
+%                 end
                 
             end
             
@@ -426,8 +436,8 @@ Floe = [Floe floenew]; %add on any new floes that were if ridging caused one flo
 Floe=rmfield(Floe,{'potentialInteractions'}); %remove potential interactions field
 live = cat(1,Floe.alive);
 for ii = N0:-1:1
-    if live(ii)==0
-        dissolvedNEW = dissolvedNEW+calc_dissolved_mass(Floe(ii),Nx,Ny,c2_boundary_poly);
+    if ~live(ii)
+        dissolvedNEW = dissolvedNEW+calc_dissolved_mass(Floe(i),Nx,Ny,c2_boundary_poly);
     end
 end
 Floe(live==0)=[]; %remove any floes that got dissolved so they do not take up space

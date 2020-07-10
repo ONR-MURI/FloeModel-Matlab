@@ -1,4 +1,4 @@
-function [Floe1,Floe2,dissolvedNEW]= ridging(dissolvedNEW,Floe1,Floe2,Nx,Ny,c2_boundary_poly,PERIODIC)
+function [Floe1,Floe2]= ridging(Floe1,Floe2,c2_boundary_poly,PERIODIC)
 %% This function takes in two floes and based upon the thickness of the two floes will perform a ridging operation
 
 %Create polyshapes for the boundary in a nonperiodic case as well as polyshapes for the union of all subfloes 
@@ -30,15 +30,10 @@ disolved = 0;
 
 %check to make sure one floe is not inside the other and add mass to
 %dissolved if it is
-if aPoly/area(Floe1.poly)>0.9 && aPoly/area(Floe2.poly)>0.9
-    x = 1;
-    x(1) = [1 2];
-elseif aPoly/area(Floe1.poly)>0.75
-    dissolvedNEW = dissolvedNEW+calc_dissolved_mass(Floe1,Nx,Ny,c2_boundary_poly);
+if aPoly/area(Floe1.poly)>0.75
     disolved = 1;
     Floe1.alive = 0;
 elseif aPoly/area(Floe2.poly)>0.75
-    dissolvedNEW = dissolvedNEW+calc_dissolved_mass(Floe2,Nx,Ny,c2_boundary_poly);
     disolved = 1;
     Floe2.alive = 0;
 end

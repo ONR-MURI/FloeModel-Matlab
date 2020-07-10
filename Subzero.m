@@ -21,6 +21,7 @@ WELDING = true;
 dXo = 4e3; dXa = dXo;
 transport=1e4; Lx=2e5; Ly=1e5;
 dt=10; %Time step in sec
+rho_ice=920;
 
 %Define ocean currents
 [ocean, c2_boundary,heat_flux.oc,h0]=couple_ocean(transport, Lx, Ly,dXo,dt);
@@ -134,21 +135,6 @@ while im_num<nSnapshots
     %Plot, calculate mean values, and pack new ice after a number of
     %timesteps
     if mod(i_step,nDTOut)==0 
-
-        
-        %Corase mean data
-        [eularian_data] = calc_eulerian_data(Floe,Nx,Ny,c2_boundary,PERIODIC);
-        coarseSnap(1,:,:,im_num)=eularian_data.c;
-        coarseSnap(2,:,:,im_num)=eularian_data.u;
-        coarseSnap(3,:,:,im_num)=eularian_data.v;
-        coarseSnap(4,:,:,im_num)=eularian_data.du;
-        coarseSnap(5,:,:,im_num)=eularian_data.dv;
-        coarseSnap(6,:,:,im_num)=eularian_data.mom_x;
-        coarseSnap(7,:,:,im_num)=eularian_data.mom_y;
-        coarseSnap(8,:,:,im_num)=eularian_data.force_x;
-        coarseSnap(9,:,:,im_num)=eularian_data.force_y;        
-        save('coarseData.mat','coarseSnap','coarseMean');
-        save('Floe.mat','Floe');
         
         %Update the winds
         if OU
@@ -189,6 +175,24 @@ while im_num<nSnapshots
 
         end
         
+        %Corase mean data
+        [eularian_data] = calc_eulerian_data(Floe,Nx,Ny,c2_boundary,PERIODIC);
+        coarseSnap(1,:,:,im_num)=eularian_data.c;
+        coarseSnap(2,:,:,im_num)=eularian_data.u;
+        coarseSnap(3,:,:,im_num)=eularian_data.v;
+        coarseSnap(4,:,:,im_num)=eularian_data.du;
+        coarseSnap(5,:,:,im_num)=eularian_data.dv;
+        coarseSnap(6,:,:,im_num)=eularian_data.mom_x;
+        coarseSnap(7,:,:,im_num)=eularian_data.mom_y;
+        coarseSnap(8,:,:,im_num)=eularian_data.force_x;
+        coarseSnap(9,:,:,im_num)=eularian_data.force_y;        
+        save('coarseData.mat','coarseSnap','coarseMean');
+        save('Floe.mat','Floe');
+        
+        if dhdt > 0
+            dissolvedNEW = dissolvedNEW + (1-eularian_data.c)*gridArea*rho_ice*h0*nDTOut; %saying here that open water is being populated by sea ice growth consistent with 0.2 m thick ice
+        end
+        
         %Check to see if any floes need to be simplified
         floenew = [];
         for ii = 1:length(Floe)
@@ -214,7 +218,7 @@ while im_num<nSnapshots
             [fig, fig2]=plot_Floes(fig,fig2, Time,Floe, ocean, c2_boundary_poly, PERIODIC);
             saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
             figure(fig2);
-            saveas(fig,['./figs/' num2str(im_num,'t%03.f') '.jpg'],'jpg');
+            saveas(fig2,['./figs/' num2str(im_num,'t%03.f') '.jpg'],'jpg');
             if im_num>1
             figure(fig3);
             imagesc(Vdnew/gridArea/1e3); axis xy
@@ -249,11 +253,6 @@ while im_num<nSnapshots
             end
             FloeOld = Floe;
             Floe = Weld_Floes(Floe,weldrate,Amax,SUBFLOES);
-            [eularian_data] = calc_eulerian_data(Floe,Nx,Ny,c2_boundary,PERIODIC);
-            if max(max(eularian_data.c))>1.1
-                xx = 1;
-                xx(1) = [1 2];
-            end
         end
 
     end
@@ -292,9 +291,6 @@ while im_num<nSnapshots
     %Advect the dissolved mass
     Area=cat(1,Floe.area);
     dissolvedNEW = calc_dissolved_mass(Floe(Area<3e5),Nx,Ny,c2_boundary_poly)+dissolvedNEW;
-    if dhdt > 0
-        dissolvedNEW = dissolvedNEW + (1-eularian_data.c)*gridArea*h0; %saying here that open water is being populated by sea ice growth consistent with 0.2 m thick ice
-    end
     Vdnew = Advect_Dissolved_Ice(Vd,coarseMean,im_num,dissolvedNEW,c2_boundary,dt);
     dissolvedNEW=zeros(Ny,Nx);
     Vd(:,:,2) = Vd(:,:,1);
