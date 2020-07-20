@@ -13,6 +13,7 @@ Yo=ocean.Yo;
 [Xocn,Yocn] = meshgrid(Xo,Yo);
 Uocn=ocean.Uocn;
 Vocn=ocean.Vocn;
+hO = height;
 
 %If the floe is periodic populate the ghost floes
 if PERIODIC
@@ -162,6 +163,11 @@ for ii = 1:Nx
                     [~,I] = max(areas);
                     if areas(I) > 3500
                         %Cacluate properties of the new floes
+                        if sum(size(height.mean)) > 2
+                            [Xi,Yi] = centroid(subfloes(I));
+                            [ko,~] = dsearchn([Xocn(:),Yocn(:)],[Xi,Yi]);
+                            height.mean = hO.mean(ko);
+                        end
                         floe2 = initialize_floe_values(subfloes(I),height, SHIFT, SUBFLOES);
                         Vd(jj,ii,1) = Vd(jj,ii,1)-floe2.h*floe2.area*rho_ice;
                         [k,~] = dsearchn([Xocn(:),Yocn(:)],[floe2.Xi,floe2.Yi]);

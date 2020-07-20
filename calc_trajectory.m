@@ -7,9 +7,17 @@ ext_torque=floe.collision_torque;
 
 Xo=ocean.Xo;
 Yo=ocean.Yo;
+[Xocn,Yocn] = meshgrid(Xo,Yo);
 Uocn=ocean.Uocn;
 Vocn=ocean.Vocn;
 dXo=Xo(2)-Xo(1);
+
+Xa=winds.X;
+Ya=winds.Y;
+[Xatm,Yatm] = meshgrid(Xa,Ya);
+Uatm=winds.U;
+Vatm=winds.V;
+dXa=Xa(2)-Xa(1);
 
 Xi=floe.Xi;
 Yi=floe.Yi;
@@ -37,6 +45,11 @@ fc=ocean.fCoriolis; %coriolis parameter
 
 %% ice floe params
 
+[ka,~] = dsearchn([Xatm(:),Yatm(:)],[Xi,Yi]);
+[ko,~] = dsearchn([Xocn(:),Yocn(:)],[Xi,Yi]);
+HFa = heat_flux.atm(ka);
+HFo = heat_flux.oc(ko);
+                        
 floe_area=floe.area;
 R_floe=floe.rmax;
 N = length(floe.SubFloes);
@@ -44,7 +57,7 @@ areaS = zeros(N,1);
 inertia = zeros(N,1);
 centers = zeros(N,2);
 for ii = 1:N
-    floe.SubFloes(ii).h = floe.SubFloes(ii).h-heat_flux.oc*dt/(floe.SubFloes(ii).h);
+    floe.SubFloes(ii).h = floe.SubFloes(ii).h-HFo*dt/(floe.SubFloes(ii).h);
     areaS(ii) = area(floe.SubFloes(ii).poly);
     if floe.SubFloes(ii).poly.NumHoles > 0
         breaks = isnan(floe.SubFloes(ii).poly.Vertices(:,1));
@@ -68,10 +81,6 @@ floe.h = sum(rho_ice*areaS.*cat(1,floe.SubFloes.h).*cat(1,floe.SubFloes.h))./flo
 floe.inertia_moment = sum(inertia+cat(1,floe.SubFloes.h).*sqrt((centers(:,1)-floe.Xm).^2+(centers(:,2)-floe.Ym).^2));
 
 %%
-% U10=winds(1); % atmospheric winds
-% V10=winds(2); % constant here
-Uatm = winds.U;
-Vatm = winds.V;
 
 if isnan(floe.Xi)||isnan(floe.alpha_i)||isnan(floe.ksi_ice), disp('Ice floe sacked: NaN state vars.'); floe=[];
 %     x = 1;

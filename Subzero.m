@@ -168,7 +168,7 @@ while im_num<nSnapshots
         save(['./Floes/Floe' num2str(im_num,'%07.f') '.mat'],'Floe');
         
         %Run packing function
-        if mod(i_step,nDTOut)==0 && PACKING && h0>0
+        if mod(i_step,nDTOut)==0 && PACKING && max(max(h0))>0
             height.mean = h0*nDTOut;
             height.delta = 0;
             [Floe,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,target_concentration,ocean,height, SUBFLOES, PERIODIC);
@@ -190,7 +190,7 @@ while im_num<nSnapshots
         save('Floe.mat','Floe');
         
         if dhdt > 0
-            dissolvedNEW = dissolvedNEW + (1-eularian_data.c)*gridArea*rho_ice*h0*nDTOut; %saying here that open water is being populated by sea ice growth consistent with 0.2 m thick ice
+            dissolvedNEW = dissolvedNEW + (1-eularian_data.c)*gridArea*rho_ice*mean(mean(h0))*nDTOut; %saying here that open water is being populated by sea ice growth consistent with 0.2 m thick ice
         end
         
         %Check to see if any floes need to be simplified
