@@ -166,21 +166,21 @@ for ii = 1:Nx
                         Vd(jj,ii,1) = Vd(jj,ii,1)-floe2.h*floe2.area*rho_ice;
                         [k,~] = dsearchn([Xocn(:),Yocn(:)],[floe2.Xi,floe2.Yi]);
                         floe2.Ui = Uocn(k); floe2.Vi = Vocn(k);
-                        if area(intersect(floe2.poly,polyu))>0 || floe2.poly.NumHoles > 0
-                            k2 = find(logical(potentialInteractions(jj,ii,:))==1);
-                            poly2 = rmholes(floe2.poly);
-                            polyO = intersect(poly2,poly);
-                            A2 = area(polyO);
-                            polyin = A2./A;
-                            in = k2(polyin>0.99);
-                            in = flipud(in);
-                            for kk = 1:length(in)
-                                floe2 = FuseFloes(floe2,Floe(in(kk)),SUBFLOES);
-                                Floe(in(kk)).alive = 0;
-                                polyu = subtract(polyu,Floe(in(kk)).poly);
+                        if floe2.poly.NumHoles > 0
+                            if area(intersect(floe2.poly,polyu))>0
+                                k2 = find(logical(potentialInteractions(jj,ii,:))==1);
+                                poly2 = rmholes(floe2.poly);
+                                polyO = intersect(poly2,poly);
+                                A2 = area(polyO);
+                                polyin = A2./A;
+                                in = k2(polyin>0.99);
+                                in = flipud(in);
+                                for kk = 1:length(in)
+                                    floe2 = FuseFloes(floe2,Floe(in(kk)),SUBFLOES);
+                                    Floe(in(kk)).alive = 0;
+                                    polyu = subtract(polyu,Floe(in(kk)).poly);
+                                end
                             end
-                        else
-                            floe2 = rmfield(floe2, 'potentialInteractions');
                         end
                         
                         %Keep track of how much area is now covered by sea
@@ -194,19 +194,33 @@ for ii = 1:Nx
                         areas(area(overlapS)./areas>0.9) = 0;
                         
                         if floe2.poly.NumHoles > 0
+                            floe2holes = floe2;
                             Holes= floe2.poly.NumHoles;
                             poly2 = rmholes(floe2.poly);
                             polyO = intersect(poly2,poly);
                             A2 = area(polyO);
-                            for kk = 1:Holes
-                                polyin = A2./abs(area(floe2.poly,kk+1));
-                                in = k2(polyin>0.99);                                                          
-                                floe2 = FuseFloes(floe2,Floe(in),SUBFLOES);
-                                Floe(in(kk)).alive = 0;
-                                polyu = subtract(polyu,Floe(in).poly);
+                            k2 = find(logical(potentialInteractions(jj,ii,:))==1);
+                            for kk = 1:Holes  
+                                polyin = A2./abs(area(floe2holes.poly,kk+1));
+                                polyin2 = abs(area(floe2holes.poly,kk+1))./A2;
+                                polyin2(isinf(polyin2)) = 0;
+                                in = unique([k2(polyin>0.99); k2(polyin2>0.99)]);
+                                for k = 1:length(in)
+                                    test = FuseFloes(floe2,Floe(in(k)),SUBFLOES);
+                                    if isempty(test)
+                                        xx = 1;
+                                        xx(1) = [1 2];
+                                    end
+                                    floe2 = test;
+                                    Floe(in(k)).alive = 0;
+                                    polyu = subtract(polyu,Floe(in(k)).poly);
+                                end
                             end
                         end
-                                                
+                        
+                        if numel(fieldnames(floe2))>31
+                            floe2=rmfield(floe2,{'potentialInteractions'});
+                        end
                         floenew = [floenew floe2];
                         clear floe2;
                     end

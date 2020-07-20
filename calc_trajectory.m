@@ -73,16 +73,17 @@ floe.inertia_moment = sum(inertia+cat(1,floe.SubFloes.h).*sqrt((centers(:,1)-flo
 Uatm = winds.U;
 Vatm = winds.V;
 
-if isnan(floe.Xi)||isnan(floe.alpha_i)||isnan(floe.ksi_ice), disp('Ice floe sacked: NaN state vars.'); floe=[]; x = 1;
-    x(1) = [1 2];
+if isnan(floe.Xi)||isnan(floe.alpha_i)||isnan(floe.ksi_ice), disp('Ice floe sacked: NaN state vars.'); floe=[];
+%     x = 1;
+%     x(1) = [1 2];
     
 else
     
     
     if  ( max(floe.poly.Vertices(:,1))>max(Xo) || min(floe.poly.Vertices(:,1))<min(Xo) || max(floe.poly.Vertices(:,2))>max(Yo) || min(floe.poly.Vertices(:,2))<min(Yo)   )
         disp('Ice floe sacked: out of ocean grid bounds!');
-        x = 1;
-        x(1) = [1 2];
+%         x = 1;
+%         x(1) = [1 2];
         floe=[];
     else
         %Advance the floe in time
@@ -147,10 +148,10 @@ else
             floe.alpha_i=floe.alpha_i+dalpha; floe.dalpha_i_p=floe.ksi_ice;
             if isinf(floe.alpha_i)
                 floe.alive = 0;
-                if floe.area > 1e7
-                    xx = 1;
-                    xx(1) = [1 2];
-                end
+%                 if floe.area > 1e7
+%                     xx = 1;
+%                     xx(1) = [1 2];
+%                 end
             end
             
             A_rot=[cos(dalpha) -sin(dalpha); sin(dalpha) cos(dalpha)]; %rotation matrix
@@ -193,17 +194,17 @@ else
             if abs(du) > 1
                 du = sign(du);
                 dUi_dt=(du+0.5*dt*floe.dUi_p)/(1.5*dt);
-            elseif isnan(du)
-                xx = 1;
-                xx(1) = [1 2];
+%             elseif isnan(du)
+%                 xx = 1;
+%                 xx(1) = [1 2];
             end
             floe.Ui=floe.Ui+du;  floe.dUi_p=dUi_dt;
             if abs(floe.Ui) > 5 
                 floe.alive = 0;
-                if floe.h > 0.5 && floe.area > 1e7
-                    xx = 1;
-                    xx(1) = [1 2];
-                end
+%                 if floe.h > 0.5 && floe.area > 1e7
+%                     xx = 1;
+%                     xx(1) = [1 2];
+%                 end
             end
             
             dVi_dt=(mean(Fy(floe_mask))*floe_area+ext_force(2))/floe_mass;
@@ -211,17 +212,17 @@ else
             if abs(dv) > 1
                 dv = sign(dv);
                 dVi_dt=(dv+0.5*dt*floe.dVi_p)/(1.5*dt);
-            elseif isnan(du)
-                xx = 1;
-                xx(1) = [1 2];
+%             elseif isnan(du)
+%                 xx = 1;
+%                 xx(1) = [1 2];
             end
             floe.Vi=floe.Vi+dv;  floe.dVi_p=dVi_dt;
             if  abs(floe.Vi) > 5 && floe.area > 1e7
                 floe.alive = 0;
-                if floe.h > 0.5
-                    xx = 1;
-                    xx(1) = [1 2];
-                end
+%                 if floe.h > 0.5
+%                     xx = 1;
+%                     xx(1) = [1 2];
+%                 end
             end
                        
             dksi_ice_dt=(mean(torque(floe_mask))*floe_area+ext_torque)/floe.inertia_moment;
@@ -229,17 +230,17 @@ else
             if abs(dksi) > 1e-4
                 dksi = sign(dksi)*1e-4;
                 dksi_ice_dt=(dksi+0.5*dt*floe.dksi_ice_p)/(1.5*dt);
-            elseif isnan(dksi)
-                xx = 1;
-                xx(1) = [1 2];
+%             elseif isnan(dksi)
+%                 xx = 1;
+%                 xx(1) = [1 2];
             end
             floe.ksi_ice=floe.ksi_ice+dksi; floe.dksi_ice_p=dksi_ice_dt;
             if  abs(floe.ksi_ice) > 5 && floe.area > 1e7
                 floe.alive = 0;
-                if floe.h > 0.5
-                    xx = 1;
-                    xx(1) = [1 2];
-                end
+%                 if floe.h > 0.5
+%                     xx = 1;
+%                     xx(1) = [1 2];
+%                 end
             end
             
             
@@ -250,18 +251,18 @@ else
             end
             if isinf(floe.ksi_ice)
                 floe.alive = 0;
-                if floe.area > 1e7
-                    xx = 1;
-                    xx(1) = [1 2];
-                end
+%                 if floe.area > 1e7
+%                     xx = 1;
+%                     xx(1) = [1 2];
+%                 end
             end
-            if isnan(floe.Xi) || isnan(floe.Yi)
-                xx = 1;
-                xx(1) = [1 2];
-            elseif isnan(floe.ksi_ice)
-                xx = 1;
-                xx(1) = [1 2];
-            end
+%             if isnan(floe.Xi) || isnan(floe.Yi)
+%                 xx = 1;
+%                 xx(1) = [1 2];
+%             elseif isnan(floe.ksi_ice)
+%                 xx = 1;
+%                 xx(1) = [1 2];
+%             end
         end
     end
     

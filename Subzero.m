@@ -246,7 +246,7 @@ while im_num<nSnapshots
     if mod(i_step-1,nDTOut)==0
         Floe2 = Floe;
         if WELDING
-            weldrate = 0.05;%Set rate at which floes will meld
+            weldrate = 0.1;%Set rate at which floes will meld
             A=cat(1,Floe.area);
             if max(A) > Amax
                 Amax = max(A);
