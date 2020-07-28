@@ -15,8 +15,14 @@ x = min(c2_boundary(1,:)):ddx:max(c2_boundary(1,:));
 y = min(c2_boundary(2,:)):ddx:max(c2_boundary(2,:));
 dx = max(x)-min(x);
 dy = max(y)-min(y);
-[X,Y] = PointGenerator(N,c2_boundary,35*ddx,N0);
-Y = Y';
+
+% %For Clustering
+% [X,Y] = PointGenerator(N,c2_boundary,35*ddx,N0);
+% Y = Y';
+
+%Randomly Scattered
+X = min(c2_boundary(1,:))-dx/2+2*rand(1,N)*dx;
+Y = min(c2_boundary(2,:))-dy/2+2*rand(1,N)*dy;
 
 %Remove any points form inside current floes
 for ii = 1:length(Floe)
