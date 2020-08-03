@@ -4,6 +4,7 @@ function [Floe,dissolvedNEW, SackedOB] = floe_interactions_all(Floe, ocean, wind
 %using the forces to time step each individual floes forward. Once these
 %floes have been advanced if ridging is allowed this process is run
 
+
 %Create a polyshape for the boundary 
 Lx= max(c2_boundary_poly.Vertices(:,1));
 Ly= max(c2_boundary_poly.Vertices(:,2));%c2 must be symmetric around x=0 for channel boundary conditions.
@@ -128,13 +129,14 @@ end
 
 %% Calculate forces between interacting floes
 
-for i=1:N  %now the interactions could be calculated in a parfor loop!
+parfor i=1:N  %now the interactions could be calculated in a parfor loop!
     
     c1=Floe(i).poly;
             
     if ~isempty(Floe(i).potentialInteractions)
         
         NpotInter=length(Floe(i).potentialInteractions);
+        Floe(i).killed = zeros(1,NpotInter);
         for k=1:NpotInter
             
             %Create polyshape for interacting floes
@@ -149,7 +151,7 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
             if live(1) == 0
                 Floe(i).alive = 0;
             elseif live(2) == 0
-                Floe(floeNum).alive = 0;
+                Floe(i).killed(k) = floeNum;
             end
             
             
@@ -174,7 +176,20 @@ for i=1:N  %now the interactions could be calculated in a parfor loop!
     end
 end
 
-
+if numel(fieldnames(Floe))>32
+    for i = 1:N    
+        if ~isempty(Floe(i).killed(Floe(i).killed>0))
+            killed = Floe(i).killed(Floe(i).killed>0);
+            killed = killed(killed>0);
+            if ~isempty(killed)
+                for j = 1:length(killed)
+                    Floe(killed(j)).alive = 0;
+                end
+            end
+        end
+    end    
+    Floe=rmfield(Floe,{'killed'});
+end
 %%
 %Fill the lower part of the interacton matrix (floe_i,floe_j) for floes with j<i
 for i=1:N %this has to be done sequentially
@@ -295,12 +310,12 @@ end
 %% Now performing ridging
 
 floenew = [];
-SimpMin = @(A) 15*log10(A);%create function for limit on number of vertices a floe can have
+SimpMin = @(A) 3*log10(A);%create function for limit on number of vertices a floe can have
 
 if RIDGING
     %Create a function to control probability that ridging will occur
     overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
-    keep=rand(length(Floe),1)<overlapArea/max(overlapArea);
+    keep=rand(length(Floe),1)<5*overlapArea/max(overlapArea);
     for i=1:N0
         
         if Floe(i).alive && keep(i)

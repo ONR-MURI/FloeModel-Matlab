@@ -1,4 +1,4 @@
-function [ocean, c2_boundary, heat_flux,h0]=couple_ocean(transport, Lx, Ly,dXo,dt)
+function [ocean, c2_boundary, heat_flux,h0]=couple_ocean(transport, Lx, Ly,dXo,dt,nDTOut)
 
 ocean.fCoriolis=1.4e-4; % Coriolis parameter.
 
@@ -44,6 +44,6 @@ ocean.Vocn=Vocn;
 Tice = -20; Tocean = 2*ones(size(Xocn));
 heat_flux = 7.4*10^(-4)*(Tice-Tocean)/(72); %cm^2/s
 heat_flux = heat_flux/100^2; %m^2/s
-h0 = real(sqrt(-2*dt*heat_flux));
+h0 = real(sqrt(-2*dt*heat_flux*nDTOut));
 
 end

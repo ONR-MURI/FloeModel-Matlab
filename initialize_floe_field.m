@@ -1,4 +1,4 @@
-function [Floe] = initialize_floe_field(c,c2_boundary,ocean,SUBFLOES,height,NumFloes)
+function [Floe] = initialize_floe_field(c,c2_boundary,ocean,SUBFLOES,height,NumFloes,min_floe_size)
 %% This function is used to generate the initial floe field
 
 %Identify the grids to align with the concentrations specified by the input
@@ -22,11 +22,14 @@ for jj = 1:Ny
         boundary = [x(ii) x(ii) x(ii+1) x(ii+1) x(ii); y(jj) y(jj+1) y(jj+1) y(jj) y(jj)];
         [dFloe]= Generate_Floes(Floe0,boundary,c(jj,ii),N,SUBFLOES,height);
         if sum(cat(1,dFloe.area))/area(polyshape(boundary(1,:),boundary(2,:)))<c(jj,ii)
-            [dFloe,~] = pack_ice(dFloe,boundary,1.1,0,c(jj,ii),ocean,height,SUBFLOES, PERIODIC);
+            [dFloe,~] = pack_ice(dFloe,boundary,1.1,0,c(jj,ii),ocean,height,min_floe_size, SUBFLOES, PERIODIC);
         end
         Floe = [Floe dFloe];
     end
 end
+
+areas = cat(1,Floe.area);
+Floe(areas<min_floe_size)=[];
 
 end
 

@@ -5,6 +5,10 @@ function [Floe2]= Generate_Floes(Floe,c2_boundary,Target,N,SUBFLOES,height)
 ddx = 250;
 id ='MATLAB:polyshape:boundary3Points';
 warning('off',id)
+id2 = 'MATLAB:polyshape:repairedBySimplify';
+warning('off',id2)
+id3 = 'MATLAB:polyshape:boolOperationFailed';
+warning('off',id3)
 SHIFT = false;
 N = floor(4*N);%floor(((max(c2_boundary(2,:))-min(c2_boundary(2,:)))*(max(c2_boundary(2,:))-min(c2_boundary(2,:))))/(mean(cat(1,Floe.area))/4));
 N0 = fix(N^(1/3));
@@ -152,6 +156,8 @@ while cnow < Target
     ii = ii+1;
 end
 warning('on',id)
+warning('on',id2)
+warning('on',id3)
 
 Floe2=rmfield(Floe2,'potentialInteractions');
 end

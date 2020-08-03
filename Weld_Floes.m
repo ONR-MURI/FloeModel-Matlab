@@ -7,7 +7,7 @@ floenew = [];
 
 %Set probability function
 ramp = @(frac) heaviside(frac)*frac;
-SimpMin = @(A) 15*log10(A);
+SimpMin = @(A) 3*log10(A);
 
 %Loop through all floes to determine which will weld
 while i < length(Floe)

@@ -38,4 +38,6 @@ colormap('gray'); caxis([0 1]);
 axis([-Lx-Lx/10 Lx+Lx/10 -Ly-Ly/10 Ly+Ly/10])
 xlabel('m');ylabel('m');
 set(gca,'Ydir','normal');
+
+drawnow
 end

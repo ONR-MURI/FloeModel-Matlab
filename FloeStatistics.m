@@ -1,7 +1,7 @@
 load FloeStats
 % FloeStats = FloeStats
 close all
-time = 10*(0:length(FloeStats)-1)*25;
+time = 10*(0:length(FloeStats)-1)*nDTOut;
 %edges = 6*10.^(1:fix(log10(sqrt(Amax)))+1);
 figure
 plot(time,cat(1,FloeStats.Num),'k','linewidth',2)

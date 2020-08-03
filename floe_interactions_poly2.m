@@ -1,7 +1,9 @@
-function [ force_1, pcenter, worked,live] = floe_interactions_poly(c1, c2)
+function [ force_1, pcenter, worked,live] = floe_interactions_poly2(floe1, floe2)
 %% This function calculates the forces between two interaction floes
 
 % Find overlapping areas between polygons
+c1 = floe1.poly;
+c2 = floe2.poly;
 live = [1 1];
 Force_factor=1.2e3;
 polyout = intersect(c1,c2);
@@ -17,15 +19,15 @@ end
 worked=1;
 
 %Make sure one polygon is not entirely within the other
-if areaPoly/area(c1)>0.99 && areaPoly/area(c2)>0.99
+if areaPoly/floe1.area>0.99 && areaPoly/floe2.area>0.99
     x = 1;
     x(1) = [1 2];
-elseif areaPoly/area(c1)>0.5 && area(c1)/area(c2)<0.05
+elseif areaPoly/floe1.area>0.5 && floe1.area/floe2.area<0.05
     force_1=[0 0];
     pcenter=[0 0];  
     areaPoly = 0;
     live(1) = 0;
-elseif areaPoly/area(c2)>0.5 && area(c2)/area(c2)>0.05
+elseif areaPoly/floe2.area>0.5 && floe2.area/floe1.area>0.05
     force_1=[0 0];
     pcenter=[0 0];
     areaPoly = 0;
@@ -36,10 +38,10 @@ end
 if areaPoly<10
     force_1=[0 0];
     pcenter=[0 0];   
-elseif areaPoly/area(c1)>0.75 && c2.NumRegions < 1
+elseif areaPoly/floe1.area>0.75 && c2.NumRegions < 1
     force_1=[0 0];
     pcenter=[0 0]; 
-elseif areaPoly/area(c2)>0.75 
+elseif areaPoly/floe2.area>0.75 
     force_1=[0 0];
     pcenter=[0 0]; 
 else
@@ -154,6 +156,5 @@ else
         end
     end  
 end
-
 
 end

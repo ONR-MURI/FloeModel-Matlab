@@ -15,16 +15,22 @@ PACKING = true;
 
 WELDING = true;
 
+ifPlot = true; %Plot floe figures or not?
+
 %% Set the floe domain and couple with Ocean and Atmosphere
 
 %Define coupling paramters
 dXo = 4e3; dXa = dXo;
 transport=1e4; Lx=2e5; Ly=1e5;
+% transport=1e4; Lx=1e6; Ly=1e6;
 dt=10; %Time step in sec
 rho_ice=920;
+nDTOut=100; %Output frequency (in number of time steps)
+
+min_floe_size = 1e6; %Set minimum floe size to keep track of
 
 %Define ocean currents
-[ocean, c2_boundary,heat_flux.oc,h0]=couple_ocean(transport, Lx, Ly,dXo,dt);
+[ocean, c2_boundary,heat_flux.oc,h0]=couple_ocean(transport, Lx, Ly,dXo,dt,nDTOut);
 c2_boundary_poly=polyshape(c2_boundary(1,:),c2_boundary(2,:));
 
 %Define Atmosphere
@@ -40,11 +46,10 @@ height.delta = 0.5; %max difference between a flow thickness and the mean floe v
 target_concentration=1; % could be a vector
 
 %Generate initiial state
-Floe = initialize_floe_field(target_concentration, c2_boundary,ocean,SUBFLOES,height, 75);%
+%Floe = initialize_floe_field(target_concentration, c2_boundary,ocean,SUBFLOES,height, 50, min_floe_size);%
+load ./Floes/Floe0000045.mat
 
 %% Initialize model vars
-
-nDTOut=50; %Output frequency (in number of time steps)
 
 nSnapshots=10000; %Total number of model snapshots to save
 
@@ -52,12 +57,9 @@ nDT=nDTOut*nSnapshots; %Total number of time steps
 
 nPar = 4; %Number of workerks for parfor
 
-ifPlot = true; %Plot floe figures or not?
-
 SackedOB = 0; %initialize number of floes sacked for being out of bounds at zero
 
 dhdt = 1; %Sets probability for ice replenishing open space
-
 
 %% Define Eulerian grid and coarsening factor
 
@@ -87,16 +89,18 @@ coarseMean=zeros(9,Ny,Nx,nSnapshots);
 coarseSnap=zeros(9,Ny,Nx,nSnapshots);
 A=cat(1,Floe.area);
 Amax = max(A);
-SimpMin = @(A) 15*log10(A);%Function to determine when simplificatoin needs to be done based upon number of vertices
+SimpMin = @(A) 3*log10(A);%Function to determine when simplificatoin needs to be done based upon number of vertices
 
 %% Initialize time and other stuff to zero
 if isempty(dir('figs')); disp('Creating folder: figs'); mkdir('figs'); end
+if isempty(dir('Floes')); disp('Creating folder: Floes'); mkdir('Floes'); end
 
 if ~exist('Time','var')
     Time=0;
     i_step=0;
     im_num=1;
     fig=0;
+    fig2=0;
 %    EulCoarse=zeros(3, length(cCoarse0(:)),nSnapshots); %allocating memory
 end
 
@@ -105,8 +109,9 @@ end
 tic;
 gridArea=area(c2_boundary_poly)/Nx/Ny;
 Vdnew=zeros(Ny, Nx);
-fig2=figure;
+% fig2=figure;
 fig3 = figure;
+count = 1;
 
 %Update the winds
 if QG
@@ -116,13 +121,17 @@ if QG
     winds = UpdateWinds(psi_winds,Lx,Ly,dXa);
     pvold = pv12;
 end
-
+im_num = 46;
+i_step = 4501;
+load FloeStats
 while im_num<nSnapshots
      
     display(i_step);
     if mod(i_step,10)==0
         disp(newline);
-        toc
+        elapsedTime = toc;
+        disp(num2str(elapsedTime));
+        StepTimes(count) = elapsedTime/length(Floe);
         disp([num2str(i_step) ' timesteps comleted']); 
         numCollisions = calc_collisionNum(Floe);
         sacked = sum(~cat(1, Floe.alive));
@@ -130,6 +139,7 @@ while im_num<nSnapshots
         if SackedOB>0, disp(['total sacked floes for being out of bounds: ' num2str(SackedOB)]); end
         disp(['number of collisions: ' num2str(numCollisions)  newline]);
         tic
+        count = count+1;
     end
 
     %Plot, calculate mean values, and pack new ice after a number of
@@ -169,9 +179,9 @@ while im_num<nSnapshots
         
         %Run packing function
         if mod(i_step,nDTOut)==0 && PACKING && max(max(h0))>0
-            height.mean = h0*nDTOut;
+            height.mean = h0;
             height.delta = 0;
-            [Floe,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,target_concentration,ocean,height, SUBFLOES, PERIODIC);
+            [Floe,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,target_concentration,ocean,height, min_floe_size, SUBFLOES, PERIODIC);
 
         end
         
@@ -187,11 +197,12 @@ while im_num<nSnapshots
         coarseSnap(8,:,:,im_num)=eularian_data.force_x;
         coarseSnap(9,:,:,im_num)=eularian_data.force_y;        
         save('coarseData.mat','coarseSnap','coarseMean');
-        save('Floe.mat','Floe');
         
-        if dhdt > 0
-            dissolvedNEW = dissolvedNEW + (1-eularian_data.c)*gridArea*rho_ice*mean(mean(h0))*nDTOut; %saying here that open water is being populated by sea ice growth consistent with 0.2 m thick ice
-        end
+%         if dhdt > 0
+%             c = eularian_data.c;
+%             c(c>0.99) = 1;
+%             dissolvedNEW = dissolvedNEW + (1-c)*gridArea*rho_ice*mean(mean(h0)); %saying here that open water is being populated by sea ice growth consistent with 0.2 m thick ice
+%         end
         
         %Check to see if any floes need to be simplified
         floenew = [];
@@ -209,25 +220,23 @@ while im_num<nSnapshots
         end
         Floe = [Floe floenew];
         A = cat(1,Floe.area);
-        Floe(A<3500) = [];
+        Floe(A<min_floe_size) = [];
         live = cat(1,Floe.alive);
         Floe(live==0)=[];
 
         %Plot the floes
         if ifPlot
-            [fig, fig2]=plot_Floes(fig,fig2, Time,Floe, ocean, c2_boundary_poly, PERIODIC);
-            saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
-            figure(fig2);
-            saveas(fig2,['./figs/' num2str(im_num,'t%03.f') '.jpg'],'jpg');
+            [fig]=plot_basic(fig, Time,Floe, ocean, c2_boundary_poly);
+            %[fig, fig2]=plot_Floes(fig,fig2, Time,Floe, ocean, c2_boundary_poly, im_num,PERIODIC);
             if im_num>1
             figure(fig3);
-            imagesc(Vdnew/gridArea/1e3); axis xy
+            imagesc(Vdnew/(gridArea*rho_ice)); axis xy
             u=squeeze(coarseMean(2,:,:,im_num));
             v=squeeze(coarseMean(3,:,:,im_num));
             colormap('gray');colorbar;
             hold on; quiver(u,v,'r')
             drawnow
-            figure(fig);
+            set(0,'CurrentFigure',fig);
             end
 
         end
@@ -236,11 +245,8 @@ while im_num<nSnapshots
         im_num=im_num+1;  %image number for saving data and coarse vars;
     end
     
-    save('FloeOld.mat','Floe')
-    
     %Calculate forces and torques and intergrate forward
     [Floe,dissolvedNEW, SackedOB] = floe_interactions_all(Floe, ocean, winds,heat_flux, c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES);
-    
     
     %Run welding every so many time steps
     if mod(i_step-1,nDTOut)==0
@@ -290,16 +296,15 @@ while im_num<nSnapshots
     
     %Advect the dissolved mass
     Area=cat(1,Floe.area);
-    dissolvedNEW = calc_dissolved_mass(Floe(Area<3e5),Nx,Ny,c2_boundary_poly)+dissolvedNEW;
+    dissolvedNEW = calc_dissolved_mass(Floe(Area<min_floe_size),Nx,Ny,c2_boundary_poly)+dissolvedNEW;
     Vdnew = Advect_Dissolved_Ice(Vd,coarseMean,im_num,dissolvedNEW,c2_boundary,dt);
     dissolvedNEW=zeros(Ny,Nx);
     Vd(:,:,2) = Vd(:,:,1);
     Vd(:,:,1) = Vdnew;
     
-     
     
-    Floe=Floe(Area> 1e6);
-    if sum(Area<1e6)>0, display(['num of small floes killed:' num2str(sum(Area<1e6))]); end
+    if sum(Area<min_floe_size)>0, display(['num of small floes killed:' num2str(sum(Area<min_floe_size))]); end
+    Floe=Floe(Area> min_floe_size);
     Time=Time+dt; i_step=i_step+1; %update time index
 
 end
