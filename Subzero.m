@@ -1,3 +1,5 @@
+% function Subzero
+
 close all; clear all;
 
 addpath ./dengwirda-inpoly-ebf47d6/ 
@@ -11,11 +13,11 @@ PERIODIC=true;
 
 SUBFLOES = false;
 
-PACKING = true;
+PACKING = false;
 
-WELDING = true;
+WELDING = false;
 
-ifPlot = false; %Plot floe figures or not?
+ifPlot = true; %Plot floe figures or not?
 
 %% Set the floe domain and couple with Ocean and Atmosphere
 
@@ -23,14 +25,14 @@ ifPlot = false; %Plot floe figures or not?
 dXo = 4e3; dXa = dXo;
 transport=1e4; Lx=2e5; Ly=1e5;
 % transport=1e4; Lx=1e6; Ly=1e6;
-dt=10; %Time step in sec
+dt=20; %Time step in sec
 rho_ice=920;
 nDTOut=100; %Output frequency (in number of time steps)
 
 min_floe_size = 1e6; %Set minimum floe size to keep track of
 
 %Define ocean currents
-[ocean, c2_boundary,heat_flux.oc,h0]=couple_ocean(transport, Lx, Ly,dXo,dt,nDTOut);
+[ocean, c2_boundary,heat_flux.oc,h0]=couple_ocean(transport, Lx, Ly,dXo,dt,nDTOut,0);
 c2_boundary_poly=polyshape(c2_boundary(1,:),c2_boundary(2,:));
 
 %Define Atmosphere
@@ -46,12 +48,12 @@ height.delta = 0.5; %max difference between a flow thickness and the mean floe v
 target_concentration=1; % could be a vector
 
 %Generate initiial state
-Floe = initialize_floe_field(target_concentration, c2_boundary,ocean,SUBFLOES,height, 50, min_floe_size);%
-%load ./Floes/Floe0000045.mat
+Floe = initialize_floe_field(target_concentration, c2_boundary,ocean,SUBFLOES,height, 100, min_floe_size);%
+Nb = 0;
 
 %% Initialize model vars
 
-nSnapshots=10; %Total number of model snapshots to save
+nSnapshots=1000; %Total number of model snapshots to save
 
 nDT=nDTOut*nSnapshots; %Total number of time steps
 
@@ -79,7 +81,7 @@ dissolvedNEW=zeros(Ny,Nx);
 Vd = zeros(Ny,Nx,2);
 
 %%  Calc interactions and plot initial state
-[Floe,dissolvedNEW, SackedOB] = floe_interactions_all(Floe, ocean, winds,heat_flux,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES); % find interaction points
+[Floe,dissolvedNEW, SackedOB] = floe_interactions_all(Floe, ocean, winds,heat_flux,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, Nb, RIDGING, PERIODIC,SUBFLOES); % find interaction points
 Floe=Floe(logical(cat(1,Floe.alive)));
 
 
@@ -89,7 +91,7 @@ coarseMean=zeros(9,Ny,Nx,nSnapshots);
 coarseSnap=zeros(9,Ny,Nx,nSnapshots);
 A=cat(1,Floe.area);
 Amax = max(A);
-SimpMin = @(A) 3*log10(A);%Function to determine when simplificatoin needs to be done based upon number of vertices
+SimpMin = @(A) 9*log10(A);%Function to determine when simplificatoin needs to be done based upon number of vertices
 
 %% Initialize time and other stuff to zero
 if isempty(dir('figs')); disp('Creating folder: figs'); mkdir('figs'); end
@@ -109,8 +111,9 @@ end
 tic;
 gridArea=area(c2_boundary_poly)/Nx/Ny;
 Vdnew=zeros(Ny, Nx);
-% fig2=figure;
-fig3 = figure;
+if ifPlot
+    fig3 = figure;
+end
 count = 1;
 
 %Update the winds
@@ -121,9 +124,7 @@ if QG
     winds = UpdateWinds(psi_winds,Lx,Ly,dXa);
     pvold = pv12;
 end
-im_num = 46;
-i_step = 4501;
-load FloeStats
+
 while im_num<nSnapshots
      
     display(i_step);
@@ -162,6 +163,8 @@ while im_num<nSnapshots
             pvold = pv12;
         end
             
+        ocean.Uocn=U*cos(ocean.fCoriolis*Time);  
+        ocean.Vocn=-U*sin(ocean.fCoriolis*Time);
         
         %Floe thickness and area statistics
         [A1,A2] = hist(Atot,10);
@@ -184,7 +187,7 @@ while im_num<nSnapshots
             [Floe,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,target_concentration,ocean,height, min_floe_size, SUBFLOES, PERIODIC);
 
         end
-        
+                
         %Corase mean data
         [eularian_data] = calc_eulerian_data(Floe,Nx,Ny,c2_boundary,PERIODIC);
         coarseSnap(1,:,:,im_num)=eularian_data.c;
@@ -207,16 +210,17 @@ while im_num<nSnapshots
         %Check to see if any floes need to be simplified
         floenew = [];
         for ii = 1:length(Floe)
-            floe = Floe(ii);
             ddx = 100;
+            if length(Floe(ii).poly.Vertices) > SimpMin(Floe(ii).area)
                 floe = FloeSimplify(Floe(ii), ddx,SUBFLOES);
-            for jj = 1:length(floe)
-                if jj == 1
-                    Floe(ii) = floe(jj);
-                else
-                    floenew = [floenew floe(jj)];
+                for jj = 1:length(floe)
+                    if jj == 1
+                        Floe(ii) = floe(jj);
+                    else
+                        floenew = [floenew floe(jj)];
+                    end
                 end
-            end           
+            end
         end
         Floe = [Floe floenew];
         A = cat(1,Floe.area);
@@ -246,30 +250,30 @@ while im_num<nSnapshots
     end
     
     %Calculate forces and torques and intergrate forward
-    [Floe,dissolvedNEW, SackedOB] = floe_interactions_all(Floe, ocean, winds,heat_flux, c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES);
+    [Floe,dissolvedNEW, SackedOB] = floe_interactions_all(Floe, ocean, winds,heat_flux, c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, Nb, RIDGING, PERIODIC,SUBFLOES);
     
     %Run welding every so many time steps
     if mod(i_step-1,nDTOut)==0
-        Floe2 = Floe;
         if WELDING
             weldrate = 0.1;%Set rate at which floes will meld
             A=cat(1,Floe.area);
             if max(A) > Amax
                 Amax = max(A);
             end
-            FloeOld = Floe;
             Floe = Weld_Floes(Floe,weldrate,Amax,SUBFLOES);
         end
 
     end
     
-    Floe2 = Floe;
     
     %Run fracture fucture
     if FRACTURES
         overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
         keep=rand(length(Floe),1)>overlapArea;
-        fracturedFloes=fracture_floe(Floe(~keep),5);
+        if Nb > 0
+            keep(1:Nb) = ones(Nb,1);
+        end
+        fracturedFloes=fracture_floe(Floe(~keep),3);
         if ~isempty(fracturedFloes), fracturedFloes=rmfield(fracturedFloes,'potentialInteractions');
             Floe=[Floe(keep) fracturedFloes];
         end
@@ -290,9 +294,9 @@ while im_num<nSnapshots
     %Find thickness and height data to keep track of these statistics
     NumFloes = NumFloes+length(Floe)/nDTOut;
     Asnap = cat(1,Floe.area);
-    Atot = [Atot; Asnap];
+    Atot = [Atot; Asnap(Nb+1:end)];
     hsnap = cat(1,Floe.h);
-    htot = [htot; hsnap];
+    htot = [htot; hsnap(Nb+1:end)];
     
     %Advect the dissolved mass
     Area=cat(1,Floe.area);
@@ -309,3 +313,4 @@ while im_num<nSnapshots
 
 end
 %%
+% end

@@ -1,4 +1,4 @@
-function floe=calc_trajectory(dt,ocean,winds,floe,heat_flux,SUBFLOES)
+function floe=calc_trajectory(dt,ocean,winds,floe,heat_flux,c2_boundary_poly, SUBFLOES)
 %%This function advances the individual floes in time calculating the new
 %%trajectory based upon the calculated forces
 
@@ -57,7 +57,7 @@ areaS = zeros(N,1);
 inertia = zeros(N,1);
 centers = zeros(N,2);
 for ii = 1:N
-%     floe.SubFloes(ii).h = floe.SubFloes(ii).h-HFo*dt/(floe.SubFloes(ii).h);
+    floe.SubFloes(ii).h = floe.SubFloes(ii).h-HFo*dt/(floe.SubFloes(ii).h);
     areaS(ii) = area(floe.SubFloes(ii).poly);
     if floe.SubFloes(ii).poly.NumHoles > 0
         breaks = isnan(floe.SubFloes(ii).poly.Vertices(:,1));
@@ -79,6 +79,10 @@ floe.Xm = sum(rho_ice*areaS.*cat(1,floe.SubFloes.h).*centers(:,1))./floe.mass;
 floe.Ym = sum(rho_ice*areaS.*cat(1,floe.SubFloes.h).*centers(:,2))./floe.mass;
 floe.h = sum(rho_ice*areaS.*cat(1,floe.SubFloes.h).*cat(1,floe.SubFloes.h))./floe.mass;
 floe.inertia_moment = sum(inertia+cat(1,floe.SubFloes.h).*sqrt((centers(:,1)-floe.Xm).^2+(centers(:,2)-floe.Ym).^2));
+if floe.h <= 0
+    floe.alive = 0;
+end
+
 
 %%
 

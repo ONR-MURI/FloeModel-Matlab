@@ -1,4 +1,4 @@
-function [Floe,dissolvedNEW, SackedOB] = floe_interactions_all(Floe, ocean, winds,heat_flux,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, RIDGING, PERIODIC,SUBFLOES)
+function [Floe,dissolvedNEW, SackedOB] = floe_interactions_all(Floe, ocean, winds,heat_flux,c2_boundary_poly, dt,dissolvedNEW,SackedOB,Nx,Ny, Nb, RIDGING, PERIODIC,SUBFLOES)
 %This function time steps the floe model forward by creating ghost floes if
 %periodic. Then calculating the forces between all interacting floes and
 %using the forces to time step each individual floes forward. Once these
@@ -260,7 +260,7 @@ end
 %% 
 
 %Do the timestepping for parent floes now that their forces and torques are known.
-parfor i=1:N0
+parfor i=1+Nb:N0
     
     if Floe(i).alive
         
@@ -292,7 +292,7 @@ parfor i=1:N0
         end
        
         
-        tmp=calc_trajectory(dt,ocean, winds,Floe(i),heat_flux,SUBFLOES); % calculate trajectory
+        tmp=calc_trajectory(dt,ocean, winds,Floe(i),heat_flux,c2_boundary_poly,SUBFLOES); % calculate trajectory
         if (isempty(tmp) || isnan(Floe(i).Xi) )
             Floe(i).alive=0; 
             SackedOB = SackedOB +1;
@@ -310,7 +310,7 @@ end
 %% Now performing ridging
 
 floenew = [];
-SimpMin = @(A) 3*log10(A);%create function for limit on number of vertices a floe can have
+SimpMin = @(A) 9*log10(A);%create function for limit on number of vertices a floe can have
 
 if RIDGING
     %Create a function to control probability that ridging will occur
