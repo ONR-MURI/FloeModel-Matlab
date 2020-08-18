@@ -1,6 +1,6 @@
 close all; clear all;
 
-addpath ~/Downloads/dengwirda-inpoly-ebf47d6/ 
+addpath ./dengwirda-inpoly-ebf47d6/ 
 
 %% Set model flags
 RIDGING=true; 
@@ -15,7 +15,7 @@ PACKING = true;
 
 WELDING = true;
 
-ifPlot = true; %Plot floe figures or not?
+ifPlot = false; %Plot floe figures or not?
 
 %% Set the floe domain and couple with Ocean and Atmosphere
 
@@ -46,12 +46,12 @@ height.delta = 0.5; %max difference between a flow thickness and the mean floe v
 target_concentration=1; % could be a vector
 
 %Generate initiial state
-%Floe = initialize_floe_field(target_concentration, c2_boundary,ocean,SUBFLOES,height, 50, min_floe_size);%
-load ./Floes/Floe0000045.mat
+Floe = initialize_floe_field(target_concentration, c2_boundary,ocean,SUBFLOES,height, 50, min_floe_size);%
+%load ./Floes/Floe0000045.mat
 
 %% Initialize model vars
 
-nSnapshots=10000; %Total number of model snapshots to save
+nSnapshots=10; %Total number of model snapshots to save
 
 nDT=nDTOut*nSnapshots; %Total number of time steps
 

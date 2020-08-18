@@ -1,7 +1,6 @@
 load FloeStats
-% FloeStats = FloeStats
 close all
-time = 10*(0:length(FloeStats)-1)*nDTOut;
+time = 10*(0:length(FloeStats)-1)*25;
 %edges = 6*10.^(1:fix(log10(sqrt(Amax)))+1);
 figure
 plot(time,cat(1,FloeStats.Num),'k','linewidth',2)
@@ -12,11 +11,10 @@ figure
 figure
 rho_ice = 920;
 clear m
-clear Vol
 for ii = 2:length(time)
     figure(2)
-    Vol(ii) = sum(FloeStats(ii).A(:,1).*FloeStats(ii).h(:,1))/nDTOut+FloeStats(ii).DissolvedMass/rho_ice;
-    plot(sqrt(FloeStats(ii).A),FloeStats(ii).h,'ok','linewidth',2)
+    Vol(ii) = sum(FloeStats(ii).A(:,1).*FloeStats(ii).h(:,1))+FloeStats(ii).DissolvedMass/rho_ice;
+    scatter(sqrt(FloeStats(ii).A),FloeStats(ii).h)
     figure(3)
     FloeStats(ii).A(sqrt(FloeStats(ii).A)<1e3) = [];
     A = histogram(sqrt(FloeStats(ii).A));
@@ -55,9 +53,3 @@ plot(time(2:end),Vol(2:end),'k','linewidth',2)
 set(gca,'fontsize',18)
 ylabel('Volume of Ice','fontsize',36)
 xlabel('Time','fontsize',36)
-figure(2)
-set(gca,'XScale','log','YScale','log')
-set(gca,'fontsize',18)
-xlabel('Floe size','fontsize',36)
-ylabel('Floe Thickness','fontsize',36)
-ylim([0.1 10])

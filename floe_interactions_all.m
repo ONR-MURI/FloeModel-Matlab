@@ -224,7 +224,7 @@ end
 %%
 
 % calculate all torques from forces including for ghost floes
-for i=1:N
+parfor i=1:N
     
     if ~isempty(Floe(i).interactions)
         
@@ -260,7 +260,7 @@ end
 %% 
 
 %Do the timestepping for parent floes now that their forces and torques are known.
-for i=1:N0
+parfor i=1:N0
     
     if Floe(i).alive
         
