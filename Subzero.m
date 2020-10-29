@@ -22,6 +22,12 @@ ocean=initialize_ocean();
 %Define 10m winds
 winds=[10 10];
 
+%Define boundaries
+c2_boundary=initialize_boundaries();
+Ly = max(c2_boundary(2,:));
+c2_boundary_poly = polyshape(c2_boundary');
+Nb = 0;
+
 %Initialize Floe state
 %Floe=initialize_Floe('FloeShapes.mat');
 height.mean = 2;
@@ -33,11 +39,6 @@ if isfield(Floe,'poly')
 end
 %load('PackedFloesFullDomain.mat','Floe');
 %Floe= create_packed_domain();
-%Define boundaries
-c2_boundary=initialize_boundaries();
-Ly = max(c2_boundary(2,:));
-c2_boundary_poly = polyshape(c2_boundary');
-Nb = 0;
 
 %%
 
