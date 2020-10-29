@@ -1,9 +1,11 @@
-function [X,Y,c,cc, U,V, UU, VV] = create_eulerian_data(Floe, X,Y, c_fact)
+function [X,Y,c,cc, U,V, UU, VV] = create_eulerian_data(Floe, X,Y, c_fact, c2_boundary)
 
 n_cutX=fix(size(X,1)/c_fact)*c_fact;
 n_cutY=fix(size(X,2)/c_fact)*c_fact;
 X=X(1:n_cutX,1:n_cutY);
 Y=Y(1:n_cutX,1:n_cutY);
+
+inBoundaries=inpolygon(X(:),Y(:),c2_boundary(1,:),c2_boundary(2,:));
 
 c=zeros(size(X));
 U=zeros(size(X));
@@ -15,8 +17,8 @@ parfor j=1:length(Floe)
     x=Floe(j).Xg;   y=Floe(j).Yg;
     
     A=imrotate(Floe(j).A,-Floe(j).alpha_i/pi*180,'crop');
-
-    Ag=interp2(x+xc,y+yc,double(A),X,Y); Ag(isnan(Ag))=0;   
+    A=Floe(j).A;
+    Ag=interp2(x+xc,y+yc,double(A),X,Y); Ag(isnan(Ag))=0; Ag(~inBoundaries)=0;
     c=c+Ag;    
     
     [Xg, Yg]=meshgrid(x,y); % grid centered around the ice floe
@@ -28,9 +30,9 @@ parfor j=1:length(Floe)
        
     Uice(~A)=0; Vice(~A)=0;%to make zero where there is no floe
   
-    ug=interp2(x+xc,y+yc,double(Uice),X,Y); ug(isnan(ug))=0;   
+    ug=interp2(x+xc,y+yc,double(Uice),X,Y); ug(isnan(ug))=0;  ug(~inBoundaries)=0; 
     U=U+ug;
-    vg=interp2(x+xc,y+yc,double(Vice),X,Y); vg(isnan(vg))=0;   
+    vg=interp2(x+xc,y+yc,double(Vice),X,Y); vg(isnan(vg))=0;  vg(~inBoundaries)=0;
     V=V+vg;
     end
     

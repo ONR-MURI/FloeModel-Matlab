@@ -4,10 +4,10 @@ close all; clear all;
 %% Initialize model vars
 
 %Define ocean currents
-ocean=initialize_ocean();
+ocean=initialize_ocean_piston();
 
 %Define 10m winds
-winds=[0 5];
+winds=[0 0];
 
 %Initialize Floe state
 %Floe=initialize_Floe('FloeShapes.mat');
@@ -16,10 +16,13 @@ load('FloeVoronoi.mat','Floe');
 %Floe= create_packed_domain();
 %Define boundaries
 c2_boundary=initialize_boundaries();
+Ly = max(c2_boundary(2,:));
+c2_boundary_poly = polyshape(c2_boundary');
+Nb = 0;
 
 %%
 
-dt=40; %Time step in sec
+dt=10; %Time step in sec
 
 nDTOut=50; %Output frequency (in number of time steps)
 
@@ -29,8 +32,9 @@ nDT=nDTOut*nSnapshots; %Total number of time steps
 
 nPar = 4; %Number of workerks for parfor
 
-ifPlot = true; %Plot floe figures or not?
+ifPlot = false; %Plot floe figures or not?
 
+min_floe_size = 1e6;
 
 %% Calc interactions and plot initial state
 Floe=Floe(logical(cat(1,Floe.alive)));
@@ -54,6 +58,7 @@ c_fact=40; % coarsening factor
 
 %% Initialize time and other stuff to zero
 if isempty(dir('figs')); disp('Creating folder: figs'); mkdir('figs'); end
+if isempty(dir('Floes')); disp('Creating folder: Floes'); mkdir('Floes'); end
 
 if ~exist('Time','var')
     Time=0;
@@ -68,7 +73,11 @@ end
 tic;
 while im_num<nSnapshots
      
-    %c2_boundary=c2_boundary*(1+0.0005); % shrink by % every 10 steps
+     
+    Ly = Ly-5; % shrink the boundaries to crush from top and bottom
+    c2_boundary(2,:) = [-Ly Ly Ly -Ly -Ly];% 
+    
+%     c2_boundary(1,:) = c2_boundary(1,:) + [-10 10 10 -10 -10]; %Shearing boundary
 
     if mod(i_step,10)==0
         disp(' ');
@@ -85,7 +94,8 @@ while im_num<nSnapshots
     if mod(i_step,nDTOut)==0  %plot the state after a number of timesteps
         
         if ifPlot
-            fig=plot_Floes(fig,Time,Floe, ocean, c2_boundary); % plots model state
+            [fig] =plot_basic(fig, Time,Floe,ocean,c2_boundary_poly,Nb);
+            %fig=plot_Floes(fig,Time,Floe, ocean, c2_boundary); % plots model state
             saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
         end
         
@@ -96,6 +106,8 @@ while im_num<nSnapshots
                 simp = simp+1;
             end
         end
+        save(['./Floes/Floe' num2str(im_num,'%07.f') '.mat'],'Floe');
+
         %calculating and saving corase grid variables
         %[x,y, cFine0, cCoarse0,  U_Fine0,V_Fine0, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact,c2_boundary );
 %         [~,~, ~, cCoarse0,  ~,~, U_Coarse0, V_Coarse0 ] = create_eulerian_data( Floe, Xgg, Ygg, c_fact ,c2_boundary);
@@ -115,14 +127,17 @@ while im_num<nSnapshots
         overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
         keep=rand(length(Floe),1)>2*overlapArea;
         fracturedFloes=fracture_floe(Floe(~keep),3);
-        if ~isempty(fracturedFloes), fracturedFloes=rmfield(fracturedFloes,'potentialInteractions');
-%             Floe=[Floe(keep) fracturedFloes];
+        if ~isempty(fracturedFloes)
+            Floe=[Floe(keep) fracturedFloes];
         end
         
     end
     
+    Area=cat(1,Floe.area);
+    if sum(Area<min_floe_size)>0, display(['num of small floes killed:' num2str(sum(Area<min_floe_size))]); end
+    Floe=Floe(Area> min_floe_size);
+    
     Time=Time+dt; i_step=i_step+1; %update time index
-
 
 end
 %%

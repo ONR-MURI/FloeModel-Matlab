@@ -4,7 +4,7 @@ showContactPoints=0;
 showCenterOfMass=0;
 
 if (fig==0 || ~isvalid(fig))
-    fig=figure('Position',[100 100 500 500]);  
+    fig=figure('Position',[100 100 500 500],'visible','off');  
     set(fig,'PaperSize',[8 8],'PaperPosition',[0 0 8 8]);
 end
 

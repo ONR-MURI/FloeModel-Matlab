@@ -1,11 +1,11 @@
-function ocean=initialize_ocean()
+function ocean=initialize_ocean_piston()
 
 % defining ocean currents
 
 % ocean grid;
 dXo=2000; % in meters
 
-Xo=-90e4:dXo:90e4; Yo=-90e4:dXo:90e4; 
+Xo=-90e3:dXo:90e3; Yo=-90e3:dXo:90e3; 
 [Xocn, Yocn]=meshgrid(Xo,Yo);
 
 %defining ocean streamfunction with some eddies
@@ -14,8 +14,6 @@ psi_ocean=transport*sin(2*pi*Xocn/40e3).*cos(2*pi*Yocn/50e3);
 
 %calculating ocean velocity field 
 Uocn=zeros(size(Xocn)); Vocn=zeros(size(Xocn));
-Uocn(2:end,:)=-(psi_ocean(2:end,:)-psi_ocean(1:end-1,:))/dXo; 
-Vocn(:,2:end)=(psi_ocean(:,2:end)-psi_ocean(:,1:end-1))/dXo;
 
 %adding pure divergence 
 %Uocn=Uocn-0.1*Xocn/3e4;

@@ -3,6 +3,13 @@ function floe=calc_trajectory(dt,ocean,winds,floe)
 ext_force=floe.collision_force;
 ext_torque=floe.collision_torque;
 
+% if floe.h < 0.5
+    while max((abs(ext_force))) > floe.mass/(3*dt)
+        ext_force = ext_force/10;
+        ext_torque = ext_torque/10;
+    end
+% end
+
 Xo=ocean.Xo;
 Yo=ocean.Yo;
 Uocn=ocean.Uocn;
@@ -38,34 +45,35 @@ Cd_atm=1e-3;
 floe_area=floe.area;
 floe_mass=floe.mass; % total mass
 floe_inertia_moment=floe.inertia_moment; % moment of inertia
-R_floe=floe.rmax;
+R_floe=sqrt(max(floe.Xg)^2+max(floe.Yg)^2);
 
 %%
 U10=winds(1); % atmospheric winds
 V10=winds(2); % constant here
 
-if isnan(floe.Xi)||isnan(floe.alpha_i)||isnan(floe.ksi_ice), disp('Ice floe sacked: out of ocean grid bounds!'); floe=[];
+if isnan(floe.Xi), disp('Ice floe sacked: out of ocean grid bounds!'); xx = 1; xx(1) = [1 2]; floe=[];
 else
-     
-%     if  ( floe.Xi+floe.rmax>max(Xo) || floe.Xi-floe.rmax<min(Xo) || floe.Yi+floe.rmax>max(Yo) || floe.Yi-floe.rmax<min(Yo)   )       
-%         disp('Ice floe sacked: out of ocean grid bounds!'); floe=[];        
-%     else
-        
-    if  ( max(floe.poly.Vertices(:,1))>max(Xo) || min(floe.poly.Vertices(:,1))<min(Xo) || max(floe.poly.Vertices(:,2))>max(Yo) || min(floe.poly.Vertices(:,2))<min(Yo)   )
+    
+    A_alpha=imrotate(floe.A,-floe.alpha_i/pi*180,'bilinear','crop');
+    floe_mask=(A_alpha==1);
+    if sum(floe_mask(:))==0
+        floe.alive = 0;
+    end
+%     dX=250; % resolution of the grid inside the floe
+%     n=(fix(floe.rmax/dX)+1); n=dX*(-n:n);
+%     [Xg, Yg]= meshgrid(n, n);
+% 
+%     [in] = inpolygon(Xg(:), Yg(:),floe.c0(1,:),floe.c0(2,:));
+%     floe_mask=reshape(in,length(Xg),length(Xg));
+    
+    if  ( max(max(floe.c_alpha(1,:)))+floe.Xi>max(Xo) || min(min(floe.c_alpha(1,:)))+floe.Xi<min(Xo) || max(max(floe.c_alpha(2,:)))+floe.Yi>max(Yo) || min(min(floe.c_alpha(2,:)))+floe.Yi<min(Yo)   )       
         disp('Ice floe sacked: out of ocean grid bounds!'); floe=[];        
-    else
+    elseif floe.alive == 1
         
-%        A_alpha=imrotate(floe.A,-floe.alpha_i/pi*180,'bilinear','crop');
-
-%        floe_mask=(A_alpha==1);
-        dX=500; % resolution of the grid inside the flow
-        n=(fix(floe.rmax/dX)+1); n=dX*(-n:n);
-        [Xg, Yg]= meshgrid(n+floe.Xi, n+floe.Yi);
         
-       % in=inpolygon(Xg(:),Yg(:),floe.poly.Vertices(:,1),floe.poly.Vertices(:,2)); 
-        in=inpoly2([Xg(:) Yg(:)],floe.poly.Vertices); 
-        floe_mask=reshape(in,length(Xg),length(Xg));
-
+        Xg=floe.X+floe.Xi; % grid centered around the ice floe
+        Yg=floe.Y+floe.Yi;
+        
         [theta,rho] = cart2pol(Xg-Xi,Yg-Yi);
         
         
@@ -74,17 +82,26 @@ else
         
         % interpolating ocean currents onto ice floe grid.
         %   floe_mask_ocn_grid=logical( (Xocn <= Xi+R_floe+3*dXo).*(Xocn >= Xi-R_floe-3*dXo).*(Yocn <= Yi+R_floe+3*dXo).*(Yocn >= Yi-R_floe-3*dXo) );
-        x_ind=logical((Xo <= Xi+R_floe+dXo).*(Xo >= Xi-R_floe-dXo));
-        y_ind=logical((Yo <= Yi+R_floe+dXo).*(Yo >= Yi-R_floe-dXo));
+         x_ind=logical((Xo <= Xi+R_floe+2*dXo).*(Xo >= Xi-R_floe-2*dXo));
+         y_ind=logical((Yo <= Yi+R_floe+2*dXo).*(Yo >= Yi-R_floe-2*dXo));
         
         Uocn_interp=interp2(Xo(x_ind),Yo(y_ind), Uocn(y_ind,x_ind),Xg,Yg);
         Vocn_interp=interp2(Xo(x_ind),Yo(y_ind), Vocn(y_ind,x_ind),Xg,Yg);
+        if isnan(mean(Uocn_interp(:))) || max(abs(Uice(:)))>100
+            xx = 1;
+            xx(1) = [1 2];
+        end
         
         Fx_atm=rho_air*Cd_atm*sqrt(U10^2+V10^2)*U10;
         Fy_atm=rho_air*Cd_atm*sqrt(U10^2+V10^2)*V10;
         
         Fx=rho0*Cd*sqrt((Uocn_interp-Uice).^2+(Vocn_interp-Vice).^2).*(Uocn_interp-Uice)+Fx_atm; % ice-water drag forces in X and Y-dir
         Fy=rho0*Cd*sqrt((Uocn_interp-Uice).^2+(Vocn_interp-Vice).^2).*(Vocn_interp-Vice)+Fy_atm;
+        
+        if max(isinf(Fx(:))) || max(isnan(Fx(:)))
+            xx = 1;
+            xx(1) = [1 2];
+        end
         
         % updating the ice floe vorticity with averaged torques over the ice floe area
         torque=(-Fx.*sin(theta)+Fy.*cos(theta)).*rho;  % torque
@@ -101,37 +118,49 @@ else
         %the previos time steps d = 1.5*dt*(d/dt)-0.5*dt*(d/dt)_previous
         
         % updating the ice floe coordinates with velocities
-        dalpha=1.5*dt*floe.ksi_ice-0.5*dt*floe.dalpha_i_p;
-        floe.alpha_i=floe.alpha_i+dalpha; floe.dalpha_i_p=floe.ksi_ice;
-        
- %      A_rot=[cos(dalpha) -sin(dalpha); sin(dalpha) cos(dalpha)]; %rotation matrix
- %      floe.poly.Vertices=(A_rot*(floe.poly.Vertices - [floe.Xi floe.Yi])')'; %rotate floe contour around its old center of mass
-
-        floe.poly=rotate(floe.poly,dalpha*180/pi,[floe.Xi, floe.Yi]);
-        dx=1.5*dt*floe.Ui-0.5*dt*floe.dXi_p;
-        floe.Xi=floe.Xi+dx;  floe.dXi_p=floe.Ui;
-        
-        dy=1.5*dt*floe.Vi-0.5*dt*floe.dYi_p;
-        floe.Yi=floe.Yi+dy;  floe.dYi_p=floe.Vi;
-        
-        floe.poly.Vertices= floe.poly.Vertices + [dx dy];  % shift by its updated center coordinate
+        floe.Xi=floe.Xi+1.5*dt*floe.Ui -0.5*dt*floe.dXi_p;  floe.dXi_p=floe.Ui;
+        floe.Yi=floe.Yi+1.5*dt*floe.Vi -0.5*dt*floe.dYi_p;  floe.dYi_p=floe.Vi;
+        floe.alpha_i=floe.alpha_i+1.5*dt*floe.ksi_ice-0.5*dt*floe.dalpha_i_p; floe.dalpha_i_p=floe.ksi_ice;
         
         % updating the ice floe velocities with mean forces and torques
         dUi_dt=(mean(Fx(floe_mask))*floe_area+ext_force(1))/floe_mass;
-        du=1.5*dt*dUi_dt-0.5*dt*floe.dUi_p;
-        floe.Ui=floe.Ui+du;  floe.dUi_p=dUi_dt;
+        frac = [];
+        if abs(dt*dUi_dt) > 0.5
+            dUi_dt = sign(dUi_dt)*0.5/dt;
+            frac = dUi_dt/(mean(Fx(floe_mask))*floe_area+ext_force(1))/floe_mass;
+        end
+        floe.Ui=floe.Ui+1.5*dt*dUi_dt-0.5*dt*floe.dUi_p;  floe.dUi_p=dUi_dt;
+        if abs(floe.Ui) > 5
+            xx = 1;
+            xx(1) = [1 2];
+        end
         
         dVi_dt=(mean(Fy(floe_mask))*floe_area+ext_force(2))/floe_mass;
-        dv=1.5*dt*dVi_dt - 0.5*dt*floe.dVi_p;
-        floe.Vi=floe.Vi+dv;  floe.dVi_p=dVi_dt;
+        if abs(dt*dVi_dt) > 0.5
+            dVi_dt = sign(dVi_dt)*0.5/dt;
+            frac = dVi_dt/(mean(Fy(floe_mask))*floe_area+ext_force(2))/floe_mass;
+        end
+        floe.Vi=floe.Vi+1.5*dt*dVi_dt - 0.5*dt*floe.dVi_p;  floe.dVi_p=dVi_dt;
+        if abs(floe.Vi) > 5
+            xx = 1;
+            xx(1) = [1 2];
+        end
         
         dksi_ice_dt=(mean(torque(floe_mask))*floe_area+ext_torque)/floe_inertia_moment;
-        dksi=1.5*dt*dksi_ice_dt - 0.5*dt*floe.dksi_ice_p;
-        floe.ksi_ice=floe.ksi_ice+dksi; floe.dksi_ice_p=dksi_ice_dt;
+        if ~isempty(frac)
+            dksi_ice_dt = frac*dksi_ice_dt;
+        end
+        floe.ksi_ice=floe.ksi_ice+1.5*dt*dksi_ice_dt - 0.5*dt*floe.dksi_ice_p; floe.dksi_ice_p=dksi_ice_dt;
         
+        A_rot=[cos(floe.alpha_i) -sin(floe.alpha_i); sin(floe.alpha_i) cos(floe.alpha_i)]; %rotation matrix
+        floe.c_alpha=A_rot*floe.c0; %rotate floe contour
     end
 end
 
+if isnan(floe.Ui) || isnan(floe.ksi_ice) || isnan(floe.Vi) || isinf(floe.ksi_ice)
+    xx =1 ;
+    xx(1) = [1 2];
+end
 
 end
 

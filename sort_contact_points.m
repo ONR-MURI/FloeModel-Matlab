@@ -8,7 +8,7 @@ end
 [~, b]=sort(dist); P=P(:,b); % points are sorted by distance along the contour
 
 
-N_contact=size(P,2)/2;
+N_contact=size(P,2)-1;
 
 moved=0;
 worked=0;
@@ -19,7 +19,7 @@ while ~worked && moved<2
     
     for k=1:N_contact
         
-        p=P(1:2,2*k-1:2*k);
+        p=P(1:2,k:k+1);
         
         pcenter(k,:)=mean(p,2); dp=p(:,1)-p(:,2);
         
@@ -44,11 +44,16 @@ while ~worked && moved<2
         
         
         pp2=InterX(c2,[x1 x2; y1 y2]);
-        [~, i_min] = sort(sqrt( ( (pp2(1,:)-pcenter(k,1)).^2 + (pp2(2,:)-pcenter(k,2)).^2)));
-        pp2=pp2(:,i_min(1));
+        if isempty(pp2)
+            floe2_in_floe1(k)=0;
+        else
+            [~, i_min] = sort(sqrt( ( (pp2(1,:)-pcenter(k,1)).^2 + (pp2(2,:)-pcenter(k,2)).^2)));
+            pp2=pp2(:,i_min(1));
+            floe2_in_floe1(k)=inpolygon(pp2(1),pp2(2),c1(1,:),c1(2,:));
+        end
         
         
-        floe2_in_floe1(k)=inpolygon(pp2(1),pp2(2),c1(1,:),c1(2,:));
+        
     end
     %display(floe2_in_floe1);
     

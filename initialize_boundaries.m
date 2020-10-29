@@ -1,11 +1,11 @@
-function c2_boundary =initialize_boundaries(aspect_ratio,Lx_boundary)
+function c2_boundary =initialize_boundaries()
 
 %Boundaries are defined as a set of contours e.g. [x1 NaN x2 ; y1 NaN y2]
 
 %Adding walls around the domain
-
-x=[-1 -1 1 1 -1]*Lx_boundary; 
-y=aspect_ratio*[-1 1 1 -1 -1]*Lx_boundary;
+L_boundary=65e3;
+x=[-1 -1 1 1 -1]*L_boundary; 
+y=[-1 1 1 -1 -1]*L_boundary;
 c2_boundary = [x; y];
 
 % include something intresting like WA state boundaries
