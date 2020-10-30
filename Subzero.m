@@ -27,13 +27,14 @@ c2_boundary=initialize_boundaries();
 Ly = max(c2_boundary(2,:));
 c2_boundary_poly = polyshape(c2_boundary');
 Nb = 0;
+min_floe_size = 1e6;
 
 %Initialize Floe state
 %Floe=initialize_Floe('FloeShapes.mat');
 height.mean = 2;
 height.delta = 0.25;
-target_concentration = 1;
-Floe = initial_concentration(c2_boundary,target_concentration,height,N,min_floe_size);
+target_concentration = 0.75;
+Floe = initial_concentration(c2_boundary,target_concentration,height,100,min_floe_size);
 if isfield(Floe,'poly')
     Floe=rmfield(Floe,{'poly'});
 end
@@ -59,8 +60,6 @@ nPar = 4; %Number of workerks for parfor
 target_concentration=1;
 
 Vd = zeros(5,5,2);
-
-min_floe_size = 1e7;
 
 %% Calc interactions and plot initial state
 Floe=Floe(logical(cat(1,Floe.alive)));
@@ -150,7 +149,7 @@ while im_num<nSnapshots
         
     end
     
-    Floe = corners(Floe);
+%     Floe = corners(Floe);
     
     Area=cat(1,Floe.area);
     if sum(Area<min_floe_size)>0, display(['num of small floes killed:' num2str(sum(Area<min_floe_size))]); end
