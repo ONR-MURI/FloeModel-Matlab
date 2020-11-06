@@ -8,7 +8,7 @@ FRACTURES=true;
 
 PERIODIC=false;
 
-PACKING = false;
+PACKING = true;
 
 WELDING = true;
 
@@ -26,6 +26,7 @@ winds=[10 10];
 c2_boundary=initialize_boundaries();
 Ly = max(c2_boundary(2,:));
 c2_boundary_poly = polyshape(c2_boundary');
+Nb = 0;
 min_floe_size = 1e6;
 
 %Initialize Floe state
@@ -33,7 +34,7 @@ min_floe_size = 1e6;
 height.mean = 2;
 height.delta = 0.25;
 target_concentration = 1;
-[Floe, Nb] = initial_concentration(c2_boundary,target_concentration,height,100,min_floe_size);
+Floe = initial_concentration(c2_boundary,target_concentration,height,100,min_floe_size);
 if isfield(Floe,'poly')
     Floe=rmfield(Floe,{'poly'});
 end
@@ -58,21 +59,15 @@ nPar = 4; %Number of workerks for parfor
 
 target_concentration=1;
 
-% specify coarse grid size
-LxO= 2*max(ocean.Xo);LyO= 2*max(ocean.Yo);
-Nx=10; Ny=fix(Nx*LyO/LxO);
-
-%initialize dissolved ice at zero
-dissolvedNEW=zeros(Ny,Nx);
-Vd = zeros(Ny,Nx,2);
-Vdnew=zeros(Ny, Nx);
+Vd = zeros(5,5,2);
 
 %% Calc interactions and plot initial state
 Floe=Floe(logical(cat(1,Floe.alive)));
 for ii = 1:length(Floe)
     Floe(ii).h = 2;
 end
-[Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt,min_floe_size,Nx,Ny,Nb, dissolvedNEW,PERIODIC, RIDGING); % find interaction points
+Floe = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt,PERIODIC, RIDGING); % find interaction points
+Nb = 0;
 A=cat(1,Floe.area);
 Amax = max(A);
 
@@ -89,8 +84,6 @@ end
 
 
 %% Solving for floe trajectories
-Floe3 = Floe;
-Floe2 = Floe;
 tic;
 while im_num<nSnapshots
 
@@ -114,24 +107,12 @@ while im_num<nSnapshots
         end
         
         simp = 0;
-        floenew = [];
         for ii = 1:length(Floe)
             if length(Floe(ii).c0) > 30
-                floe = FloeSimplify(Floe(ii));
-                if isfield(floe,'poly')
-                    floe=rmfield(floe,{'poly'});
-                end
-                for jj = 1:length(floe)
-                    if jj == 1
-                        Floe(ii) = floe(jj);
-                    else
-                        floenew = [floenew floe(jj)];
-                    end
-                end
+                Floe(ii) = FloeSimplify(Floe(ii));
                 simp = simp+1;
-            end    
+            end
         end
-        Floe = [Floe floenew];
         
         if PACKING && h0 > 0
             height.mean = h0;
@@ -146,7 +127,7 @@ while im_num<nSnapshots
                 Amax = max(A);
             end
             FloeOld = Floe;
-            Floe = Weld_Floes(Floe,Nb,weldrate,Amax);
+            Floe = Weld_Floes(Floe,weldrate,Amax);
         end
         
         save(['./Floes/Floe' num2str(im_num,'%07.f') '.mat'],'Floe');
@@ -154,14 +135,13 @@ while im_num<nSnapshots
         im_num=im_num+1;  %image number for saving data and coarse vars;
     end
     
-    Floe3 = Floe2; Floe2 = Floe;
+    
     %Calculate forces and torques and intergrate forward
-    [Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds, c2_boundary, dt, min_floe_size, Nx,Ny,Nb, dissolvedNEW,PERIODIC, RIDGING);
+    Floe = floe_interactions_all(Floe, ocean, winds, c2_boundary, dt, PERIODIC, RIDGING);
     
     if FRACTURES
         overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
         keep=rand(length(Floe),1)>2*overlapArea;
-        keep(1:Nb) = ones(Nb,1);
         fracturedFloes=fracture_floe(Floe(~keep),3);
         if ~isempty(fracturedFloes)
             Floe=[Floe(keep) fracturedFloes];
@@ -169,15 +149,7 @@ while im_num<nSnapshots
         
     end
     
-    Floe = corners(Floe);
-    %Advect the dissolved mass
-    Area=cat(1,Floe.area);
-    dissolvedNEW = calc_dissolved_mass(Floe(Area<min_floe_size),Nx,Ny,c2_boundary_poly)+dissolvedNEW;
-%     Vdnew = Advect_Dissolved_Ice(Vd,coarseMean,im_num,dissolvedNEW,c2_boundary,dt);
-    Vdnew = Vd(:,:,1)+dissolvedNEW;
-    dissolvedNEW=zeros(Ny,Nx);
-    Vd(:,:,2) = Vd(:,:,1);
-    Vd(:,:,1) = Vdnew;
+    %Floe = corners(Floe);
     
     Area=cat(1,Floe.area);
     if sum(Area<min_floe_size)>0, display(['num of small floes killed:' num2str(sum(Area<min_floe_size))]); end

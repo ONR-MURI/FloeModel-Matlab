@@ -1,4 +1,4 @@
-function [Floe] = Weld_Floes(Floe,dhdt,Amax)
+function [Floe] = Weld_Floes(Floe,Nb,dhdt,Amax)
 %%This function takes in two floe field and based upon a specified
 %%probability function welds interacting floes together
 
@@ -7,7 +7,7 @@ warning('off',id)
 id3 ='MATLAB:polyshape:boundary3Points';
 warning('off',id3)
 
-i = 1; 
+i = Nb+1; 
 floenew = [];
 
 for ii =1:length(Floe)

@@ -33,7 +33,7 @@ poly1 = simplify(polyshape(Pc1));
 poly2 = simplify(polyshape(Pc2));
 R1 = [regions(poly1); regions(poly2)];
 a = R1(area(R1)>1e4);
-a2 = R1(area(R1)<1e4);
+a2 = R1(area(R1)<1e4)
 Atot = sum(area(a));
 
 for p=1:length(a)

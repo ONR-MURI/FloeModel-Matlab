@@ -1,4 +1,4 @@
-function [Floe1,Floe2]= ridging(Floe1,Floe2,c2_boundary_poly,PERIODIC)
+function [Floe1,Floe2]= ridging(Floe1,Floe2,c2_boundary_poly,PERIODIC,min_floe_size)
 %% This function takes in two floes and based upon the thickness of the two floes will perform a ridging operation
 id ='MATLAB:polyshape:repairedBySimplify';
 warning('off',id)
@@ -32,12 +32,14 @@ boundary = 0;
 %dissolved if it is
 if area(poly2)/area(c2_boundary_poly)>0.99
     boundary = 1;
-elseif aPoly/area(Floe1.poly)>0.75
+elseif aPoly/area(Floe1.poly)>0.75 || Floe1.area<min_floe_size
     disolved = 1;
     Floe1.alive = 0;
-elseif aPoly/area(Floe2.poly)>0.75
+elseif aPoly/area(Floe2.poly)>0.75 || Floe2.area < min_floe_size
     disolved = 1;
     Floe2.alive = 0;
+elseif Floe1.alive+Floe2.alive < 2
+    disolved = 0;
 end
 %% If there is enough overlap then allow ridging to happen
 if ~isfield(Floe2,'poly')
@@ -64,7 +66,9 @@ if disolved == 0 && aPoly > 500 && ~boundary
         [Floe2, Floe1] = ridge_values_update(Floe2,Floe1, V1, aPoly);
     end
 end
-if ~isfield(Floe2,'poly')
+if isempty(Floe2)
+    
+elseif ~isfield(Floe2,'poly')
     xx = 1;
     xx(1) = [1 2];
 end

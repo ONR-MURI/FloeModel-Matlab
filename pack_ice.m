@@ -2,6 +2,8 @@ function [Floe,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,target,ocean, height, min
 %% This function takes in the existing floe state and creates new thin floes in the open space to match the input target concentration
 id = 'MATLAB:polyshape:tinyBoundaryDropped';
 warning('off',id);
+id2 ='MATLAB:polyshape:repairedBySimplify';
+warning('off',id2)
 
 N0=length(Floe);
 Lx= max(c2_boundary(1,:));
@@ -84,6 +86,8 @@ yf = cat(1,Floe.Yi);
 r_max = sqrt((dx/2)^2+(dy/2)^2);
 rmax = cat(1,Floe.rmax);
 potentialInteractions = zeros(Ny,Nx,length(Floe));
+
+
 for kk = 1:length(Floe)
     Floe(kk).poly = polyshape(Floe(kk).c_alpha'+[Floe(kk).Xi Floe(kk).Yi]);
     pint = sqrt((xx-xf(kk)).^2+(yy-yf(kk)).^2)-(rmax(kk)+r_max);
@@ -291,16 +295,18 @@ for ii = 1:length(floenew)
     end
 end
 
-[eularian_data] = calc_eulerian_data(Floe,10,10,0,c2_boundary,PERIODIC);
-if max(max(eularian_data.c))-1 > 0.01
-    xx = 1;
-    xx(1) = [1 2];
-end
+% [eularian_data] = calc_eulerian_data(Floe,10,10,0,c2_boundary,PERIODIC);
+% if max(max(eularian_data.c))-1 > 0.01
+%     xx = 1;
+%     xx(1) = [1 2];
+% end
 
 Floe = [Floe floenew];
 warning('on',id)
+warning('on',id2)
 
 Floe=rmfield(Floe,{'poly'});
+Vd(Vd<0)=0;
 
 for ii = 1:length(Floe)
     if isnan(Floe(ii).ksi_ice)

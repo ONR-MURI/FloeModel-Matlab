@@ -11,9 +11,9 @@ poly2 = polyshape(c2');
 polyB = polyshape(c2_boundary');
 if area(intersect(polyB,poly2))/area(polyB)<0.95
     polyI = intersect(poly1,poly2);
-    if area(polyI)/area(poly1) > 0.6
+    if area(polyI)/area(poly1) > 0.95
         overlap = Inf;
-    elseif area(polyI)/area(poly2) > 0.6
+    elseif area(polyI)/area(poly2) > 0.95
         overlap = Inf;
     end
 end

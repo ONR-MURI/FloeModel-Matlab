@@ -224,7 +224,7 @@ end
 
 keep = ones(1,N0);
 kill = zeros(1,N0);
-for i=1+Nb:N0
+parfor i=1+Nb:N0
     
     if ~isempty(Floe(i).interactions)
         
@@ -270,37 +270,30 @@ if RIDGING
                 c = c(c>Nb);
                 for ii = 1:length(c)
                     [Floe1, Floe2] = ridging(Floe(i),Floe(c(ii)),c2_boundary_poly,PERIODIC,min_floe_size);
-
                     if length(Floe1) > 1
                         Floe(i) = Floe1(1);
                         floenew = [floenew Floe1(2:end)];
                     else
                         Floe(i) = Floe1;
-                        if Floe1.alive == 0
-                            kill(i) = 0;
-                        end
                     end
                     if length(Floe2) > 1
                         Floe(c(ii)) = Floe2(1);
                         floenew = [floenew Floe2(2:end)];
                     else
                         Floe(c(ii)) = Floe2;
-                        if Floe2.alive == 0 && c(ii) <= N0
-                            kill(c(ii)) = 0;
-                        end
                     end
                     
                 end
                 if c2 == 1
                     [Floe1, ~] = ridging(Floe(i),FloeB,c2_boundary_poly,PERIODIC,min_floe_size);
+                    if Floe1.alive == 0
+                        kill(i) = 0;
+                    end
                     if length(Floe1) > 1
                         Floe(i) = Floe1(1);
                         floenew = [floenew Floe1(2:end)];
                     else
                         Floe(i) = Floe1;
-                        if Floe1.alive == 0
-                            kill(i) = 0;
-                        end
                     end
                 end
             end
