@@ -21,9 +21,10 @@ else
     X = [poly.Vertices(end-1:end,1); poly.Vertices(1,1)];
     Y = [poly.Vertices(end-1:end,2); poly.Vertices(1,2)];
 end
-
-x1 = X(2)+alph/Anorm*(X(1)-X(2))/5; y1 = Y(2)+alph/Anorm*(Y(1)-Y(2))/5;
-x2 = X(2)+alph/Anorm*(X(3)-X(2))/5; y2 = Y(2)+alph/Anorm*(Y(3)-Y(2))/5;
+d1 = sqrt((X(1)-X(2))^2+(Y(1)-Y(2))^2); d2 = sqrt((X(3)-X(2))^2+(Y(3)-Y(2))^2); 
+d = min(d1,d2);
+x1 = X(2)+d/d1*alph/Anorm*(X(1)-X(2))/5; y1 = Y(2)+d/d1*alph/Anorm*(Y(1)-Y(2))/5;
+x2 = X(2)+d/d2*alph/Anorm*(X(3)-X(2))/5; y2 = Y(2)+d/d2*alph/Anorm*(Y(3)-Y(2))/5;
 if abs(x1-x2)<0.1
     x1 = x1+1;
 end
@@ -31,16 +32,18 @@ Pc1 = cutpolygon([poly.Vertices;poly.Vertices(1,:)],[x1, y1; x2, y2],1);
 Pc2 = cutpolygon([poly.Vertices;poly.Vertices(1,:)],[x1, y1; x2, y2],2);
 poly1 = simplify(polyshape(Pc1));
 poly2 = simplify(polyshape(Pc2));
+% xx = 1; xx(1) = [1 2];
+
 R1 = [regions(poly1); regions(poly2)];
-a = R1(area(R1)>1e4);
-a2 = R1(area(R1)<1e4);
+a = R1(area(R1)>10);
 Atot = sum(area(a));
+Mtot = floe.mass*Atot/area(polyshape(floe.c_alpha'));
 
 for p=1:length(a)
     FloeNEW.poly = rmholes(a(p));
     [Xi,Yi] = centroid(FloeNEW.poly);
     FloeNEW.area = area(FloeNEW.poly);
-    FloeNEW.mass = floe.mass*area(a(p))/Atot;
+    FloeNEW.mass = Mtot*area(a(p))/Atot;
     FloeNEW.h = FloeNEW.mass/(rho_ice*FloeNEW.area);
     FloeNEW.inertia_moment = PolygonMoments(FloeNEW.poly.Vertices,FloeNEW.h);
     FloeNEW.c_alpha = [(FloeNEW.poly.Vertices-[Xi Yi])' [FloeNEW.poly.Vertices(1,1)-Xi; FloeNEW.poly.Vertices(1,2)-Yi]];
@@ -51,11 +54,15 @@ for p=1:length(a)
     FloeNEW.Yg = floe.Yg;
     FloeNEW.X = floe.X;
     FloeNEW. Y = floe.Y;
+    FloeNEW.Stress = [0 0; 0 0];
     
     [in] = inpolygon(FloeNEW.X(:)+Xi, FloeNEW.Y(:)+Yi,FloeNEW.poly.Vertices(:,1),FloeNEW.poly.Vertices(:,2));
     FloeNEW.A=reshape(in,length(FloeNEW.X),length(FloeNEW.X));
     
     FloeNEW.Xi = floe.Xi+Xi; FloeNEW.Yi = floe.Yi+Yi; FloeNEW.alive = 1;
+    if FloeNEW.area<1e4
+        FloeNEW.alive = 0;
+    end
     FloeNEW.alpha_i = 0; FloeNEW.Ui = floe.Ui; FloeNEW.Vi = floe.Vi;
     FloeNEW.dXi_p = floe.dXi_p; FloeNEW.dYi_p = floe.dYi_p;
     FloeNEW.dUi_p = floe.dUi_p; FloeNEW.dVi_p = floe.dVi_p;
@@ -75,6 +82,20 @@ end
 
 % warning('on',id)
 % warning('on',id3)
-
+% if floe.mass/sum(cat(1,Floes.mass))-1 > 1e-3
+%     xx = 1;
+%     xx(1) = [1 2];
+% end
+% 
+% if sum(cat(1,Floes.mass))/floe.mass-1 > 1e-3
+%     xx = 1;
+%     xx(1) = [1 2];
+% end
+% 
+% h = cat(1,Floes.h);
+% if max(h)/floe.h-1 > 1e-2
+%     xx = 1;
+%     xx(1) = [1 2];
+% end
 end
 

@@ -17,7 +17,7 @@ figure(fig)
 clf(fig);
 
 dn=1; % plot every dn'th velocity vector
-quiver(ocean.Xo(1:dn:end),ocean.Yo(1:dn:end),ocean.Uocn(1:dn:end,1:dn:end),ocean.Vocn(1:dn:end,1:dn:end));
+% quiver(ocean.Xo(1:dn:end),ocean.Yo(1:dn:end),ocean.Uocn(1:dn:end,1:dn:end),ocean.Vocn(1:dn:end,1:dn:end));
 hold on;
 
 axis([ocean.Xo(1) ocean.Xo(end) ocean.Yo(1) ocean.Yo(end)]);
@@ -42,11 +42,11 @@ plot(xb,yb, 'k-','linewidth',2);
 
 
 colormap('gray'); caxis([0 1]);
-axis([-Lx-Lx/10 Lx+Lx/10 -Lx-Lx/10 Lx+Lx/10])
+axis([-Lx-Lx/10 Lx+Lx/10 -Ly-Ly/10 Ly+Ly/10])
 %xlabel('m');ylabel('m');
 set(gca,'Ydir','normal');
 % set(gca,'xtick',[])
 % set(gca,'ytick',[])
 
-drawnow
+% drawnow
 end

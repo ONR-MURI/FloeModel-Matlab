@@ -25,7 +25,8 @@ FloeNEW.Xg = n;
 FloeNEW.Yg = n;
 [X, Y]= meshgrid(n, n);
 FloeNEW.X = X;
-FloeNEW. Y = Y;
+FloeNEW.Y = Y;
+FloeNEW.Stress = [0 0; 0 0];
 
 [in] = inpolygon(FloeNEW.X(:)+Xi, FloeNEW.Y(:)+Yi,FloeNEW.poly.Vertices(:,1),FloeNEW.poly.Vertices(:,2));
 FloeNEW.A=reshape(in,length(FloeNEW.X),length(FloeNEW.X));

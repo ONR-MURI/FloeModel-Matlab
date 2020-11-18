@@ -14,18 +14,13 @@ KeepF = ones(length(Floe),1);
 for ii = 1:length(Floe)
     if ~isempty(Floe(ii).interactions)
         inter = Floe(ii).interactions(:,1);
-        inter = inter(inter<=N0);
-        Xi = x(inter);
-        Yi = y(inter);
+%         inter = inter(inter<=N0);
+        Xi = Floe(ii).interactions(inter<=N0,4);%x(inter);
+        Yi = Floe(ii).interactions(inter<=N0,5);%y(inter);
         d = sqrt((Xi-Floe(ii).Xi).^2-(Yi-Floe(ii).Yi).^2);
         
         poly = polyshape(Floe(ii).c_alpha');
-        if poly.NumRegions>1
-            polyout = sortregions(poly,'area','descend');
-            R = regions(polyout);
-            poly = R(1);
-        end
-        if poly.NumHoles==0
+        if poly.NumRegions == 1 && poly.NumHoles == 0
             angles = polyangles(poly.Vertices(:,1),poly.Vertices(:,2));
             Anorm = 180-360/length(angles);
             keep1=(rand(length(angles),1)>angles/Anorm);
@@ -33,7 +28,7 @@ for ii = 1:length(Floe)
             for jj = 1:length(angles)
                 if ~keep1(jj)
                     d2 = sqrt((Xi-poly.Vertices(jj,1)).^2-(Yi-poly.Vertices(jj,2)).^2);
-                    if max(d2-d)>0
+                    if max(d-d2)>0
                         da(jj) = 1;
                     end
                 end
@@ -42,9 +37,22 @@ for ii = 1:length(Floe)
             keep = logical(keep1 + da);
             
             if sum(keep)>0
-                [~,I] = min(angles(keep));
+                [ang,~] = min(angles(keep));
+                I = find(angles == ang);
+                if length(I) > 1
+                    tick = 0; count = 1;
+                    while tick < 1
+                        if keep(I(count)) == 1
+                            jj = I(count); tick = 2;
+                        else
+                            count = count + 1;
+                        end
+                    end
+                else
+                    jj = I;
+                end
                 KeepF(ii) = 0;
-                fracturedFloes = frac_corner(Floe(ii),I,poly);
+                fracturedFloes = frac_corner(Floe(ii),jj,poly);
                 floenew=[floenew fracturedFloes];
             end
         end

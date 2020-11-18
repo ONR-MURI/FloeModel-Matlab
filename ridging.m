@@ -56,14 +56,14 @@ if disolved == 0 && aPoly > 500 && ~boundary
     if Floe1.h>= hc && Floe2.h >= hc
         p=1/(1+Floe1.h/Floe2.h);
         if rand(1)>= p
-            [Floe1, Floe2] = ridge_values_update(Floe1,Floe2, V2, aPoly);
+            [Floe1, Floe2] = ridge_values_update(Floe1,Floe2, V2);
         else
-            [Floe2, Floe1] = ridge_values_update(Floe2,Floe1, V1, aPoly);
+            [Floe2, Floe1] = ridge_values_update(Floe2,Floe1, V1);
         end
     elseif Floe1.h>= hc && Floe2.h< hc
-        [Floe1, Floe2] = ridge_values_update(Floe1,Floe2, V2, aPoly);
+        [Floe1, Floe2] = ridge_values_update(Floe1,Floe2, V2);
     elseif Floe1.h < hc && Floe2.h >= hc
-        [Floe2, Floe1] = ridge_values_update(Floe2,Floe1, V1, aPoly);
+        [Floe2, Floe1] = ridge_values_update(Floe2,Floe1, V1);
     end
 end
 if isempty(Floe2)
@@ -116,6 +116,15 @@ if ~PERIODIC && boundary
         Floe1.rmax = max(sqrt(Floe1.c_alpha(1,:).^2+Floe1.c_alpha(2,:).^2));
     end
 end
+
+% if max(cat(1,Floe1.h))/floe1.h-1 > 0.15
+%     xx = 1;
+%     xx(1) = [1 2];
+% elseif max(cat(1,Floe2.h))/floe2.h-1 > 0.15
+%     xx = 1;
+%     xx(1) = [1 2];
+% end
+
 if isfield(Floe1,'poly')
     Floe1=rmfield(Floe1,{'poly'});
 end

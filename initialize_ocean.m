@@ -1,6 +1,11 @@
-function ocean=initialize_ocean()
+function [ocean, heat_flux, nDTpack]=initialize_ocean(dt,h0)
 
 % defining ocean currents
+ocean.fCoriolis=1.4e-4; % Coriolis parameter.
+
+ocean.U = 0.5;
+
+ocean.turn_angle=15*pi/180; % turning angle between the stress and surface current due to the Ekman spiral; the angle is positive!
 
 % ocean grid;
 dXo=2000; % in meters
@@ -25,5 +30,11 @@ ocean.Xo=Xo;
 ocean.Yo=Yo;
 ocean.Uocn=Uocn;
 ocean.Vocn=Vocn;
+
+Tice = -20; Tocean = 2*ones(size(Xocn));
+heat_flux = 7.4*10^(-4)*(Tice-Tocean)/(72); %cm^2/s
+heat_flux = heat_flux/100^2; %m^2/s
+% h0 = real(sqrt(-2*dt*heat_flux*nDTOut));
+nDTpack = fix(-h0^2/(2*dt*mean(heat_flux(:)))); %frequency with which packing will be run
 
 end

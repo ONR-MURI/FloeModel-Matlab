@@ -1,14 +1,15 @@
-function [FloeWhole,FloeNEW] = ridge_values_update(FloeWhole,FloeLess, V, Area)
+function [FloeWhole,FloeNEW] = ridge_values_update(FloeWhole,FloeLess, V)
 %%This function calculates the values for the floes after their shapes and
 %%mass get updated after ridging
 
 %Store a copy of this structure for later reference
+Floe1 = FloeWhole;
 Floe2 = FloeLess;
 
 %   Calculate values for Floe gaining the new ice
 rho_ice = 920;
 hold = FloeWhole.h;
-FloeWhole.h = FloeWhole.h + V/Area;
+FloeWhole.h = FloeWhole.h + V/FloeWhole.area;
 if FloeWhole.h > 30
     FloeWhole.h = 30;
 end
@@ -63,6 +64,13 @@ for kk = 1:length(R)
     FloeNEW = [FloeNEW FloeLess];
 end
 
+% if FloeWhole.h/Floe1.h-1 > 0.153
+%     xx = 1;
+%     xx(1) = [1 2];
+% elseif max(cat(1,FloeLess.h))/Floe2.h-1 > 0.15
+%     xx = 1;
+%     xx(1) = [1 2];
+% end
 
 end
 

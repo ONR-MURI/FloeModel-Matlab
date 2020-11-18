@@ -1,7 +1,9 @@
-function [floe, fracture] =calc_trajectory(dt,ocean,winds,floe)
+function [floe, fracture] =calc_trajectory(dt,ocean,winds,floe,HFo)
 
 ext_force=floe.collision_force;
 ext_torque=floe.collision_torque;
+HFo = mean(HFo(:));
+
 
 if length(ext_force) == 1
     ext_force = [0 0];
@@ -47,11 +49,18 @@ Cd=3e-3;
 rho_air=1.2;
 Cd_atm=1e-3;
 
+fc=ocean.fCoriolis; %coriolis parameter
+
 %% ice floe params
 
 floe_area=floe.area;
 floe_mass=floe.mass; % total mass
+h = floe.h;
 floe_inertia_moment=floe.inertia_moment; % moment of inertia
+dh = HFo*dt./h;
+floe_mass = (h+dh)./h.*floe_mass; floe.mass = floe_mass;
+floe_inertia_moment = (h+dh)./h.*floe_inertia_moment;
+floe.inertia_moment = floe_inertia_moment;
 R_floe=sqrt(max(floe.Xg)^2+max(floe.Yg)^2);
 
 %%
@@ -100,8 +109,16 @@ else
             Fx_atm=rho_air*Cd_atm*sqrt(U10^2+V10^2)*U10;
             Fy_atm=rho_air*Cd_atm*sqrt(U10^2+V10^2)*V10;
             
-            Fx=rho0*Cd*sqrt((Uocn_interp-Uice).^2+(Vocn_interp-Vice).^2).*(Uocn_interp-Uice)+Fx_atm; % ice-water drag forces in X and Y-dir
-            Fy=rho0*Cd*sqrt((Uocn_interp-Uice).^2+(Vocn_interp-Vice).^2).*(Vocn_interp-Vice)+Fy_atm;
+            Fx_pressureGrad=-(floe_mass/floe_area)*fc*Vocn_interp; % SSH tilt term
+            Fy_pressureGrad=+(floe_mass/floe_area)*fc*Uocn_interp;        
+        
+            du=Uocn_interp-Uice; dv=Vocn_interp-Vice;        
+        
+            tau_ocnX=rho0*Cd*sqrt(du.^2+dv.^2).*( cos(ocean.turn_angle)*du+sin(ocean.turn_angle)*dv); % ocean stress with the turning angle
+            tau_ocnY=rho0*Cd*sqrt(du.^2+dv.^2).*(-sin(ocean.turn_angle)*du+cos(ocean.turn_angle)*dv);
+            
+            Fx=tau_ocnX+Fx_atm+Fx_pressureGrad; % adding up all forces except the Coriolis force
+            Fy=tau_ocnY+Fy_atm+Fy_pressureGrad;
             
             if max(isinf(Fx(:))) || max(isnan(Fx(:)))
                 xx = 1;

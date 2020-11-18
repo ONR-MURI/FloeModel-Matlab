@@ -1,4 +1,4 @@
-function [Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt, min_floe_size, Nx,Ny,Nb, dissolvedNEW,PERIODIC, RIDGING)
+function [Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt, HFo, min_floe_size, Nx,Ny,Nb, dissolvedNEW,PERIODIC, RIDGING)
 
 id ='MATLAB:polyshape:repairedBySimplify';
 warning('off',id)
@@ -88,6 +88,11 @@ for i=1+Nb:N  %do interactions with boundary in a separate parfor loop
     
     k=1;
     
+%     if abs(Floe(i).area/area(polyshape(Floe(i).c_alpha'))-1)>1e-3
+%         xx = 1;
+%         xx(1) =[1 2];
+%     end
+    
     if ( alive(i) && ~isnan(x(i)) )
         for j=1:N
             %display(j);
@@ -104,6 +109,7 @@ for i=1+Nb:N  %do interactions with boundary in a separate parfor loop
 end
 
 weld = zeros(length(Floe),1);
+kill = zeros(1,N0);
 parfor i=1+Nb:N  %now the interactions could be calculated in a parfor loop!
         
     c1=[Floe(i).c_alpha(1,:)+x(i); Floe(i).c_alpha(2,:)+y(i)];
@@ -116,15 +122,20 @@ parfor i=1+Nb:N  %now the interactions could be calculated in a parfor loop!
             
             c2=Floe(i).potentialInteractions(k).c;
             
-            [force_j,P_j, overlap] = floe_interactions(c1,c2,c2_boundary);
+            [force_j,P_j, overlap] = floe_interactions(c1,c2,c2_boundary,PERIODIC);
             
             %if ~worked, disp(['contact points issue for (' num2str(i) ',' num2str(floeNum) ')' ]); end
             
             if sum(abs(force_j))~=0
                 Floe(i).interactions=[Floe(i).interactions ; floeNum*ones(size(force_j,1),1) force_j P_j zeros(size(force_j,1),1) overlap'];
                 Floe(i).OverlapArea = sum(overlap)+Floe(i).OverlapArea;
+                Floe(i).Stress =.5*([sum((P_j(:,1)-x(i)).*force_j(:,1)) sum((P_j(:,2)-y(i)).*force_j(:,1)); sum((P_j(:,1)-x(i)).*force_j(:,2)) sum((P_j(:,2)-y(i)).*force_j(:,2))]+[sum(force_j(:,1).*(P_j(:,1)-x(i))) sum(force_j(:,2).*(P_j(:,1)-x(i))); sum(force_j(:,1).*(P_j(:,2)-y(i))) sum(force_j(:,2).*(P_j(:,2)-y(i)))]);
             elseif isinf(overlap)
-                weld(i) = floeNum; 
+                if i <= N0 && sign(overlap)>0
+                    kill(i) = i;%floeNum;
+                elseif floeNum <= N0
+                    kill(i) = floeNum;
+                end
             end
             
         end
@@ -132,7 +143,7 @@ parfor i=1+Nb:N  %now the interactions could be calculated in a parfor loop!
     end
     
     if ~PERIODIC
-        [force_b, P_j, overlap] = floe_interactions(c1, c2_boundary,c2_boundary);
+        [force_b, P_j, overlap] = floe_interactions(c1, c2_boundary,c2_boundary,PERIODIC);
         in = inpolygon(x(i),y(i),c2_boundary(1,:)',c2_boundary(2,:)');
         if ~in
             Floe(i).alive = 0;
@@ -151,21 +162,40 @@ parfor i=1+Nb:N  %now the interactions could be calculated in a parfor loop!
     
 end
 
-for i = 1+Nb:length(Floe)
-    if weld(i)>0
-        Floe(i).poly = polyshape(Floe(i).c_alpha'+[Floe(i).Xi Floe(i).Yi]);
-        Floe(weld(i)).poly = polyshape(Floe(weld(i)).c_alpha'+[Floe(weld(i)).Xi Floe(weld(i)).Yi]);
-        [floenew] = FuseFloes(Floe(i),Floe(weld(i)));
-        floenew.interactions = Floe(i).interactions;
-        floenew.OverlapArea = Floe(i).OverlapArea;
-        floenew.potentialInteractions = Floe(i).potentialInteractions;
-%         if isfield(floenew,'poly')
-%             floenew=rmfield(floenew,{'poly'});
+% for i = 1+Nb:length(Floe)
+%     if weld(i)>0 && Floe(i).alive > 0 && Floe(weld(i)).alive > 0
+%         Floe(i).poly = polyshape(Floe(i).c_alpha'+[Floe(i).Xi Floe(i).Yi]);
+%         Floe(weld(i)).poly = polyshape(Floe(weld(i)).c_alpha'+[Floe(weld(i)).Xi Floe(weld(i)).Yi]);
+%         [floenew] = FuseFloes(Floe(i),Floe(weld(i)));
+%         if floenew.h > 3
+%             xx = 1;
+%             xx(1) = [1 2];
+%         elseif weld(i) > N0
+%             xx = 1;
+%             xx(1) = [1 2];
 %         end
-        Floe(i) = floenew;
-        Floe(weld(i)).alive = 0;
-    end
-end
+% %         if isfield(floenew,'poly')
+% %             floenew=rmfield(floenew,{'poly'});
+% %         end
+%         Mass = [Floe(i).mass Floe(weld(i)).mass];
+%         if Mass(1) > Mass(2)
+%             floenew.interactions = Floe(i).interactions;
+%             floenew.OverlapArea = Floe(i).OverlapArea;
+%             floenew.potentialInteractions = Floe(i).potentialInteractions;
+%             Floe(i) = floenew;
+%             Floe(weld(i)).alive = 0; kill(weld(i)) = 0;
+%             Floe(weld(i)).interactions = [];
+%         else
+%             floenew.interactions = Floe(weld(i)).interactions;
+%             floenew.OverlapArea = Floe(weld(i)).OverlapArea;
+%             floenew.potentialInteractions = Floe(weld(i)).potentialInteractions;
+%             Floe(weld(i)) = floenew;
+%             Floe(i).alive = 0; kill(i) = 0;
+%             Floe(i).interactions = [];
+%         end
+%     end
+% end
+alive=cat(1,Floe.alive);
 if isfield(Floe,'poly')
     Floe=rmfield(Floe,{'poly'});
 end
@@ -223,8 +253,7 @@ if PERIODIC
 end
 
 keep = ones(1,N0);
-kill = zeros(1,N0);
-for i=1+Nb:N0
+parfor i=1+Nb:N0
     
     if ~isempty(Floe(i).interactions)
         
@@ -244,8 +273,9 @@ for i=1+Nb:N0
     
    %Do the timestepping now that forces and torques are known.
     if Floe(i).alive,
-        [tmp,frac]=calc_trajectory(dt,ocean, winds,Floe(i)); % calculate trajectory
-        if (isempty(tmp) || isnan(x(i)) ), kill(i)=0; elseif frac == 1, keep(i) = 0; else Floe(i)=tmp; end
+%                 [tmp,frac]=calc_trajectory_Nares(dt,ocean, winds,Floe(i),HFo,c2_boundary); % calculate trajectory
+        [tmp,frac]=calc_trajectory(dt,ocean, winds,Floe(i),HFo); % calculate trajectory
+        if (isempty(tmp) || isnan(x(i)) ), kill(i)=i; elseif frac == 1, keep(i) = 0; else Floe(i)=tmp; end
     end
         
 end
@@ -255,11 +285,11 @@ floenew = [];
 if RIDGING
     %Create a function to control probability that ridging will occur
     overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
-    keep=rand(length(Floe),1)>overlapArea;
+    keepR=rand(length(Floe),1)>overlapArea;
 %     keep=rand(length(Floe),1)<0.5;
     for i=1+Nb:N0
 
-        if Floe(i).alive && ~keep(i)
+        if Floe(i).alive && ~keepR(i)
             c2 = 0;
             if ~isempty(Floe(i).potentialInteractions)
                 c = cat(1,Floe(i).potentialInteractions.floeNum);
@@ -277,7 +307,7 @@ if RIDGING
                     else
                         Floe(i) = Floe1;
                         if Floe1.alive == 0
-                            kill(i) = 0;
+                            kill(i) = i;
                         end
                     end
                     if length(Floe2) > 1
@@ -286,7 +316,7 @@ if RIDGING
                     else
                         Floe(c(ii)) = Floe2;
                         if Floe2.alive == 0 && c(ii) <= N0
-                            kill(c(ii)) = 0;
+                            kill(c(ii)) = c(ii);
                         end
                     end
                     
@@ -299,7 +329,7 @@ if RIDGING
                     else
                         Floe(i) = Floe1;
                         if Floe1.alive == 0
-                            kill(i) = 0;
+                            kill(i) = i;
                         end
                     end
                 end
@@ -310,20 +340,22 @@ end
 %toc(timer1)
 Floe=Floe(1:N0); % ditch the ghost floes.
 
-for ii = 1+Nb:length(Floe)
-    if isnan(Floe(ii).ksi_ice)
-        xx = 1;
-        xx(1) = [1 2];
-    end
-end
-
-for ii = N0:-1:1
-    if kill(ii)==0
-        dissolvedNEW = dissolvedNEW+calc_dissolved_mass(Floe(ii),Nx,Ny,c2_boundary_poly);
+% for ii = 1+Nb:length(Floe)
+%     if isnan(Floe(ii).ksi_ice)
+%         xx = 1;
+%         xx(1) = [1 2];
+%     end
+% end
+kill = unique(kill>0);
+kill = sort(kill,'descend');
+if ~isempty(kill) 
+    for ii = length(kill)
+        %     if kill(ii)==0
+        dissolvedNEW = dissolvedNEW+calc_dissolved_mass(Floe(kill(ii)),Nx,Ny,c2_boundary_poly);
+        %     end
     end
 end
 Floe(live==0)=[]; %remove any floes that got dissolved so they do not take up space
-
 live = cat(1,Floe.alive);
 notalive = logical(abs(live-1));
 keep = logical(keep+notalive);
@@ -331,6 +363,13 @@ keep = logical(keep+notalive);
 % if ~isempty(fracturedFloes)
 %     Floe=[Floe(keep) fracturedFloes];
 % end
+% for ii = 1:length(Floe)
+%     if abs(Floe(ii).area/area(polyshape(Floe(ii).c_alpha'))-1)>1e-3
+%         xx = 1;
+%         xx(1) =[1 2];
+%     end
+% end
+
 
 warning('on',id)
 warning('on',id3)

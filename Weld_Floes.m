@@ -40,15 +40,26 @@ while i < length(Floe)
                             xx(1) = [1 2];
                         end
                         A(i) = Floe(i).area;
+                        if abs(floe.area/area(polyshape(floe.c_alpha'))-1)>1e-3
+                            xx = 1;
+                            xx(1) =[1 2];
+                        end
+                        
                         Floe(j).alive  = 0;
                         if length(floe.poly.Vertices) > SimpMin(Floe(i).area)
-                            floe = FloeSimplify(floe);
+                            floe2 = FloeSimplify(floe);
+                        else 
+                            floe2 = floe;
                         end
-                        for jj = 1:length(floe)
+                        for jj = 1:length(floe2)
                             if jj == 1
-                                Floe(i) = floe(jj);
+                                Floe(i) = floe2(jj);
                             else
-                                floenew = [floenew floe(jj)];
+                                floenew = [floenew floe2(jj)];
+                            end
+                            if abs(floe2(jj).area/area(polyshape(floe2(jj).c_alpha'))-1)>1e-3
+                                xx = 1;
+                                xx(1) =[1 2];
                             end
                         end
                         
@@ -72,6 +83,13 @@ Floe=rmfield(Floe,{'poly'});
 
 warning('on',id)
 warning('on',id3)
+
+for ii = 1:length(Floe)
+    if abs(Floe(ii).area/area(polyshape(Floe(ii).c_alpha'))-1)>1e-3
+        xx = 1;
+        xx(1) =[1 2];
+    end
+end
 
 end
 

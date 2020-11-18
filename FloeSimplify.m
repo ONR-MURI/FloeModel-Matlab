@@ -18,21 +18,35 @@ SimpMin = @(A) log10(A)^3.5;
 floenew = floe;
 %vertnew = DouglasPeucker(floe.poly.Vertices,SimpMin(floe.area));
 [vertx,verty] = reducem(floe.c0(1,:)',floe.c0(2,:)',120);
-polynew = polyshape(vertx, verty);
+pnew = polyshape(vertx, verty);
+Atot = sum(area(pnew));
+if isinf(Atot)
+  save('floefail.mat','floe','pnew');
+   1
+elseif isnan(Atot)
+  save('floefail.mat','floe','pnew');
+  2
+elseif Atot ==0
+  save('floefail.mat','floe','pnew');
+  3
+  R = [];
+else
+  polynew = scale(pnew,sqrt(floe.area/Atot));
 
-%Align center of old polygon with the enw one
-[x1,y1] = centroid(polynew);
-dx = floe.Xi-x1;
-dy = floe.Yi-y1;
-% if area(intersect(floe.poly,polynew))/floe.area > 0.95
-%     polynew = translate(polynew,[dx, dy]);
-% end
+  %Align center of old polygon with the enw one
+  [x1,y1] = centroid(polynew);
+  dx = floe.Xi-x1;
+  dy = floe.Yi-y1;
+  % if area(intersect(floe.poly,polynew))/floe.area > 0.95
+  %     polynew = translate(polynew,[dx, dy]);
+  % end
 
-%Check if simplifcation led to polygon having multiple regions
-polyout = sortregions(polynew,'area','descend');
-R = regions(polyout);
-R = R(area(R)>1e4);
-Atot = sum(area(R));
+  %Check if simplifcation led to polygon having multiple regions
+  polyout = sortregions(polynew,'area','descend');
+  R = regions(polyout);
+  R = R(area(R)>1e4);
+  Atot = sum(area(R));
+end
 
 %% Calculate the new properties associated with this floe since it has a new shape
 if length(R) == 1
@@ -42,7 +56,7 @@ if length(R) == 1
     [Xi, Yi] = centroid(R);
     floes.Xi = Xi+floenew.Xi; floes.Yi = Yi+floenew.Yi;
     floes.h = floes.mass/(rho_ice*floes.area);
-    floes.c0 = [vertx verty]';
+    floes.c0 = [R.Vertices(:,1),R.Vertices(:,2); R.Vertices(1,1),R.Vertices(1,2)]';
     floes.angles = polyangles(R.Vertices(:,1),R.Vertices(:,2));
     A_rot=[cos(floes.alpha_i) -sin(floes.alpha_i); sin(floes.alpha_i) cos(floes.alpha_i)]; %rotation matrix
     floes.c_alpha=A_rot*floes.c0;
@@ -94,13 +108,31 @@ if floe.mass/sum(cat(1,floes.mass))-1 > 1e-3
     xx = 1;
     xx(1) = [1 2];
 end
-
+if sum(cat(1,floes.mass))/floe.mass-1 > 1e-3
+    xx = 1;
+    xx(1) = [1 2];
+end
+h = cat(1,floes.h);
+if max(h)/floe.h-1 > 0.01
+    xx = 1;
+    xx(1) = [1 2];
+end
 % for ii = 1:length(floes)
 %     if isempty(floes(ii).SubFloes.inertia)
 %         xx=1;
 %         xx(1) = [1 2];
 %     end
 % end
+if abs(floe.area/sum(cat(1,floes.area))-1)>0.05
+    xx = 1;
+    xx(1) =[1 2];
+end
+for ii = 1:length(floes)
+    if abs(floes(ii).area/area(polyshape(floes(ii).c_alpha'))-1)>1e-3
+        xx = 1;
+        xx(1) =[1 2];
+    end
+end
 
 warning('on',id)
 warning('on',id2)

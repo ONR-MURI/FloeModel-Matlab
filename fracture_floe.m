@@ -60,7 +60,7 @@ for kk=1:length(Floe)
             %         FloeNEW.fracture_force = 0;
             FloeNEW.collision_torque = 0;
             FloeNEW.OverlapArea = 0;
-            %         FloeNEW.Stress = zeros(2);
+            FloeNEW.Stress = zeros(2);
             
             Floes = [Floes FloeNEW];
             clear FloeNEW

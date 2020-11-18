@@ -1,22 +1,38 @@
-function [ force_1, pcenter, overlap] = floe_interactions(c1, c2, c2_boundary)
+function [ force_1, pcenter, overlap] = floe_interactions(c1, c2, c2_boundary,PERIODIC)
 id ='MATLAB:polyshape:repairedBySimplify';
 warning('off',id)
 id3 ='MATLAB:polyshape:boundary3Points';
 warning('off',id3)
 
 Force_factor=1e3; overlap = 0;
-polyA = area(polyshape(c1'));
-poly1 = polyshape(c1');
-poly2 = polyshape(c2');
-polyB = polyshape(c2_boundary');
-if area(intersect(polyB,poly2))/area(polyB)<0.95
+% tic
+% polyA = area(polyshape(c1'));
+% poly1 = polyshape(c1');
+% poly2 = polyshape(c2');
+% polyB = polyshape(c2_boundary');
+% if area(intersect(polyB,poly2))/area(polyB)<0.95
+%     polyI = intersect(poly1,poly2);
+%     if area(polyI)/area(poly1) > 0.6
+%         overlap = Inf;
+%     elseif area(polyI)/area(poly2) > 0.6
+%         overlap = Inf;
+%     end
+% end
+% toc
+% tic
+if  ( max(c1(1,:))<max(c2_boundary(1,:)) && min(c1(1,:))>min(c2_boundary(1,:)) && max(c1(2,:))<max(c2_boundary(2,:)) && min(c1(2,:))>min(c2_boundary(2,:)) || PERIODIC) 
+    poly1 = polyshape(c1');
+    poly2 = polyshape(c2');
     polyI = intersect(poly1,poly2);
-    if area(polyI)/area(poly1) > 0.95
+    if area(polyI)/area(poly1) > 0.6
         overlap = Inf;
-    elseif area(polyI)/area(poly2) > 0.95
+    elseif area(polyI)/area(poly2) > 0.6
         overlap = Inf;
     end
 end
+% toc
+xx = 1;
+xx(1) =[1 2];
 if norm(c1(:,1)-c1(:,end))> 1
     c1(:,length(c1)+1) = c1(:,1);
 end

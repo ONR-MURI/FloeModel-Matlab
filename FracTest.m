@@ -11,11 +11,11 @@ height.mean = 2;
 height.delta = 0;
 for ii =1:length(Floe)
 %     poly = polyshape(b{ii});
-    poly(ii) = polyshape(Floe(ii).c_alpha'+[Floe(ii).Xi Floe(ii).Yi]);
+%     poly(ii) = polyshape(Floe(ii).c_alpha'+[Floe(ii).Xi Floe(ii).Yi]);
 %     Floe(ii).angles = polyangles(poly.Vertices(:,1),poly.Vertices(:,2));
 %     floe = initialize_floe_values(poly, height);
 %     Floe0(ii) = floe;
-    %vec(ii) = length(Floe(ii).c0);
+    vec(ii) = length(Floe(ii).c0);
 end
 Floe = Floe0;
 save('Floe0.mat','Floe')
@@ -31,3 +31,6 @@ for ii = 1:45
     exportgraphics(ax,['./Nares/' num2str(ii,'%03.f') '.jpg'],'Resolution',300)
 end
 
+for ii =1:length(Floe)
+    poly(ii) = polyshape(Floe(ii).c_alpha'+[Floe(ii).Xi Floe(ii).Yi]);
+end

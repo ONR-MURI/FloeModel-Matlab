@@ -28,10 +28,24 @@ floenew.ksi_ice = (floe1.ksi_ice*floe1.inertia_moment + floe2.ksi_ice*floe2.iner
 floenew.dXi_p = (floe1.dXi_p*floe1.mass + floe2.dXi_p*floe2.mass)/(floenew.mass);
 floenew.dYi_p = (floe1.dYi_p*floe1.mass + floe2.dYi_p*floe2.mass)/(floenew.mass);
 floenew.dksi_ice_p = (floe1.dksi_ice_p*floe1.inertia_moment + floe2.dksi_ice_p*floe2.inertia_moment)/(floenew.inertia_moment);
+floenew.Stress = (floe1.Stress*floe1.mass + floe2.Stress*floe2.mass)/(floenew.mass);
 
 if isinf(floenew.ksi_ice) || isnan(floenew.ksi_ice)
     xx = 1;
     xx(1) = [1 2];
+end
+
+for ii = 1:length(floenew)
+    if abs(floenew(ii).area/area(polyshape(floenew(ii).c_alpha'))-1)>1e-3
+        xx = 1;
+        xx(1) =[1 2];
+    end
+end
+
+h = [floe1.h floe2.h];
+if floenew.h/max(h)-1 > 0.1
+    xx = 1;
+    xx(1) =[1 2];
 end
 
 end

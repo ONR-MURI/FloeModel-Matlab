@@ -2,7 +2,7 @@ close all; clear all;
 
 %% Set Flags
 
-RIDGING=true; 
+RIDGING=false; 
 
 FRACTURES=true;
 
@@ -10,14 +10,18 @@ PERIODIC=false;
 
 PACKING = false;
 
-WELDING = true;
+WELDING = false;
 
 ifPlot = true; %Plot floe figures or not?
 
 %% Initialize model vars
 
+dt=20; %Time step in sec
+h0 = 0.1; %thickness of ice that gets packed in
+
 %Define ocean currents
-ocean=initialize_ocean();
+[ocean, HFo, nDTpack]=initialize_ocean(dt,h0);
+nDTpack = 50;
 
 %Define 10m winds
 winds=[10 10];
@@ -31,9 +35,9 @@ min_floe_size = 1e6;
 %Initialize Floe state
 %Floe=initialize_Floe('FloeShapes.mat');
 height.mean = 2;
-height.delta = 0.25;
+height.delta = 0;
 target_concentration = 1;
-[Floe, Nb] = initial_concentration(c2_boundary,target_concentration,height,100,min_floe_size);
+[Floe, Nb] = initial_concentration(c2_boundary,target_concentration,height,10,min_floe_size);
 if isfield(Floe,'poly')
     Floe=rmfield(Floe,{'poly'});
 end
@@ -41,10 +45,6 @@ end
 %Floe= create_packed_domain();
 
 %%
-
-dt=10; %Time step in sec
-
-h0 = 0.1;
 
 dhdt = 1;
 
@@ -55,6 +55,7 @@ nSnapshots=1000; %Total number of model snapshots to save
 nDT=nDTOut*nSnapshots; %Total number of time steps
 
 nPar = 4; %Number of workerks for parfor
+parpool(nPar)
 
 target_concentration=1;
 
@@ -69,10 +70,7 @@ Vdnew=zeros(Ny, Nx);
 
 %% Calc interactions and plot initial state
 Floe=Floe(logical(cat(1,Floe.alive)));
-for ii = 1:length(Floe)
-    Floe(ii).h = 2;
-end
-[Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt,min_floe_size,Nx,Ny,Nb, dissolvedNEW,PERIODIC, RIDGING); % find interaction points
+[Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt,HFo,min_floe_size,Nx,Ny,Nb, dissolvedNEW,PERIODIC, RIDGING); % find interaction points
 A=cat(1,Floe.area);
 Amax = max(A);
 
@@ -108,36 +106,27 @@ while im_num<nSnapshots
 
     if mod(i_step,nDTOut)==0  %plot the state after a number of timesteps
         
-        if ifPlot
-            [fig] =plot_basic(fig, Time,Floe,ocean,c2_boundary_poly,Nb);
-            saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
-        end
-        
         simp = 0;
         floenew = [];
         for ii = 1:length(Floe)
+            floe = Floe(ii);
             if length(Floe(ii).c0) > 30
-                floe = FloeSimplify(Floe(ii));
-                if isfield(floe,'poly')
-                    floe=rmfield(floe,{'poly'});
+                floe2 = FloeSimplify(Floe(ii));
+                if isfield(floe2,'poly')
+                    floe2=rmfield(floe2,{'poly'});
                 end
-                for jj = 1:length(floe)
+                for jj = 1:length(floe2)
                     if jj == 1
-                        Floe(ii) = floe(jj);
+                        
+                        Floe(ii) = floe2(jj);
                     else
-                        floenew = [floenew floe(jj)];
+                        floenew = [floenew floe2(jj)];
                     end
                 end
                 simp = simp+1;
             end    
         end
         Floe = [Floe floenew];
-        
-        if PACKING && h0 > 0
-            height.mean = h0;
-            height.delta = 0;
-            [Floe,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,target_concentration,ocean,height, min_floe_size, PERIODIC);
-        end
         
         if WELDING
             weldrate = 0.1;%Set rate at which floes will meld
@@ -148,15 +137,28 @@ while im_num<nSnapshots
             FloeOld = Floe;
             Floe = Weld_Floes(Floe,Nb,weldrate,Amax);
         end
+
+        if ifPlot
+            [fig] =plot_basic(fig, Time,Floe,ocean,c2_boundary_poly,Nb);
+            saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
+        end
         
         save(['./Floes/Floe' num2str(im_num,'%07.f') '.mat'],'Floe');
         
         im_num=im_num+1;  %image number for saving data and coarse vars;
     end
+
+    if PACKING && h0 > 0
+        if mod(i_step,nDTpack)==0
+            height.mean = h0;
+            height.delta = 0;
+            [Floe,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,target_concentration,ocean,height, min_floe_size, PERIODIC);
+        end
+    end
     
     Floe3 = Floe2; Floe2 = Floe;
     %Calculate forces and torques and intergrate forward
-    [Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds, c2_boundary, dt, min_floe_size, Nx,Ny,Nb, dissolvedNEW,PERIODIC, RIDGING);
+    [Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds, c2_boundary, dt, HFo,min_floe_size, Nx,Ny,Nb, dissolvedNEW,PERIODIC, RIDGING);
     
     if FRACTURES
         overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);

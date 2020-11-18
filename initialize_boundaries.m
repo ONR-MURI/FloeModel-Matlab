@@ -3,9 +3,9 @@ function c2_boundary =initialize_boundaries()
 %Boundaries are defined as a set of contours e.g. [x1 NaN x2 ; y1 NaN y2]
 
 %Adding walls around the domain
-L_boundary=65e3;
-x=[-1 -1 1 1 -1]*L_boundary; 
-y=[-1 1 1 -1 -1]*L_boundary;
+Lx=65e3; Ly=65e3;
+x=[-1 -1 1 1 -1]*Lx; 
+y=[-1 1 1 -1 -1]*Ly;
 c2_boundary = [x; y];
 
 % include something intresting like WA state boundaries
