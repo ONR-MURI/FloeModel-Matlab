@@ -74,11 +74,11 @@ eularian_data.mom_x = zeros(Ny,Nx);
 eularian_data.mom_y = zeros(Ny,Nx);
 % eularian_data.force_x = zeros(Ny,Nx);
 % eularian_data.force_y = zeros(Ny,Nx);
-% eularian_data.stress = zeros(Ny,Nx);
-% eularian_data.stressxx = zeros(Ny,Nx);
-% eularian_data.stressyx = zeros(Ny,Nx);
-% eularian_data.stressxy = zeros(Ny,Nx);
-% eularian_data.stressyy = zeros(Ny,Nx);
+eularian_data.stress = zeros(Ny,Nx);
+eularian_data.stressxx = zeros(Ny,Nx);
+eularian_data.stressyx = zeros(Ny,Nx);
+eularian_data.stressxy = zeros(Ny,Nx);
+eularian_data.stressyy = zeros(Ny,Nx);
 
 
 [xx,yy] = meshgrid(0.5*(x(1:end-1)+x(2:end)),0.5*(y(1:end-1)+y(2:end)));
@@ -98,6 +98,10 @@ dV = cat(1,Floe.dVi_p);
 % ForceX(isnan(ForceX)==1)=0;
 % ForceY = cat(1,Floe.fy);
 % ForceY(isnan(ForceY)==1)=0;
+Stress = zeros(2,2,length(Floe));
+for ii = 1:length(Floe)
+    Stress(:,:,ii) = Floe(ii).Stress;
+end
 
 % Sig = zeros(1,length(Floe));
 r_max = sqrt((dx/2)^2+(dy/2)^2);
@@ -162,11 +166,11 @@ for ii = 1:Nx
             eularian_data.mom_y(jj,ii) = sum(mass(logical(potentialInteractions(jj,ii,:)))'.*V(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;
 %             eularian_data.force_x(jj,ii) = sum(ForceX(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;%sum(mass(logical(potentialInteractions(jj,ii,:)))'.*dU(logical(potentialInteractions(jj,ii,:)))'.*Aover)./(dt*Area);
 %             eularian_data.force_y(jj,ii) = sum(ForceY(logical(potentialInteractions(jj,ii,:)))'.*Aover)./Area;%sum(mass(logical(potentialInteractions(jj,ii,:)))'.*dV(logical(potentialInteractions(jj,ii,:)))'.*Aover)./(dt*Area);
-%             eularian_data.stress(jj,ii) = 0.5*trace(sum(Stress(:,:,logical(potentialInteractions(jj,ii,:))).*zg,3)./sum(Aover))/2;
-%             eularian_data.stressxx(jj,ii) = sum(squeeze(Stress(1,1,logical(potentialInteractions(jj,ii,:)))).*Aover')./(sum(Aover)^2)/2;
-%             eularian_data.stressyx(jj,ii) = sum(squeeze(Stress(1,2,logical(potentialInteractions(jj,ii,:)))).*Aover')./(sum(Aover)^2)/2;
-%             eularian_data.stressxy(jj,ii) = sum(squeeze(Stress(2,1,logical(potentialInteractions(jj,ii,:)))).*Aover')./(sum(Aover)^2)/2;
-%             eularian_data.stressyy(jj,ii) = sum(squeeze(Stress(2,2,logical(potentialInteractions(jj,ii,:)))).*Aover')./(sum(Aover)^2)/2;
+            eularian_data.stress(jj,ii) = 0.5*trace(sum(Stress(:,:,logical(potentialInteractions(jj,ii,:))).*zg,3)./sum(Aover))/2;
+            eularian_data.stressxx(jj,ii) = sum(squeeze(Stress(1,1,logical(potentialInteractions(jj,ii,:)))).*Aover')./(sum(Aover)^2)/2;
+            eularian_data.stressyx(jj,ii) = sum(squeeze(Stress(1,2,logical(potentialInteractions(jj,ii,:)))).*Aover')./(sum(Aover)^2)/2;
+            eularian_data.stressxy(jj,ii) = sum(squeeze(Stress(2,1,logical(potentialInteractions(jj,ii,:)))).*Aover')./(sum(Aover)^2)/2;
+            eularian_data.stressyy(jj,ii) = sum(squeeze(Stress(2,2,logical(potentialInteractions(jj,ii,:)))).*Aover')./(sum(Aover)^2)/2;
 %             Sig(logical(potentialInteractions(jj,ii,:))) = eularian_data.stress(jj,ii);
         end
     end

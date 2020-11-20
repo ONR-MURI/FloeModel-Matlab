@@ -8,6 +8,7 @@ function [Floes] = frac_corner(floe,ii,poly)
 
 rho_ice = 920;
 Floes = [];
+dX = 120;
 angles = polyangles(poly.Vertices(:,1),poly.Vertices(:,2));
 Anorm = 180-360/length(angles);
 alph = min(angles);
@@ -50,10 +51,12 @@ for p=1:length(a)
     FloeNEW.c0 = FloeNEW.c_alpha;
     FloeNEW.angles = polyangles(FloeNEW.poly.Vertices(:,1),FloeNEW.poly.Vertices(:,2));
     FloeNEW.rmax = sqrt(max(sum((FloeNEW.poly.Vertices' - [Xi;Yi]).^2,1)));
-    FloeNEW.Xg = floe.Xg;
-    FloeNEW.Yg = floe.Yg;
-    FloeNEW.X = floe.X;
-    FloeNEW. Y = floe.Y;
+    n=(fix(FloeNEW.rmax/dX)+1); n=dX*(-n:n);
+    FloeNEW.Xg = n;
+    FloeNEW.Yg = n;
+    [X, Y]= meshgrid(n, n);
+    FloeNEW.X = X;
+    FloeNEW.Y = Y;
     FloeNEW.Stress = [0 0; 0 0];
     
     [in] = inpolygon(FloeNEW.X(:)+Xi, FloeNEW.Y(:)+Yi,FloeNEW.poly.Vertices(:,1),FloeNEW.poly.Vertices(:,2));
