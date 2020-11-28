@@ -1,10 +1,11 @@
 function [Floes] = frac_corner(floe,ii,poly)
 %UNTITLED3 Summary of this function goes here
 %   Detailed explanation goes here
-% id ='MATLAB:polyshape:repairedBySimplify';
-% warning('off',id)
+id ='MATLAB:polyshape:repairedBySimplify';
+warning('off',id)
 % id3 ='MATLAB:polyshape:boundary3Points';
 % warning('off',id3)
+
 
 rho_ice = 920;
 Floes = [];
@@ -29,10 +30,47 @@ x2 = X(2)+d/d2*alph/Anorm*(X(3)-X(2))/5; y2 = Y(2)+d/d2*alph/Anorm*(Y(3)-Y(2))/5
 if abs(x1-x2)<0.1
     x1 = x1+1;
 end
-Pc1 = cutpolygon([poly.Vertices;poly.Vertices(1,:)],[x1, y1; x2, y2],1);
-Pc2 = cutpolygon([poly.Vertices;poly.Vertices(1,:)],[x1, y1; x2, y2],2);
-poly1 = simplify(polyshape(Pc1));
-poly2 = simplify(polyshape(Pc2));
+if ii>1 && ii<length(poly.Vertices)
+    Pc1 = [poly.Vertices(1:ii-1,:); x1 y1; x2 y2; poly.Vertices(ii+1:end,:)];
+    Pc2 = [x1 y1; x2 y2; poly.Vertices(ii,:)];
+    poly1 = simplify(polyshape(Pc1));
+    poly2 = simplify(polyshape(Pc2));
+    if poly1.NumRegions > 1
+        Pc1 = [poly.Vertices(1:ii-1,:); x2 y2; x1 y1; poly.Vertices(ii+1:end,:)];
+        poly1 = simplify(polyshape(Pc1));
+%         if poly1.NumRegions > 1
+%             xx = 1; xx(1) = [ 1 2];
+%         end
+    end
+elseif ii == 1
+    Pc1 = [ x1 y1; x2 y2; poly.Vertices(ii+1:end,:)];
+    Pc2 = [x1 y1; x2 y2; poly.Vertices(ii,:)];
+    poly1 = simplify(polyshape(Pc1));
+    poly2 = simplify(polyshape(Pc2));
+    if poly1.NumRegions > 1
+        Pc1 = [x2 y2; x1 y1; poly.Vertices(ii+1:end,:)];
+        poly1 = simplify(polyshape(Pc1));
+%         if poly1.NumRegions > 1
+%             xx = 1; xx(1) = [ 1 2];
+%         end
+    end
+else
+    Pc1 = [poly.Vertices(1:ii-1,:); x1 y1; x2 y2];
+    Pc2 = [x1 y1; x2 y2; poly.Vertices(ii,:)];
+    poly1 = simplify(polyshape(Pc1));
+    poly2 = simplify(polyshape(Pc2));
+    if poly1.NumRegions > 1
+        Pc1 = [poly.Vertices(1:ii-1,:); x2 y2; x1 y1];
+        poly1 = simplify(polyshape(Pc1));
+%         if poly1.NumRegions > 1
+%             xx = 1; xx(1) = [ 1 2];
+%         end
+    end
+end
+% Pc1 = cutpolygon([poly.Vertices;poly.Vertices(1,:)],[x1, y1; x2, y2],1);
+% Pc2 = cutpolygon([poly.Vertices;poly.Vertices(1,:)],[x1, y1; x2, y2],2);
+% poly1 = simplify(polyshape(Pc1));
+% poly2 = simplify(polyshape(Pc2));
 % xx = 1; xx(1) = [1 2];
 
 R1 = [regions(poly1); regions(poly2)];
@@ -58,6 +96,8 @@ for p=1:length(a)
     FloeNEW.X = X;
     FloeNEW.Y = Y;
     FloeNEW.Stress = [0 0; 0 0];
+    FloeNEW.Fx = floe.Fx*area(a(p))/Atot;
+    FloeNEW.Fy = floe.Fy*area(a(p))/Atot;
     
     [in] = inpolygon(FloeNEW.X(:)+Xi, FloeNEW.Y(:)+Yi,FloeNEW.poly.Vertices(:,1),FloeNEW.poly.Vertices(:,2));
     FloeNEW.A=reshape(in,length(FloeNEW.X),length(FloeNEW.X));
@@ -77,11 +117,23 @@ for p=1:length(a)
     %         FloeNEW.fracture_force = 0;
     FloeNEW.collision_torque = 0;
     FloeNEW.OverlapArea = 0;
-    %         FloeNEW.Stress = zeros(2);
     
     Floes = [Floes FloeNEW];
     clear FloeNEW
 end
+
+floenew = [];
+for ii = 1:length(Floes)
+    floe2 = FloeSimplify(Floes(ii));
+    for jj = 1:length(floe2)
+        if jj == 1
+            Floes(ii) = floe2(jj);
+        else
+            floenew = [floenew floe2(jj)];
+        end
+    end
+end
+Floes = [Floes floenew];
 
 % warning('on',id)
 % warning('on',id3)

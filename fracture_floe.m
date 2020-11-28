@@ -63,6 +63,8 @@ for kk=1:length(Floe)
             FloeNEW.collision_torque = 0;
             FloeNEW.OverlapArea = 0;
             FloeNEW.Stress = zeros(2);
+            FloeNEW.Fx = floe.Fx*area(a(p))/floe.area;
+            FloeNEW.Fy = floe.Fy*area(a(p))/floe.area;
             
             Floes = [Floes FloeNEW];
             clear FloeNEW

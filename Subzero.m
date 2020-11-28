@@ -8,7 +8,7 @@ FRACTURES=true;
 
 PERIODIC=false;
 
-PACKING = false;
+PACKING = true;
 
 WELDING = false;
 
@@ -37,7 +37,8 @@ min_floe_size = 1e6;
 height.mean = 2;
 height.delta = 0;
 target_concentration = 1;
-[Floe, Nb] = initial_concentration(c2_boundary,target_concentration,height,10,min_floe_size);
+[Floe, Nb] = initial_concentration(c2_boundary,target_concentration,height,100,min_floe_size);
+% load Floe0; Nb = 0;
 if isfield(Floe,'poly')
     Floe=rmfield(Floe,{'poly'});
 end

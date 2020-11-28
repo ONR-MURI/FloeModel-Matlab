@@ -22,8 +22,12 @@ if  ( max(c1(1,:))<max(c2_boundary(1,:)) && min(c1(1,:))>min(c2_boundary(1,:)) &
     polyI = intersect(poly1,poly2);
     if area(polyI)/area(poly1) > 0.6
         overlap = Inf;
+%         xx = 1;
+%         xx(1) =[1 2];
     elseif area(polyI)/area(poly2) > 0.6
         overlap = -Inf;
+%         xx = 1;
+%         xx(1) =[1 2];
     end
 end
 if norm(c1(:,1)-c1(:,end))> 1

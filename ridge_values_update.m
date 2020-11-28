@@ -59,8 +59,9 @@ for kk = 1:length(R)
 
     FloeLess.inertia_moment = PolygonMoments(FloeLess.c_alpha',FloeLess.h);
     FloeLess.rmax = max(sqrt(FloeLess.c_alpha(1,:).^2+FloeLess.c_alpha(2,:).^2));
-%     FloeLess.fx = Floe2.fx;
-%     FloeLess.fx = Floe2.fy;
+    FloeLess.Fx = Floe2.Fx;
+    FloeLess.Fy = Floe2.Fy;
+    FloeLess.Stress = Floe2.Stress;
     FloeNEW = [FloeNEW FloeLess];
 end
 

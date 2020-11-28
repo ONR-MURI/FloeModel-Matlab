@@ -22,13 +22,13 @@ pnew = polyshape(vertx, verty);
 Atot = sum(area(pnew));
 if isinf(Atot)
   save('floefail.mat','floe','pnew');
-   1
+%    1
 elseif isnan(Atot)
   save('floefail.mat','floe','pnew');
-  2
+%   2
 elseif Atot ==0
   save('floefail.mat','floe','pnew');
-  3
+%   3
   R = [];
 else
   polynew = scale(pnew,sqrt(floe.area/Atot));

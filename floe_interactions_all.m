@@ -74,7 +74,7 @@ y=cat(1,Floe.Yi);
 rmax=cat(1,Floe.rmax);
 alive=cat(1,Floe.alive);
 
-for i=1+Nb:N  %do interactions with boundary in a separate parfor loop
+for i=1:N  %do interactions with boundary in a separate parfor loop
     
     Floe(i).interactions=[];
     
@@ -83,6 +83,8 @@ for i=1+Nb:N  %do interactions with boundary in a separate parfor loop
     Floe(i).potentialInteractions=[];
     
     Floe(i).collision_force=[0 0];
+    
+    Floe(i).Stress=zeros(2);
     
     Floe(i).collision_torque=0;
     
@@ -110,7 +112,7 @@ end
 
 weld = zeros(length(Floe),1);
 kill = zeros(1,N0);
-parfor i=1+Nb:N  %now the interactions could be calculated in a parfor loop!
+parfor i=1:N  %now the interactions could be calculated in a parfor loop!
         
     c1=[Floe(i).c_alpha(1,:)+x(i); Floe(i).c_alpha(2,:)+y(i)];
     
@@ -129,7 +131,6 @@ parfor i=1+Nb:N  %now the interactions could be calculated in a parfor loop!
             if sum(abs(force_j))~=0
                 Floe(i).interactions=[Floe(i).interactions ; floeNum*ones(size(force_j,1),1) force_j P_j zeros(size(force_j,1),1) overlap'];
                 Floe(i).OverlapArea = sum(overlap)+Floe(i).OverlapArea;
-                Floe(i).Stress =.5*([sum((P_j(:,1)-x(i)).*force_j(:,1)) sum((P_j(:,2)-y(i)).*force_j(:,1)); sum((P_j(:,1)-x(i)).*force_j(:,2)) sum((P_j(:,2)-y(i)).*force_j(:,2))]+[sum(force_j(:,1).*(P_j(:,1)-x(i))) sum(force_j(:,2).*(P_j(:,1)-x(i))); sum(force_j(:,1).*(P_j(:,2)-y(i))) sum(force_j(:,2).*(P_j(:,2)-y(i)))]);
             elseif isinf(overlap)
                 if i <= N0 && sign(overlap)>0
                     kill(i) = i;%floeNum;
@@ -161,7 +162,6 @@ parfor i=1+Nb:N  %now the interactions could be calculated in a parfor loop!
     end
     
 end
-
 % for i = 1+Nb:length(Floe)
 %     if weld(i)>0 && Floe(i).alive > 0 && Floe(weld(i)).alive > 0
 %         Floe(i).poly = polyshape(Floe(i).c_alpha'+[Floe(i).Xi Floe(i).Yi]);
@@ -201,7 +201,7 @@ if isfield(Floe,'poly')
 end
 
 %Fill the lower part of the interacton matrix (floe_i,floe_j) for floes with j<i
-for i=1+Nb:N %this has to be done sequentially
+for i=1:N %this has to be done sequentially
       
     if ~isempty(Floe(i).interactions)
         
@@ -266,16 +266,32 @@ parfor i=1+Nb:N0
             Floe(i).interactions(k,6)=floe_torque(3);
         end
         
+%        Floe(i).Stress =.5*([sum((a(:,4)-r(1)).*a(:,2)) sum((a(:,5)-r(2)).*a(:,2)); sum((a(:,4)-r(1)).*a(:,3)) sum((a(:,5)-r(2)).*a(:,3))]+[sum(a(:,2).*(a(:,4)-r(2))) sum(a(:,3).*(a(:,4)-r(2))); sum(a(:,2).*(a(:,5)-r(2))) sum(a(:,3).*(a(:,5)-r(2)))]);
        Floe(i).collision_force=sum(Floe(i).interactions(:,2:3),1)+Floe(i).collision_force;
        Floe(i).collision_torque=sum(Floe(i).interactions(:,6),1)+Floe(i).collision_torque;
+        
+    end
+    
+    if PERIODIC
+            
+        if abs(Floe(i).Xi)>Lx %if floe got out of periodic bounds, put it on the other end
+            %
+            Floe(i).Xm=Floe(i).Xm-2*Lx*sign(Floe(i).Xi);
+            Floe(i).Xi=Floe(i).Xi-2*Lx*sign(Floe(i).Xi);
+        end
+        
+        if abs(Floe(i).Yi)>Ly %if floe got out of periodic bounds, put it on the other end
+            Floe(i).Ym=Floe(i).Ym-2*Ly*sign(Floe(i).Yi);
+            Floe(i).Yi=Floe(i).Yi-2*Ly*sign(Floe(i).Yi);
+        end
         
     end
     
    %Do the timestepping now that forces and torques are known.
     if Floe(i).alive,
 %                 [tmp,frac]=calc_trajectory_Nares(dt,ocean, winds,Floe(i),HFo,c2_boundary); % calculate trajectory
-        [tmp,frac]=calc_trajectory(dt,ocean, winds,Floe(i),HFo); % calculate trajectory
-        if (isempty(tmp) || isnan(x(i)) ), kill(i)=i; elseif frac == 1, keep(i) = 0; else Floe(i)=tmp; end
+        [tmp,frac,Fx,Fy]=calc_trajectory(dt,ocean, winds,Floe(i),HFo); % calculate trajectory
+        if (isempty(tmp) || isnan(x(i)) ), kill(i)=i; elseif frac == 1, keep(i) = 0; else Floe(i)=tmp; Floe(i).Fx = Fx; Floe(i).Fy = Fy; end
     end
         
 end
@@ -346,12 +362,12 @@ Floe=Floe(1:N0); % ditch the ghost floes.
 %         xx(1) = [1 2];
 %     end
 % end
-kill = unique(kill>0);
-kill = sort(kill,'descend');
-if ~isempty(kill) 
+if ~isempty(kill(kill>0)) 
+    kill = unique(kill(kill>0));
+    kill = sort(kill,'descend');
     for ii = length(kill)
-        %     if kill(ii)==0
         dissolvedNEW = dissolvedNEW+calc_dissolved_mass(Floe(kill(ii)),Nx,Ny,c2_boundary_poly);
+        Floe(kill(ii)).alive = 0;
         %     end
     end
 end

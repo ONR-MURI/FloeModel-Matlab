@@ -1,9 +1,13 @@
-function [floe, fracture] =calc_trajectory(dt,ocean,winds,floe,HFo)
+function [floe, fracture,Fx,Fy] =calc_trajectory(dt,ocean,winds,floe,HFo)
 
 ext_force=floe.collision_force;
 ext_torque=floe.collision_torque;
 HFo = mean(HFo(:));
-
+if ~isempty(floe.interactions)
+    a=floe.interactions;
+    r=[floe.Xi floe.Yi];
+    floe.Stress =1/(2*floe.h)*([sum((a(:,4)-r(1)).*a(:,2)) sum((a(:,5)-r(2)).*a(:,2)); sum((a(:,4)-r(1)).*a(:,3)) sum((a(:,5)-r(2)).*a(:,3))]+[sum(a(:,2).*(a(:,4)-r(2))) sum(a(:,3).*(a(:,4)-r(2))); sum(a(:,2).*(a(:,5)-r(2))) sum(a(:,3).*(a(:,5)-r(2)))]);
+end
 
 if length(ext_force) == 1
     ext_force = [0 0];
@@ -16,6 +20,7 @@ end
     while max((abs(ext_force))) > floe.mass/(5*dt)
         ext_force = ext_force/10;
         ext_torque = ext_torque/10;
+        if ~isempty(floe.interactions); a = a/10; end
     end
 % end
 
@@ -29,7 +34,7 @@ fracture = 0;
 
 Xi=floe.Xi;
 Yi=floe.Yi;
-
+Fx = 0; Fy = 0;
 
 % Spin up of an ice floe by an ocean eddy;
 % ice floe is a disk with a radius R_floe;
@@ -117,7 +122,7 @@ else
             tau_ocnX=rho0*Cd*sqrt(du.^2+dv.^2).*( cos(ocean.turn_angle)*du+sin(ocean.turn_angle)*dv); % ocean stress with the turning angle
             tau_ocnY=rho0*Cd*sqrt(du.^2+dv.^2).*(-sin(ocean.turn_angle)*du+cos(ocean.turn_angle)*dv);
             
-            Fx=tau_ocnX+Fx_atm+Fx_pressureGrad; % adding up all forces except the Coriolis force
+            Fx=tau_ocnX+Fx_atm+Fx_pressureGrad; 
             Fy=tau_ocnY+Fy_atm+Fy_pressureGrad;
             
             if max(isinf(Fx(:))) || max(isnan(Fx(:)))
@@ -187,6 +192,8 @@ if isnan(floe.Ui) || isnan(floe.ksi_ice) || isnan(floe.Vi) || isinf(floe.ksi_ice
     xx(1) = [1 2];
 end
 
+Fx = mean(Fx(floe_mask))/floe_mass;
+Fy = mean(Fy(floe_mask))/floe_mass;
 end
 
 

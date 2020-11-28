@@ -21,6 +21,9 @@ for ii = 1:length(Floe)
         
         poly = polyshape(Floe(ii).c_alpha');
         if poly.NumRegions == 1 && poly.NumHoles == 0
+            if norm(poly.Vertices(1,:)-poly.Vertices(end,:)) == 0
+                poly.Vertices(end,:) = [];
+            end
             angles = polyangles(poly.Vertices(:,1),poly.Vertices(:,2));
             Anorm = 180-360/length(angles);
             keep1=(rand(length(angles),1)>angles/Anorm);
@@ -64,26 +67,6 @@ end
 if isfield(Floe,'poly')
     Floe=rmfield(Floe,{'poly'});
 end
-
-Floes = [];
-for ii = 1:length(floenew)
-    if length(floenew(ii).c0) > 30
-        floe2 = FloeSimplify(floenew(ii));
-        if isfield(floe2,'poly')
-            floe2=rmfield(floe2,{'poly'});
-        end
-        for jj = 1:length(floe2)
-            if jj == 1
-                
-                Floes(ii) = floe2(jj);
-            else
-                Floes = [Floes floe2(jj)];
-            end
-        end
-        simp = simp+1;
-    end
-end
-floenew = [floenew Floes];
 
 Floe = [Floe(logical(KeepF)) floenew];
 
