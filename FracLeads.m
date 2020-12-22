@@ -29,6 +29,9 @@ for ii = 1:Nx
             [~,V] = eig([SigXX(jj,ii) SigYX(jj,ii);SigXY(jj,ii) SigYY(jj,ii)]);
             r = randi([1 2],1,1);
             m = vecnorm(V(1,r)/V(2,r));
+            if m>0 && m<Inf
+                xx = 1; xx(1) =[1 2];
+            end
             if isinf(m)
                 m = Ly;
             end

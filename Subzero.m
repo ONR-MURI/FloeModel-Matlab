@@ -14,11 +14,13 @@ WELDING = false;
 
 CORNERS = false;
 
+COLLISION = false;
+
 ifPlot = true; %Plot floe figures or not?
 
 %% Initialize model vars
 
-dt=20; %Time step in sec
+dt=300; %Time step in sec
 % h0 = 0.1; %thickness of ice that gets packed in
 
 %Define ocean currents
@@ -26,7 +28,7 @@ nDTpack = 100;
 [ocean, HFo, h0]=initialize_ocean(dt,nDTpack);
 
 %Define 10m winds
-winds=[10 0];
+winds=[2 0];
 
 %Define boundaries
 c2_boundary=initialize_boundaries();
@@ -39,7 +41,8 @@ min_floe_size = 4*Lx*Ly/25000;
 height.mean = 2;
 height.delta = 0;
 target_concentration = 1;
-[Floe, Nb] = initial_concentration(c2_boundary,target_concentration,height,400,min_floe_size);
+[Floe, Nb] = initial_concentration(c2_boundary,target_concentration,height,2000,min_floe_size);
+Floe = Floe(1:200);
 %load Floe0; Nb = 0;
 if isfield(Floe,'poly')
     Floe=rmfield(Floe,{'poly'});
@@ -54,7 +57,7 @@ dhdt = 1;
 
 nDTOut=50; %Output frequency (in number of time steps)
 
-nSnapshots=100; %Total number of model snapshots to save
+nSnapshots=60; %Total number of model snapshots to save
 
 nDT=nDTOut*nSnapshots; %Total number of time steps
 
@@ -68,6 +71,7 @@ else
 end
 
 target_concentration=1;
+tStart = tic; 
 
 % specify coarse grid size
 LxO= 2*max(ocean.Xo);LyO= 2*max(ocean.Yo);
@@ -84,11 +88,12 @@ SigXX = zeros(Ny, Nx); SigYX = zeros(Ny, Nx);
 SigXY = zeros(Ny, Nx); SigYY = zeros(Ny, Nx);
 Eux = zeros(Ny, Nx); Evx = zeros(Ny, Nx);
 Euy = zeros(Ny, Nx); Evy = zeros(Ny, Nx);
+U = zeros(Ny, Nx); V = zeros(Ny, Nx);
 Sig = zeros(Ny, Nx);
 
 %% Calc interactions and plot initial state
 Floe=Floe(logical(cat(1,Floe.alive)));
-[Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt,HFo,min_floe_size,Nx,Ny,Nb, dissolvedNEW,PERIODIC, RIDGING); % find interaction points
+[Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt,HFo,min_floe_size,Nx,Ny,Nb, dissolvedNEW,COLLISION, PERIODIC, RIDGING); % find interaction points
 A=cat(1,Floe.area);
 Amax = max(A);
 
@@ -124,6 +129,7 @@ while im_num<nSnapshots
         SigXY = SigXY+squeeze(eularian_data.stressxy); SigYY = SigYY+squeeze(eularian_data.stressyy);
         Eux = Eux+squeeze(eularian_data.strainux); Evx = Evx+squeeze(eularian_data.strainvx);
         Euy = Euy+squeeze(eularian_data.strainuy); Evy = Evy+squeeze(eularian_data.strainvy);
+        U = U+squeeze(eularian_data.u);V = V+squeeze(eularian_data.v);
         Sig = Sig+squeeze(eularian_data.stress);
     end
 
@@ -170,17 +176,18 @@ while im_num<nSnapshots
             SigXY = SigXY/fix(nDTOut/10); SigYY = SigYY/fix(nDTOut/10);
             Eux = Eux/fix(nDTOut/10); Evx = Evx/fix(nDTOut/10);
             Euy = Euy/fix(nDTOut/10); Evy = Evy/fix(nDTOut/10);
+            U = U/fix(nDTOut/10); V = V/fix(nDTOut/10);
             Sig = Sig/fix(nDTOut/10);
             SigO = Sig;
 %             imagesc(Xc,Yc,abs(Sig)); colorbar;%title('$\sigma_{xx}$','interpreter','latex','fontsize',16); colorbar; caxis([0 1e3])
-            subplot(2,4,1); imagesc(Xc,Yc,abs(SigXX)); title('$\sigma_{xx}$','interpreter','latex','fontsize',16); colorbar; caxis([0 1.5e4])
-            subplot(2,4,2); imagesc(Xc,Yc,abs(SigYX)); title('$\sigma_{yx}$','interpreter','latex','fontsize',16); colorbar; caxis([0 1.5e4])
-            subplot(2,4,5); imagesc(Xc,Yc,abs(SigXY)); title('$\sigma_{xy}$','interpreter','latex','fontsize',16); colorbar; caxis([0 1.5e4])
-            subplot(2,4,6); imagesc(Xc,Yc,abs(SigYY)); title('$\sigma_{yy}$','interpreter','latex','fontsize',16); colorbar; caxis([0 1.5e4])
-            subplot(2,4,3); imagesc(Xc,Yc,abs(Eux)); title('$E_{11}$','interpreter','latex','fontsize',16); colorbar; 
-            subplot(2,4,4); imagesc(Xc,Yc,abs(Evx)); title('$E_{21}$','interpreter','latex','fontsize',16); colorbar; 
-            subplot(2,4,7); imagesc(Xc,Yc,abs(Euy)); title('$E_{12}$','interpreter','latex','fontsize',16); colorbar; 
-            subplot(2,4,8); imagesc(Xc,Yc,abs(Evy)); title('$E_{22}$','interpreter','latex','fontsize',16); colorbar; 
+            subplot(2,4,1); imagesc(Xc,Yc,abs(SigXX)); hold on; quiver(Xc,Yc,U,V,'k'); title('$\sigma_{xx}$','interpreter','latex','fontsize',16); colorbar; caxis([0 1.5e4])
+            subplot(2,4,2); imagesc(Xc,Yc,abs(SigYX)); hold on; quiver(Xc,Yc,U,V,'k'); title('$\sigma_{yx}$','interpreter','latex','fontsize',16); colorbar; caxis([0 1.5e4])
+            subplot(2,4,5); imagesc(Xc,Yc,abs(SigXY)); hold on; quiver(Xc,Yc,U,V,'k'); title('$\sigma_{xy}$','interpreter','latex','fontsize',16); colorbar; caxis([0 1.5e4])
+            subplot(2,4,6); imagesc(Xc,Yc,abs(SigYY)); hold on; quiver(Xc,Yc,U,V,'k'); title('$\sigma_{yy}$','interpreter','latex','fontsize',16); colorbar; caxis([0 1.5e4])
+            subplot(2,4,3); imagesc(Xc,Yc,abs(Eux)); hold on; quiver(Xc,Yc,U,V,'k'); title('$E_{11}$','interpreter','latex','fontsize',16); colorbar; 
+            subplot(2,4,4); imagesc(Xc,Yc,abs(Evx)); hold on; quiver(Xc,Yc,U,V,'k'); title('$E_{21}$','interpreter','latex','fontsize',16); colorbar; 
+            subplot(2,4,7); imagesc(Xc,Yc,abs(Euy)); hold on; quiver(Xc,Yc,U,V,'k'); title('$E_{12}$','interpreter','latex','fontsize',16); colorbar; 
+            subplot(2,4,8); imagesc(Xc,Yc,abs(Evy)); hold on; quiver(Xc,Yc,U,V,'k'); title('$E_{22}$','interpreter','latex','fontsize',16); colorbar; 
             saveas(fig2,['./figs/' num2str(im_num,'Stress%03.f') '.jpg'],'jpg');
         end
         
@@ -189,6 +196,7 @@ while im_num<nSnapshots
         SigXY = zeros(Ny, Nx); SigYY = zeros(Ny, Nx);
         Eux = zeros(Ny, Nx); Evx = zeros(Ny, Nx);
         Euy = zeros(Ny, Nx); Evy = zeros(Ny, Nx);
+        U = zeros(Ny, Nx); V = zeros(Ny, Nx);
         Sig = zeros(Ny, Nx);
         
         M = cat(1,Floe.mass);
@@ -206,7 +214,7 @@ while im_num<nSnapshots
     end
     
     %Calculate forces and torques and intergrate forward
-    [Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds, c2_boundary, dt, HFo,min_floe_size, Nx,Ny,Nb, dissolvedNEW,PERIODIC, RIDGING);
+    [Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds, c2_boundary, dt, HFo,min_floe_size, Nx,Ny,Nb, dissolvedNEW,COLLISION, PERIODIC, RIDGING);
     
     if FRACTURES && im_num>5 && mod(i_step,10)==0
         [Floe] = FracLeads(Floe,Ny,Nx,Nb,c2_boundary,eularian_data);
@@ -249,4 +257,5 @@ while im_num<nSnapshots
     Time=Time+dt; i_step=i_step+1; %update time index
 
 end
+tEnd = toc(tStart)
 %%

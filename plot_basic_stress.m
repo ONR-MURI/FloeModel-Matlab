@@ -24,7 +24,7 @@ axis([ocean.Xo(1) ocean.Xo(end) ocean.Yo(1) ocean.Yo(end)]);
 
 colormap('gray'); caxis([0 1]);
 
-% title(['Time = ' num2str(Time) ' s'],'fontsize',24);
+title(['Time = ' num2str(Time/3600) ' hours'],'fontsize',24);
 for ii =1:length(Floe)
     Floe(ii).poly = polyshape(Floe(ii).c_alpha'+[Floe(ii).Xi Floe(ii).Yi]);
     Stress(ii) = max(eig(Floe(ii).Stress));

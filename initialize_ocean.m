@@ -19,8 +19,8 @@ psi_ocean=transport*sin(2*pi*Xocn/40e4).*cos(2*pi*Yocn/50e4);
 
 %calculating ocean velocity field 
 Uocn=zeros(size(Xocn)); Vocn=zeros(size(Xocn));
-% Uocn(2:end,:)=-(psi_ocean(2:end,:)-psi_ocean(1:end-1,:))/dXo; 
-% Vocn(:,2:end)=(psi_ocean(:,2:end)-psi_ocean(:,1:end-1))/dXo;
+Uocn(2:end,:)=-(psi_ocean(2:end,:)-psi_ocean(1:end-1,:))/dXo; 
+Vocn(:,2:end)=(psi_ocean(:,2:end)-psi_ocean(:,1:end-1))/dXo;
 
 %adding pure divergence 
 %Uocn=Uocn-0.1*Xocn/3e4;

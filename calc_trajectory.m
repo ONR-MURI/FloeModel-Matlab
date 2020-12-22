@@ -1,4 +1,4 @@
-function [floe, fracture,Fx,Fy] =calc_trajectory_Nares(dt,ocean,winds,floe,HFo,c2_boundary)
+function [floe, fracture,Fx,Fy] =calc_trajectory(dt,ocean,winds,floe,HFo)
 
 ext_force=floe.collision_force;
 ext_torque=floe.collision_torque;

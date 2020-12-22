@@ -1,4 +1,4 @@
-function [ force_1, pcenter, overlap] = floe_interactions(floe1, floe2, c2_boundary,PERIODIC)
+function [ force_1, pcenter, overlap] = floe_interactions_bound(c1, c2, c2_boundary,PERIODIC)
 id ='MATLAB:polyshape:repairedBySimplify';
 warning('off',id)
 id3 ='MATLAB:polyshape:boundary3Points';
@@ -6,8 +6,8 @@ warning('off',id3)
 
 Force_factor=1.5e3; overlap = 0;
 G = 3.8e9; mu = 0.05;
-c1=[floe1.c_alpha(1,:)+floe1.Xi; floe1.c_alpha(2,:)+floe1.Yi];
-c2=floe2.c;
+% c1=[floe1.c_alpha(1,:)+floe1.Xi; floe1.c_alpha(2,:)+floe1.Yi];
+% c2=[floe2.c_alpha(1,:)+floe2.Xi; floe2.c_alpha(2,:)+floe2.Yi];
 poly1 = polyshape(c1');
 polyA = area(poly1);
 % poly2 = polyshape(c2');
@@ -143,21 +143,22 @@ else
                 
                 force=force_dir*(dl*dist_eff)*Force_factor; %proportional to the overlap area
                 
-                v1 = ([floe1.Ui floe1.Vi]+ floe1.ksi_ice*(pcenter(k,:)-[floe1.Xi floe1.Yi]));
-                v2 = ([floe2.Ui floe2.Vi]+ floe2.ksi_ice*(pcenter(k,:)-[floe2.Xi floe2.Yi]));
-                dir_t = [-force_dir(2) force_dir(1)];
-                v_t = dot(v1-v2,dir_t);
-                force_t = dl*G*v_t*sign(v1).*abs(dir_t);
-                if vecnorm(force_t)>mu*vecnorm(force)
-                    force_t = mu*vecnorm(force)*sign(v1).*abs(dir_t);
-                end
+%                 v1 = ([floe1.u floe1.v]+ floe1.ksi_ice*(pcenter(k,:)-[floe1.Xi floe1.Yi]));
+%                 v2 = ([floe2.u floe2.v]+ floe2.ksi_ice*(pcenter(k,:)-[floe2.Xi floe2.Yi]));
+%                 dir_t = [-dir(2) dir(1)];
+%                 v_t = dot(v1-v2,dir_t);
+%                 force_t = dl*G*v_t*sign(v1).*abs(dir_t);
+%                 if vecnorm(force_t)>mu*vecnorm(force)
+%                     force_t = mu*vecnorm(force);
+%                 end
+%                 xx = 1; xx(1) =[1 2];
                 
                 if isnan(force(1)) || isnan(force(2))
                     xx = 1;
                     xx(1) = [1 2];
                 end
                 
-                force_1(k,:)= force'+force_t;
+                force_1(k,:)= force;
                 overlap(k) = dl*dist_eff;
                 
             end

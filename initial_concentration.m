@@ -48,11 +48,11 @@ for jj = 1:Ny
                     poly = polyshape(b{Nf(count)});
                     floenew = initialize_floe_values(poly,height);
                     Floe = [Floe floenew];
-                    count = count+1;
                     Atot = Atot+area(poly);
-                    if count > length(Nf)
-                        Atot = area(boundary)+1;
-                    end
+                end
+                count = count+1;
+                if count > length(Nf)
+                    Atot = area(boundary)+1;
                 end
             end
         end

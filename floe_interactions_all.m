@@ -1,4 +1,4 @@
-function [Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt, HFo, min_floe_size, Nx,Ny,Nb, dissolvedNEW,PERIODIC, RIDGING)
+function [Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt, HFo, min_floe_size, Nx,Ny,Nb, dissolvedNEW,COLLISION, PERIODIC, RIDGING)
 
 id ='MATLAB:polyshape:repairedBySimplify';
 warning('off',id)
@@ -95,12 +95,17 @@ for i=1:N  %do interactions with boundary in a separate parfor loop
 %         xx(1) =[1 2];
 %     end
     
-    if ( alive(i) && ~isnan(x(i)) )
+    if ( alive(i) && ~isnan(x(i)) ) && COLLISION
         for j=1:N
             %display(j);
             if j>i && alive(j) && sqrt((x(i)-x(j))^2 + (y(i)-y(j))^2)<(rmax(i)+rmax(j)) % if floes are potentially overlapping
                 Floe(i).potentialInteractions(k).floeNum=j;
                 Floe(i).potentialInteractions(k).c=[Floe(j).c_alpha(1,:)+x(j); Floe(j).c_alpha(2,:)+y(j)];
+                Floe(i).potentialInteractions(k).Ui=Floe(j).Ui;
+                Floe(i).potentialInteractions(k).Vi=Floe(j).Vi;
+                Floe(i).potentialInteractions(k).Xi=x(j);
+                Floe(i).potentialInteractions(k).Yi=y(j);
+                Floe(i).potentialInteractions(k).ksi_ice = Floe(j).ksi_ice;
                 k=k+1;
             end
             
@@ -112,9 +117,10 @@ end
 
 weld = zeros(length(Floe),1);
 kill = zeros(1,N0);
+
 parfor i=1:N  %now the interactions could be calculated in a parfor loop!
         
-    c1=[Floe(i).c_alpha(1,:)+x(i); Floe(i).c_alpha(2,:)+y(i)];
+    %c1=[Floe(i).c_alpha(1,:)+x(i); Floe(i).c_alpha(2,:)+y(i)];
     
     if ~isempty(Floe(i).potentialInteractions)
         
@@ -122,9 +128,10 @@ parfor i=1:N  %now the interactions could be calculated in a parfor loop!
             
             floeNum=Floe(i).potentialInteractions(k).floeNum;
             
-            c2=Floe(i).potentialInteractions(k).c;
+            %c2=Floe(i).potentialInteractions(k).c;
             
-            [force_j,P_j, overlap] = floe_interactions(c1,c2,c2_boundary,PERIODIC);
+            %[force_j,P_j, overlap] = floe_interactions(c1,c2,c2_boundary,PERIODIC);
+            [force_j,P_j, overlap] = floe_interactions(Floe(i),Floe(i).potentialInteractions(k),c2_boundary,PERIODIC);
             
             %if ~worked, disp(['contact points issue for (' num2str(i) ',' num2str(floeNum) ')' ]); end
             
@@ -144,7 +151,8 @@ parfor i=1:N  %now the interactions could be calculated in a parfor loop!
     end
     
     if ~PERIODIC
-        [force_b, P_j, overlap] = floe_interactions(c1, c2_boundary,c2_boundary,PERIODIC);
+        c1=[Floe(i).c_alpha(1,:)+x(i); Floe(i).c_alpha(2,:)+y(i)];
+        [force_b, P_j, overlap] = floe_interactions_bound(c1, c2_boundary,c2_boundary,PERIODIC);
         in = inpolygon(x(i),y(i),c2_boundary(1,:)',c2_boundary(2,:)');
         if ~in
             Floe(i).alive = 0;
