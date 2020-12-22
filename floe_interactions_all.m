@@ -225,7 +225,7 @@ end
 % calculate all torques from forces
 if PERIODIC
     
-    parfor i=N0+1:N
+    parfor i=N0+1:N %do this in parfor
         
         if ~isempty(Floe(i).interactions)
             
@@ -275,13 +275,10 @@ parfor i=1+Nb:N0
     if PERIODIC
             
         if abs(Floe(i).Xi)>Lx %if floe got out of periodic bounds, put it on the other end
-            %
-            Floe(i).Xm=Floe(i).Xm-2*Lx*sign(Floe(i).Xi);
             Floe(i).Xi=Floe(i).Xi-2*Lx*sign(Floe(i).Xi);
         end
         
         if abs(Floe(i).Yi)>Ly %if floe got out of periodic bounds, put it on the other end
-            Floe(i).Ym=Floe(i).Ym-2*Ly*sign(Floe(i).Yi);
             Floe(i).Yi=Floe(i).Yi-2*Ly*sign(Floe(i).Yi);
         end
         
@@ -289,7 +286,7 @@ parfor i=1+Nb:N0
     
    %Do the timestepping now that forces and torques are known.
     if Floe(i).alive,
-%                 [tmp,frac]=calc_trajectory_Nares(dt,ocean, winds,Floe(i),HFo,c2_boundary); % calculate trajectory
+%         [tmp,frac,Fx,Fy]=calc_trajectory_Nares(dt,ocean, winds,Floe(i),HFo,c2_boundary); % calculate trajectory
         [tmp,frac,Fx,Fy]=calc_trajectory(dt,ocean, winds,Floe(i),HFo); % calculate trajectory
         if (isempty(tmp) || isnan(x(i)) ), kill(i)=i; elseif frac == 1, keep(i) = 0; else Floe(i)=tmp; Floe(i).Fx = Fx; Floe(i).Fy = Fy; end
     end
@@ -301,7 +298,7 @@ floenew = [];
 if RIDGING
     %Create a function to control probability that ridging will occur
     overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
-    keepR=rand(length(Floe),1)>overlapArea;
+    keepR=rand(length(Floe),1)>10*overlapArea;
 %     keep=rand(length(Floe),1)<0.5;
     for i=1+Nb:N0
 

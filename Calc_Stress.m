@@ -106,8 +106,11 @@ for jj = 1:Nx-2
     end
 end
 rho_ice = 920;
-DivSig1 = rho_ice*dU+rho_ice*(u(2:Ny-1,2:Nx-1).*diff(Uxshift,1,2)/delx + v(2:Ny-1,2:Nx-1).*diff(Uyshift,1,1)/dely)-Fx*rho_ice;
-DivSig2 = rho_ice*dV+rho_ice*(u(2:Ny-1,2:Nx-1).*diff(Vxshift,1,2)/delx + v(2:Ny-1,2:Nx-1).*diff(Vyshift,1,1)/dely)-Fy*rho_ice;
+DivSig1 = rho_ice*dU-Fx*rho_ice;
+DivSig2 = rho_ice*dV-Fy*rho_ice;
+
+% DivSig1 = rho_ice*dU+rho_ice*(u(2:Ny-1,2:Nx-1).*diff(Uxshift,1,2)/delx + v(2:Ny-1,2:Nx-1).*diff(Uyshift,1,1)/dely)-Fx*rho_ice;
+% DivSig2 = rho_ice*dV+rho_ice*(u(2:Ny-1,2:Nx-1).*diff(Vxshift,1,2)/delx + v(2:Ny-1,2:Nx-1).*diff(Vyshift,1,1)/dely)-Fy*rho_ice;
 
 DivSigX = diff(SigXXxshift,1,2)/delx + diff(SigYXyshift,1,1)/dely;
 DivSigY = diff(SigXYxshift,1,2)/delx + diff(SigYYyshift,1,1)/dely;

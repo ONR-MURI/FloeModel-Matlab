@@ -6,11 +6,13 @@ RIDGING=false;
 
 FRACTURES=true;
 
-PERIODIC=false;
+PERIODIC=true;
 
 PACKING = false;
 
 WELDING = false;
+
+CORNERS = true;
 
 ifPlot = false; %Plot floe figures or not?
 
@@ -20,7 +22,7 @@ dt=30; %Time step in sec
 h0 = 0.1; %thickness of ice that gets packed in
 
 %Define ocean currents
-[ocean, HFo, nDTpack]=initialize_ocean(dt,h0);
+[ocean, HFo, nDTpack]=initialize_ocean_Nares(dt,h0);
 nDTpack = 50;
 
 %Define 10m winds
@@ -38,10 +40,11 @@ height.mean = 2;
 height.delta = 0;
 target_concentration = [1;1;0];
 [Floe, Nb] = initial_concentration_Nares(c2_boundary,target_concentration,height,50,min_floe_size);
-if isfield(Floe,'poly')
-    Floe=rmfield(Floe,{'poly'});
-end
-save('Floe0.mat','Floe')
+% if isfield(Floe,'poly')
+%     Floe=rmfield(Floe,{'poly'});
+% end
+%load Floe0000076.mat; Nb = 2;
+%save('Floe0.mat','Floe')
 %load('PackedFloesFullDomain.mat','Floe');
 %Floe= create_packed_domain();
 
@@ -49,7 +52,7 @@ save('Floe0.mat','Floe')
 
 dhdt = 1;
 
-nDTOut=50; %Output frequency (in number of time steps)
+nDTOut=100; %Output frequency (in number of time steps)
 
 nSnapshots=1000; %Total number of model snapshots to save
 
@@ -171,7 +174,23 @@ while im_num<nSnapshots
         
     end
     
-%     Floe = corners(Floe);
+    if CORNERS
+        stress = zeros(length(Floe),1);
+        for ii = 1:length(Floe)
+            stress(ii) = trace(abs(Floe(ii).Stress));
+        end
+        if max(stress)>0
+            stresses=stress/max(stress);
+        else
+            stresses = stress;
+        end
+        keep=stresses<rand(length(Floe),1);
+        keep(1:Nb) = ones(Nb,1);
+        fracturedFloes=corners(Floe(~keep),Nb);
+        if ~isempty(fracturedFloes)
+            Floe=[Floe(keep) fracturedFloes];
+        end
+    end 
 
     %Advect the dissolved mass
     Area=cat(1,Floe.area);

@@ -6,7 +6,7 @@ warning('off',id)
 id3 ='MATLAB:polyshape:boundary3Points';
 warning('off',id3)
 
-Floes=[]; rho_ice = 920; dX = 120;
+Floes=[]; rho_ice = 920; 
 
 for kk=1:length(Floe)
     floe = Floe(kk);
@@ -40,15 +40,21 @@ for kk=1:length(Floe)
             FloeNEW.c0 = FloeNEW.c_alpha;
             FloeNEW.angles = polyangles(FloeNEW.poly.Vertices(:,1),FloeNEW.poly.Vertices(:,2));
             FloeNEW.rmax = sqrt(max(sum((FloeNEW.poly.Vertices' - [Xi;Yi]).^2,1)));
-            n=(fix(FloeNEW.rmax/dX)+1); n=dX*(-n:n);
-            FloeNEW.Xg = n;
-            FloeNEW.Yg = n;
-            [X, Y]= meshgrid(n, n);
-            FloeNEW.X = X;
-            FloeNEW.Y = Y;
+            % n=(fix(FloeNEW.rmax/dX)+1); n=dX*(-n:n);
+            % FloeNEW.Xg = n;
+            % FloeNEW.Yg = n;
+            % [X, Y]= meshgrid(n, n);
+            % FloeNEW.X = X;
+            % FloeNEW.Y = Y;
+            FloeNEW.strain = floe.strain;
+            FloeNEW.Stress = [0 0; 0 0];
+            FloeNEW.Fx = 0; FloeNEW.Fy = 0;
             
-            [in] = inpolygon(FloeNEW.X(:)+Xi, FloeNEW.Y(:)+Yi,FloeNEW.poly.Vertices(:,1),FloeNEW.poly.Vertices(:,2));
-            FloeNEW.A=reshape(in,length(FloeNEW.X),length(FloeNEW.X));            
+            FloeNEW.X = FloeNEW.rmax*(2*rand(1000,1) - 1);
+            FloeNEW.Y = FloeNEW.rmax*(2*rand(1000,1) - 1);
+            FloeNEW.A = inpolygon(FloeNEW.X,FloeNEW.Y,FloeNEW.c_alpha(1,:),FloeNEW.c_alpha(2,:));
+            % [in] = inpolygon(FloeNEW.X(:)+Xi, FloeNEW.Y(:)+Yi,FloeNEW.poly.Vertices(:,1),FloeNEW.poly.Vertices(:,2));
+            % FloeNEW.A=reshape(in,length(FloeNEW.X),length(FloeNEW.X));
             
             FloeNEW.Xi = floe.Xi+Xi; FloeNEW.Yi = floe.Yi+Yi; FloeNEW.alive = 1;
             FloeNEW.alpha_i = 0; FloeNEW.Ui = floe.Ui; FloeNEW.Vi = floe.Vi;

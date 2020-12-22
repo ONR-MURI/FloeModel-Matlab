@@ -4,7 +4,7 @@ warning('off',id)
 id3 ='MATLAB:polyshape:boundary3Points';
 warning('off',id3)
 
-Force_factor=1e3; overlap = 0;
+Force_factor=1.5e3; overlap = 0;
 poly1 = polyshape(c1');
 polyA = area(poly1);
 % poly2 = polyshape(c2');

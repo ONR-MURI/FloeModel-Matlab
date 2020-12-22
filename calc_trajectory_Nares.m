@@ -1,9 +1,14 @@
-function [floe, fracture] =calc_trajectory_Nares(dt,ocean,winds,floe,HFo,c2_boundary)
+function [floe, fracture,Fx,Fy] =calc_trajectory_Nares(dt,ocean,winds,floe,HFo,c2_boundary)
 
 ext_force=floe.collision_force;
 ext_torque=floe.collision_torque;
 HFo = mean(HFo(:));
-
+if ~isempty(floe.interactions)
+    a=floe.interactions;
+    r=[floe.Xi floe.Yi];
+    floe.Stress =1/(2*floe.h)*([sum((a(:,4)-r(1)).*a(:,2)) sum((a(:,5)-r(2)).*a(:,2)); sum((a(:,4)-r(1)).*a(:,3)) sum((a(:,5)-r(2)).*a(:,3))]...
+        +[sum(a(:,2).*(a(:,4)-r(2))) sum(a(:,3).*(a(:,4)-r(1))); sum(a(:,2).*(a(:,5)-r(2))) sum(a(:,3).*(a(:,5)-r(2)))]);
+end
 
 if length(ext_force) == 1
     ext_force = [0 0];
@@ -16,6 +21,7 @@ end
     while max((abs(ext_force))) > floe.mass/(5*dt)
         ext_force = ext_force/10;
         ext_torque = ext_torque/10;
+        if ~isempty(floe.interactions); a = a/10; end
     end
 % end
 
@@ -29,7 +35,7 @@ fracture = 0;
 
 Xi=floe.Xi;
 Yi=floe.Yi;
-
+Fx = 0; Fy = 0;
 
 % Spin up of an ice floe by an ocean eddy;
 % ice floe is a disk with a radius R_floe;
@@ -61,7 +67,7 @@ dh = HFo*dt./h;
 floe_mass = (h+dh)./h.*floe_mass; floe.mass = floe_mass;
 floe_inertia_moment = (h+dh)./h.*floe_inertia_moment;
 floe.inertia_moment = floe_inertia_moment;
-R_floe=sqrt(max(floe.Xg)^2+max(floe.Yg)^2);
+R_floe=sqrt(2)*floe.rmax;%sqrt(max(floe.Xg)^2+max(floe.Yg)^2);
 
 %%
 U10=winds(1); % atmospheric winds
@@ -70,8 +76,16 @@ V10=winds(2); % constant here
 if isnan(floe.Xi), disp('Ice floe sacked: out of ocean grid bounds!'); xx = 1; xx(1) = [1 2]; floe=[];
 else
     
-    A_alpha=imrotate(floe.A,-floe.alpha_i/pi*180,'bilinear','crop');
-    floe_mask=(A_alpha==1);
+%     A_alpha=imrotate(floe.A,-floe.alpha_i/pi*180,'bilinear','crop');
+%     floe_mask=(A_alpha==1);
+    
+    x = floe.X;
+    y = floe.Y;
+    A_rot=[cos(floe.alpha_i) -sin(floe.alpha_i); sin(floe.alpha_i) cos(floe.alpha_i)]; %rotation matrix
+    xr = A_rot*[x';y'];
+    floe_mask = floe.A;%inpolygon(xr(1,:),xr(2,:),floe.c_alpha(1,:),floe.c_alpha(2,:));
+%     A = sum(in)/length(x)*4*R_floe^2;
+    
     if sum(floe_mask(:))==0
         floe.alive = 0;
     end
@@ -87,10 +101,14 @@ else
     elseif floe.alive == 1
         
         
-        Xg=floe.X+floe.Xi; % grid centered around the ice floe
-        Yg=floe.Y+floe.Yi;
+%         Xg=floe.X+floe.Xi; % grid centered around the ice floe
+%         Yg=floe.Y+floe.Yi;
+%         
+%         [theta,rho] = cart2pol(Xg-Xi,Yg-Yi);
         
-        [theta,rho] = cart2pol(Xg-Xi,Yg-Yi);
+        Xg = xr(1,:)+Xi; Yg = xr(2,:)+Yi;
+        
+        [theta,rho] = cart2pol(xr(1,:),xr(2,:));
         
         
         Uice=floe.Ui-rho*floe.ksi_ice.*sin(theta); % X-dir floe velocity (variable within the ice floe)
@@ -103,22 +121,22 @@ else
             x_ind=logical((Xo <= Xi+R_floe+2*dXo).*(Xo >= Xi-R_floe-2*dXo));
             y_ind=logical((Yo <= Yi+R_floe+2*dXo).*(Yo >= Yi-R_floe-2*dXo));
             
-            Uocn_interp=interp2(Xo(x_ind),Yo(y_ind), Uocn(y_ind,x_ind),Xg,Yg);
-            Vocn_interp=interp2(Xo(x_ind),Yo(y_ind), Vocn(y_ind,x_ind),Xg,Yg);
+%             Uocn_interp=interp2(Xo(x_ind),Yo(y_ind), Uocn(y_ind,x_ind),Xg,Yg);
+%             Vocn_interp=interp2(Xo(x_ind),Yo(y_ind), Vocn(y_ind,x_ind),Xg,Yg);
             
             Fx_atm=rho_air*Cd_atm*sqrt(U10^2+V10^2)*U10;
             Fy_atm=rho_air*Cd_atm*sqrt(U10^2+V10^2)*V10;
             
-            Fx_pressureGrad=-(floe_mass/floe_area)*fc*Vocn_interp; % SSH tilt term
-            Fy_pressureGrad=+(floe_mass/floe_area)*fc*Uocn_interp;        
-        
-            du=Uocn_interp-Uice; dv=Vocn_interp-Vice;        
-        
-            tau_ocnX=rho0*Cd*sqrt(du.^2+dv.^2).*( cos(ocean.turn_angle)*du+sin(ocean.turn_angle)*dv); % ocean stress with the turning angle
-            tau_ocnY=rho0*Cd*sqrt(du.^2+dv.^2).*(-sin(ocean.turn_angle)*du+cos(ocean.turn_angle)*dv);
+%             Fx_pressureGrad=-(floe_mass/floe_area)*fc*Vocn_interp; % SSH tilt term
+%             Fy_pressureGrad=+(floe_mass/floe_area)*fc*Uocn_interp;        
+%         
+%             du=Uocn_interp-Uice; dv=Vocn_interp-Vice;        
+%         
+%             tau_ocnX=rho0*Cd*sqrt(du.^2+dv.^2).*( cos(ocean.turn_angle)*du+sin(ocean.turn_angle)*dv); % ocean stress with the turning angle
+%             tau_ocnY=rho0*Cd*sqrt(du.^2+dv.^2).*(-sin(ocean.turn_angle)*du+cos(ocean.turn_angle)*dv);
             
-            Fx=tau_ocnX+Fx_atm+Fx_pressureGrad; % adding up all forces except the Coriolis force
-            Fy=tau_ocnY+Fy_atm+Fy_pressureGrad;
+            Fx=Fx_atm;%tau_ocnX+Fx_atm+Fx_pressureGrad; 
+            Fy=Fy_atm;%tau_ocnY+Fy_atm+Fy_pressureGrad;
             
             if max(isinf(Fx(:))) || max(isnan(Fx(:)))
                 xx = 1;
@@ -150,11 +168,13 @@ else
             end
             
             % updating the ice floe velocities with mean forces and torques
-            dUi_dt=(mean(Fx(floe_mask))*floe_area+ext_force(1))/floe_mass;
+            dUi_dt=(Fx*floe_area+ext_force(1))/floe_mass;
+%             dUi_dt=(mean(Fx(floe_mask))*floe_area+ext_force(1))/floe_mass;
             frac = [];
             if abs(dt*dUi_dt) > 0.5
                 dUi_dt = sign(dUi_dt)*0.5/dt;
-                frac = dUi_dt/(mean(Fx(floe_mask))*floe_area+ext_force(1))/floe_mass;
+                frac = dUi_dt/(Fx*floe_area+ext_force(1))/floe_mass;
+%                 frac = dUi_dt/(mean(Fx(floe_mask))*floe_area+ext_force(1))/floe_mass;
             end
             floe.Ui=floe.Ui+1.5*dt*dUi_dt-0.5*dt*floe.dUi_p;  floe.dUi_p=dUi_dt;
             if abs(floe.Ui) > 5
@@ -162,10 +182,12 @@ else
                 xx(1) = [1 2];
             end
             
-            dVi_dt=(mean(Fy(floe_mask))*floe_area+ext_force(2))/floe_mass;
+            dVi_dt=(Fy*floe_area+ext_force(2))/floe_mass;
+%             dVi_dt=(mean(Fy(floe_mask))*floe_area+ext_force(2))/floe_mass;
             if abs(dt*dVi_dt) > 0.5
                 dVi_dt = sign(dVi_dt)*0.5/dt;
-                frac = dVi_dt/(mean(Fy(floe_mask))*floe_area+ext_force(2))/floe_mass;
+                frac = dVi_dt/(Fy*floe_area+ext_force(2))/floe_mass;
+%                 frac = dVi_dt/(mean(Fy(floe_mask))*floe_area+ext_force(2))/floe_mass;
             end
             floe.Vi=floe.Vi+1.5*dt*dVi_dt - 0.5*dt*floe.dVi_p;  floe.dVi_p=dVi_dt;
             if abs(floe.Vi) > 5
@@ -192,6 +214,8 @@ if isnan(floe.Ui) || isnan(floe.ksi_ice) || isnan(floe.Vi) || isinf(floe.ksi_ice
     xx(1) = [1 2];
 end
 
+% Fx = mean(Fx(floe_mask))*floe_area/floe_mass;
+% Fy = mean(Fy(floe_mask))*floe_area/floe_mass;
 end
 
 

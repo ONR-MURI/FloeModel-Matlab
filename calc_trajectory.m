@@ -1,4 +1,4 @@
-function [floe, fracture,Fx,Fy] =calc_trajectory(dt,ocean,winds,floe,HFo)
+function [floe, fracture,Fx,Fy] =calc_trajectory_Nares(dt,ocean,winds,floe,HFo,c2_boundary)
 
 ext_force=floe.collision_force;
 ext_torque=floe.collision_torque;
@@ -6,7 +6,8 @@ HFo = mean(HFo(:));
 if ~isempty(floe.interactions)
     a=floe.interactions;
     r=[floe.Xi floe.Yi];
-    floe.Stress =1/(2*floe.h)*([sum((a(:,4)-r(1)).*a(:,2)) sum((a(:,5)-r(2)).*a(:,2)); sum((a(:,4)-r(1)).*a(:,3)) sum((a(:,5)-r(2)).*a(:,3))]+[sum(a(:,2).*(a(:,4)-r(2))) sum(a(:,3).*(a(:,4)-r(2))); sum(a(:,2).*(a(:,5)-r(2))) sum(a(:,3).*(a(:,5)-r(2)))]);
+    floe.Stress =1/(2*floe.area*floe.h)*([sum((a(:,4)-r(1)).*a(:,2)) sum((a(:,5)-r(2)).*a(:,2)); sum((a(:,4)-r(1)).*a(:,3)) sum((a(:,5)-r(2)).*a(:,3))]...
+        +[sum(a(:,2).*(a(:,4)-r(2))) sum(a(:,3).*(a(:,4)-r(1))); sum(a(:,2).*(a(:,5)-r(2))) sum(a(:,3).*(a(:,5)-r(2)))]);
 end
 
 if length(ext_force) == 1
@@ -66,7 +67,7 @@ dh = HFo*dt./h;
 floe_mass = (h+dh)./h.*floe_mass; floe.mass = floe_mass;
 floe_inertia_moment = (h+dh)./h.*floe_inertia_moment;
 floe.inertia_moment = floe_inertia_moment;
-R_floe=sqrt(max(floe.Xg)^2+max(floe.Yg)^2);
+R_floe=sqrt(2)*floe.rmax;%sqrt(max(floe.Xg)^2+max(floe.Yg)^2);
 
 %%
 U10=winds(1); % atmospheric winds
@@ -75,8 +76,16 @@ V10=winds(2); % constant here
 if isnan(floe.Xi), disp('Ice floe sacked: out of ocean grid bounds!'); xx = 1; xx(1) = [1 2]; floe=[];
 else
     
-    A_alpha=imrotate(floe.A,-floe.alpha_i/pi*180,'bilinear','crop');
-    floe_mask=(A_alpha==1);
+%     A_alpha=imrotate(floe.A,-floe.alpha_i/pi*180,'bilinear','crop');
+%     floe_mask=(A_alpha==1);
+    
+    x = floe.X;
+    y = floe.Y;
+    A_rot=[cos(floe.alpha_i) -sin(floe.alpha_i); sin(floe.alpha_i) cos(floe.alpha_i)]; %rotation matrix
+    xr = A_rot*[x';y'];
+    floe_mask = floe.A;%inpolygon(xr(1,:),xr(2,:),floe.c_alpha(1,:),floe.c_alpha(2,:));
+%     A = sum(in)/length(x)*4*R_floe^2;
+    
     if sum(floe_mask(:))==0
         floe.alive = 0;
     end
@@ -92,10 +101,14 @@ else
     elseif floe.alive == 1
         
         
-        Xg=floe.X+floe.Xi; % grid centered around the ice floe
-        Yg=floe.Y+floe.Yi;
+%         Xg=floe.X+floe.Xi; % grid centered around the ice floe
+%         Yg=floe.Y+floe.Yi;
+%         
+%         [theta,rho] = cart2pol(Xg-Xi,Yg-Yi);
         
-        [theta,rho] = cart2pol(Xg-Xi,Yg-Yi);
+        Xg = xr(1,:)+Xi; Yg = xr(2,:)+Yi;
+        
+        [theta,rho] = cart2pol(xr(1,:),xr(2,:));
         
         
         Uice=floe.Ui-rho*floe.ksi_ice.*sin(theta); % X-dir floe velocity (variable within the ice floe)
@@ -145,9 +158,11 @@ else
             %the previos time steps d = 1.5*dt*(d/dt)-0.5*dt*(d/dt)_previous
             
             % updating the ice floe coordinates with velocities
-            floe.Xi=floe.Xi+1.5*dt*floe.Ui -0.5*dt*floe.dXi_p;  floe.dXi_p=floe.Ui;
-            floe.Yi=floe.Yi+1.5*dt*floe.Vi -0.5*dt*floe.dYi_p;  floe.dYi_p=floe.Vi;
+            dx = 1.5*dt*floe.Ui -0.5*dt*floe.dXi_p; dy = 1.5*dt*floe.Vi -0.5*dt*floe.dYi_p;
+            floe.Xi=floe.Xi+dx;  floe.dXi_p=floe.Ui;
+            floe.Yi=floe.Yi+dy;  floe.dYi_p=floe.Vi;
             floe.alpha_i=floe.alpha_i+1.5*dt*floe.ksi_ice-0.5*dt*floe.dalpha_i_p; floe.dalpha_i_p=floe.ksi_ice;
+            
             
             % updating the ice floe velocities with mean forces and torques
             dUi_dt=(mean(Fx(floe_mask))*floe_area+ext_force(1))/floe_mass;
@@ -181,6 +196,8 @@ else
             
             A_rot=[cos(floe.alpha_i) -sin(floe.alpha_i); sin(floe.alpha_i) cos(floe.alpha_i)]; %rotation matrix
             floe.c_alpha=A_rot*floe.c0; %rotate floe contour
+            
+            floe.strain = 1/2*([dUi_dt*dt/dx dVi_dt*dt/dx; dUi_dt*dt/dy dVi_dt*dt/dy] + [dUi_dt*dt/dx dUi_dt*dt/dy; dVi_dt*dt/dx dVi_dt*dt/dy]);
         else
             fracture = 1; % if large stress then designate floe to fracture releasing energy
         end
@@ -192,8 +209,8 @@ if isnan(floe.Ui) || isnan(floe.ksi_ice) || isnan(floe.Vi) || isinf(floe.ksi_ice
     xx(1) = [1 2];
 end
 
-Fx = mean(Fx(floe_mask))/floe_mass;
-Fy = mean(Fy(floe_mask))/floe_mass;
+Fx = mean(Fx(floe_mask))*floe_area/floe_mass;
+Fy = mean(Fy(floe_mask))*floe_area/floe_mass;
 end
 
 

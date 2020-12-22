@@ -204,19 +204,21 @@ for j = 1:Nx*Ny
                             polyin2 = abs(area(floe2holes.poly,kk+1))./A2;
                             polyin2(isinf(polyin2)) = 0;
                             in = unique([k2(polyin>0.99); k2(polyin2>0.99)]);
+                            FloeIn = [];
                             for k = 1:length(in)
-                                test = FuseFloes(floe2,Floe(in(k)));
-%                                 if isnan(test)
-%                                     xx = 1;
-%                                     xx(1) = [1 2];
-%                                 end
+                                if Floe(in(k)).alive == 1
+                                    FloeIn = [FloeIn Floe(in(k))];
+                                    Floe(in(k)).alive = 0;
+                                end
+                                polyu = subtract(polyu,Floe(in(k)).poly);
+                            end
+                            if ~isempty(FloeIn)
+                                test = FuseFloes(floe2,FloeIn);
                                 if isempty(test)
                                     xx = 1;
                                     xx(1) = [1 2];
                                 end
                                 floe2 = test;
-                                Floe(in(k)).alive = 0;
-                                polyu = subtract(polyu,Floe(in(k)).poly);
                             end
                         end
                         if isnan(floe2.ksi_ice)

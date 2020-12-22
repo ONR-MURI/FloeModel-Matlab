@@ -62,6 +62,9 @@ if length(R) == 1
     floes.c_alpha=A_rot*floes.c0;
     floes.inertia_moment = PolygonMoments(floes.c_alpha',floes.h);
     floes.rmax = max(sqrt(floes.c_alpha(1,:).^2+floes.c_alpha(2,:).^2));
+    floes.X = floes.rmax*(2*rand(1000,1) - 1);
+    floes.Y = floes.rmax*(2*rand(1000,1) - 1);
+    floes.A = inpolygon(floes.X,floes.Y,floes.c_alpha(1,:),floes.c_alpha(2,:));
 elseif length(R) > 1
     for ii = 1:length(R)
         floenew = floe;
@@ -77,13 +80,16 @@ elseif length(R) > 1
         floenew.angles = polyangles(poly1new.Vertices(:,1),poly1new.Vertices(:,2));
         floenew.c0 = floenew.c_alpha;
         floenew.rmax = sqrt(max(sum((poly1new.Vertices' - [Xi;Yi]).^2,1)));
-        floenew.Xg = floe.Xg;
-        floenew.Yg = floe.Yg;
-        floenew.X = floe.X;
-        floenew. Y = floe.Y;
-        
-        [in] = inpolygon(floenew.X(:)+Xi, floenew.Y(:)+Yi,floenew.poly.Vertices(:,1),floenew.poly.Vertices(:,2));
-        floenew.A=reshape(in,length(floenew.X),length(floenew.X));
+        floenew.X = floenew.rmax*(2*rand(1000,1) - 1);
+        floenew.Y = floenew.rmax*(2*rand(1000,1) - 1);
+        floenew.A = inpolygon(floenew.X,floenew.Y,floenew.c_alpha(1,:),floenew.c_alpha(2,:));
+%         floenew.Xg = floe.Xg;
+%         floenew.Yg = floe.Yg;
+%         floenew.X = floe.X;
+%         floenew. Y = floe.Y;
+%         
+%         [in] = inpolygon(floenew.X(:)+Xi, floenew.Y(:)+Yi,floenew.poly.Vertices(:,1),floenew.poly.Vertices(:,2));
+%         floenew.A=reshape(in,length(floenew.X),length(floenew.X));
         
         floenew.Xi = floe.Xi+Xi; floenew.Yi = floe.Yi+Yi; floenew.alive = 1;
         floenew.alpha_i = 0; floenew.Ui = floe.Ui; floenew.Vi = floe.Vi;

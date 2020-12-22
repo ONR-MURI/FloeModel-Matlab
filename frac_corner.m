@@ -9,7 +9,6 @@ warning('off',id)
 
 rho_ice = 920;
 Floes = [];
-dX = 120;
 angles = polyangles(poly.Vertices(:,1),poly.Vertices(:,2));
 Anorm = 180-360/length(angles);
 alph = min(angles);
@@ -89,18 +88,21 @@ for p=1:length(a)
     FloeNEW.c0 = FloeNEW.c_alpha;
     FloeNEW.angles = polyangles(FloeNEW.poly.Vertices(:,1),FloeNEW.poly.Vertices(:,2));
     FloeNEW.rmax = sqrt(max(sum((FloeNEW.poly.Vertices' - [Xi;Yi]).^2,1)));
-    n=(fix(FloeNEW.rmax/dX)+1); n=dX*(-n:n);
-    FloeNEW.Xg = n;
-    FloeNEW.Yg = n;
-    [X, Y]= meshgrid(n, n);
-    FloeNEW.X = X;
-    FloeNEW.Y = Y;
+    % n=(fix(FloeNEW.rmax/dX)+1); n=dX*(-n:n);
+    % FloeNEW.Xg = n;
+    % FloeNEW.Yg = n;
+    % [X, Y]= meshgrid(n, n);
+    % FloeNEW.X = X;
+    % FloeNEW.Y = Y;
+    FloeNEW.strain=floe.strain;
     FloeNEW.Stress = [0 0; 0 0];
-    FloeNEW.Fx = floe.Fx*area(a(p))/Atot;
-    FloeNEW.Fy = floe.Fy*area(a(p))/Atot;
+    FloeNEW.Fx = 0; FloeNEW.Fy = 0;
     
-    [in] = inpolygon(FloeNEW.X(:)+Xi, FloeNEW.Y(:)+Yi,FloeNEW.poly.Vertices(:,1),FloeNEW.poly.Vertices(:,2));
-    FloeNEW.A=reshape(in,length(FloeNEW.X),length(FloeNEW.X));
+    FloeNEW.X = FloeNEW.rmax*(2*rand(1000,1) - 1);
+    FloeNEW.Y = FloeNEW.rmax*(2*rand(1000,1) - 1);
+    FloeNEW.A = inpolygon(FloeNEW.X,FloeNEW.Y,FloeNEW.c_alpha(1,:),FloeNEW.c_alpha(2,:));
+    % [in] = inpolygon(FloeNEW.X(:)+Xi, FloeNEW.Y(:)+Yi,FloeNEW.poly.Vertices(:,1),FloeNEW.poly.Vertices(:,2));
+    % FloeNEW.A=reshape(in,length(FloeNEW.X),length(FloeNEW.X));
     
     FloeNEW.Xi = floe.Xi+Xi; FloeNEW.Yi = floe.Yi+Yi; FloeNEW.alive = 1;
     if FloeNEW.area<1e4

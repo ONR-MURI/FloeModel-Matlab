@@ -12,7 +12,7 @@ dXo=2000; % in meters
 
 dXo = 4e3; dXa = dXo;
 Lx=2e5; Ly=1e6;
-Xo=-1.1*Lx/2:dXo:1.1*Lx/2; Yo=-1.1*Ly/2:dXo:1.1*Ly/2; 
+Xo=-1.5*Lx/2:dXo:1.5*Lx/2; Yo=-1.5*Ly/2:dXo:1.5*Ly/2; 
 [Xocn, Yocn]=meshgrid(Xo,Yo);
 
 %defining ocean streamfunction with some eddies

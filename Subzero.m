@@ -4,44 +4,47 @@ close all; clear all;
 
 RIDGING=false; 
 
-FRACTURES=true;
+FRACTURES=false;
 
 PERIODIC=false;
 
-PACKING = true;
+PACKING = false;
 
 WELDING = false;
+
+CORNERS = false;
 
 ifPlot = true; %Plot floe figures or not?
 
 %% Initialize model vars
 
 dt=20; %Time step in sec
-h0 = 0.1; %thickness of ice that gets packed in
+% h0 = 0.1; %thickness of ice that gets packed in
 
 %Define ocean currents
-[ocean, HFo, nDTpack]=initialize_ocean(dt,h0);
-nDTpack = 50;
+nDTpack = 100;
+[ocean, HFo, h0]=initialize_ocean(dt,nDTpack);
 
 %Define 10m winds
-winds=[10 10];
+winds=[10 0];
 
 %Define boundaries
 c2_boundary=initialize_boundaries();
-Ly = max(c2_boundary(2,:));
+Ly = max(c2_boundary(2,:));Lx = max(c2_boundary(1,:));
 c2_boundary_poly = polyshape(c2_boundary');
-min_floe_size = 1e6;
+min_floe_size = 4*Lx*Ly/25000;
 
 %Initialize Floe state
 %Floe=initialize_Floe('FloeShapes.mat');
 height.mean = 2;
 height.delta = 0;
 target_concentration = 1;
-[Floe, Nb] = initial_concentration(c2_boundary,target_concentration,height,100,min_floe_size);
-% load Floe0; Nb = 0;
+[Floe, Nb] = initial_concentration(c2_boundary,target_concentration,height,400,min_floe_size);
+%load Floe0; Nb = 0;
 if isfield(Floe,'poly')
     Floe=rmfield(Floe,{'poly'});
 end
+min_floe_size = (4*Lx*Ly-sum(cat(1,Floe(1:Nb).area)))/25000;
 %load('PackedFloesFullDomain.mat','Floe');
 %Floe= create_packed_domain();
 
@@ -51,23 +54,37 @@ dhdt = 1;
 
 nDTOut=50; %Output frequency (in number of time steps)
 
-nSnapshots=1000; %Total number of model snapshots to save
+nSnapshots=100; %Total number of model snapshots to save
 
 nDT=nDTOut*nSnapshots; %Total number of time steps
 
 nPar = 4; %Number of workerks for parfor
-parpool(nPar)
+poolobj = gcp('nocreate'); % If no pool, do not create new one.
+if isempty(poolobj)
+    parpool(nPar);
+else
+    delete(poolobj);
+    parpool(nPar);
+end
 
 target_concentration=1;
 
 % specify coarse grid size
 LxO= 2*max(ocean.Xo);LyO= 2*max(ocean.Yo);
-Nx=10; Ny=fix(Nx*LyO/LxO);
+Nx=5; Ny=fix(Nx*LyO/LxO);
+xc = min(c2_boundary(1,:)):(max(c2_boundary(1,:))-min(c2_boundary(1,:)))/Nx:max(c2_boundary(1,:));
+yc = min(c2_boundary(2,:)):(max(c2_boundary(2,:))-min(c2_boundary(2,:)))/Ny:max(c2_boundary(2,:));
+Xc = (xc(1:end-1)+xc(2:end))/2; Yc = -(yc(1:end-1)+yc(2:end))/2;
 
 %initialize dissolved ice at zero
 dissolvedNEW=zeros(Ny,Nx);
 Vd = zeros(Ny,Nx,2);
 Vdnew=zeros(Ny, Nx);
+SigXX = zeros(Ny, Nx); SigYX = zeros(Ny, Nx);
+SigXY = zeros(Ny, Nx); SigYY = zeros(Ny, Nx);
+Eux = zeros(Ny, Nx); Evx = zeros(Ny, Nx);
+Euy = zeros(Ny, Nx); Evy = zeros(Ny, Nx);
+Sig = zeros(Ny, Nx);
 
 %% Calc interactions and plot initial state
 Floe=Floe(logical(cat(1,Floe.alive)));
@@ -84,12 +101,11 @@ if ~exist('Time','var')
     i_step=0;
     im_num=1;
     fig=0;
+    fig2=figure('Position',[100 100 1000 500],'visible','on');
 end
 
 
 %% Solving for floe trajectories
-Floe3 = Floe;
-Floe2 = Floe;
 tic;
 while im_num<nSnapshots
 
@@ -103,6 +119,12 @@ while im_num<nSnapshots
         disp(['number of collisions: ' num2str(numCollisions)]);
         disp(' ');
         tic
+        [eularian_data] = calc_eulerian_stress(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIODIC);
+        SigXX = SigXX+squeeze(eularian_data.stressxx); SigYX = SigYX+squeeze(eularian_data.stressyx);
+        SigXY = SigXY+squeeze(eularian_data.stressxy); SigYY = SigYY+squeeze(eularian_data.stressyy);
+        Eux = Eux+squeeze(eularian_data.strainux); Evx = Evx+squeeze(eularian_data.strainvx);
+        Euy = Euy+squeeze(eularian_data.strainuy); Evy = Evy+squeeze(eularian_data.strainvy);
+        Sig = Sig+squeeze(eularian_data.stress);
     end
 
     if mod(i_step,nDTOut)==0  %plot the state after a number of timesteps
@@ -139,12 +161,38 @@ while im_num<nSnapshots
             Floe = Weld_Floes(Floe,Nb,weldrate,Amax);
         end
 
+        [eularian_data] = calc_eulerian_data(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIODIC);
         if ifPlot
-            [fig] =plot_basic(fig, Time,Floe,ocean,c2_boundary_poly,Nb);
+            [fig] =plot_basic_stress(fig, Time,Floe,ocean,c2_boundary_poly,Nb);
             saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
+            fig2 = figure(fig2);
+            SigXX = SigXX/fix(nDTOut/10); SigYX = SigYX/fix(nDTOut/10);
+            SigXY = SigXY/fix(nDTOut/10); SigYY = SigYY/fix(nDTOut/10);
+            Eux = Eux/fix(nDTOut/10); Evx = Evx/fix(nDTOut/10);
+            Euy = Euy/fix(nDTOut/10); Evy = Evy/fix(nDTOut/10);
+            Sig = Sig/fix(nDTOut/10);
+            SigO = Sig;
+%             imagesc(Xc,Yc,abs(Sig)); colorbar;%title('$\sigma_{xx}$','interpreter','latex','fontsize',16); colorbar; caxis([0 1e3])
+            subplot(2,4,1); imagesc(Xc,Yc,abs(SigXX)); title('$\sigma_{xx}$','interpreter','latex','fontsize',16); colorbar; caxis([0 1.5e4])
+            subplot(2,4,2); imagesc(Xc,Yc,abs(SigYX)); title('$\sigma_{yx}$','interpreter','latex','fontsize',16); colorbar; caxis([0 1.5e4])
+            subplot(2,4,5); imagesc(Xc,Yc,abs(SigXY)); title('$\sigma_{xy}$','interpreter','latex','fontsize',16); colorbar; caxis([0 1.5e4])
+            subplot(2,4,6); imagesc(Xc,Yc,abs(SigYY)); title('$\sigma_{yy}$','interpreter','latex','fontsize',16); colorbar; caxis([0 1.5e4])
+            subplot(2,4,3); imagesc(Xc,Yc,abs(Eux)); title('$E_{11}$','interpreter','latex','fontsize',16); colorbar; 
+            subplot(2,4,4); imagesc(Xc,Yc,abs(Evx)); title('$E_{21}$','interpreter','latex','fontsize',16); colorbar; 
+            subplot(2,4,7); imagesc(Xc,Yc,abs(Euy)); title('$E_{12}$','interpreter','latex','fontsize',16); colorbar; 
+            subplot(2,4,8); imagesc(Xc,Yc,abs(Evy)); title('$E_{22}$','interpreter','latex','fontsize',16); colorbar; 
+            saveas(fig2,['./figs/' num2str(im_num,'Stress%03.f') '.jpg'],'jpg');
         end
         
-        save(['./Floes/Floe' num2str(im_num,'%07.f') '.mat'],'Floe');
+        save(['./Floes/Floe' num2str(im_num,'%07.f') '.mat'],'Floe','eularian_data');
+        SigXX = zeros(Ny, Nx); SigYX = zeros(Ny, Nx);
+        SigXY = zeros(Ny, Nx); SigYY = zeros(Ny, Nx);
+        Eux = zeros(Ny, Nx); Evx = zeros(Ny, Nx);
+        Euy = zeros(Ny, Nx); Evy = zeros(Ny, Nx);
+        Sig = zeros(Ny, Nx);
+        
+        M = cat(1,Floe.mass);
+        Mtot(im_num) = sum(M)+sum(Vdnew(:));
         
         im_num=im_num+1;  %image number for saving data and coarse vars;
     end
@@ -153,26 +201,36 @@ while im_num<nSnapshots
         if mod(i_step,nDTpack)==0
             height.mean = h0;
             height.delta = 0;
-            [Floe,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,target_concentration,ocean,height, min_floe_size, PERIODIC);
+            [Floe,Vd] = pack_ice(Floe,c2_boundary,dhdt,Vd,target_concentration,ocean,height,min_floe_size,PERIODIC);
         end
     end
     
-    Floe3 = Floe2; Floe2 = Floe;
     %Calculate forces and torques and intergrate forward
     [Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds, c2_boundary, dt, HFo,min_floe_size, Nx,Ny,Nb, dissolvedNEW,PERIODIC, RIDGING);
     
-    if FRACTURES
-        overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
-        keep=rand(length(Floe),1)>2*overlapArea;
+    if FRACTURES && im_num>5 && mod(i_step,10)==0
+        [Floe] = FracLeads(Floe,Ny,Nx,Nb,c2_boundary,eularian_data);
+%         [Floe] = FracIso(Floe,Ny,Nx,Nb,c2_boundary,SigO);
+    end
+    
+    if CORNERS
+        stress = zeros(length(Floe),1);
+        for ii = 1:length(Floe)
+            stress(ii) = trace(abs(Floe(ii).Stress));
+        end
+        if max(stress)>0
+            stresses=stress/max(stress);
+        else
+            stresses = stress;
+        end
+        keep=stresses<4*rand(length(Floe),1);
         keep(1:Nb) = ones(Nb,1);
-        fracturedFloes=fracture_floe(Floe(~keep),3);
+        fracturedFloes=corners(Floe(~keep),Nb);
         if ~isempty(fracturedFloes)
             Floe=[Floe(keep) fracturedFloes];
         end
-        
-    end
+    end    
     
-    Floe = corners(Floe);
     %Advect the dissolved mass
     Area=cat(1,Floe.area);
     dissolvedNEW = calc_dissolved_mass(Floe(Area<min_floe_size),Nx,Ny,c2_boundary_poly)+dissolvedNEW;

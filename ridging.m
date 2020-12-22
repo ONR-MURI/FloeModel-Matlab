@@ -109,11 +109,11 @@ if ~PERIODIC && boundary
             xx(1) = [1 2];
         end
         
-        [in] = inpolygon(Floe1.X(:)+Xi, Floe1.Y(:)+Yi,Floe1.poly.Vertices(:,1),Floe1.poly.Vertices(:,2));
-        Floe1.A=reshape(in,length(Floe1.X),length(Floe1.X));
-        
         Floe1.inertia_moment = PolygonMoments(Floe1.c_alpha',Floe1.h);
         Floe1.rmax = max(sqrt(Floe1.c_alpha(1,:).^2+Floe1.c_alpha(2,:).^2));
+        Floe1.X = Floe1.rmax*(2*rand(1000,1) - 1);
+        Floe1.Y = Floe1.rmax*(2*rand(1000,1) - 1);
+        Floe1.A = inpolygon(Floe1.X,Floe1.Y,Floe1.c_alpha(1,:),Floe1.c_alpha(2,:));
     end
 end
 

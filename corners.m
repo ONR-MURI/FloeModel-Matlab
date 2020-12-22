@@ -1,4 +1,4 @@
-function [Floe] = corners(Floe)
+function [Floe] = corners(Floe,Nb)
 %UNTITLED4 Summary of this function goes here
 %   Detailed explanation goes here
 id ='MATLAB:polyshape:repairedBySimplify';
@@ -11,7 +11,7 @@ y=cat(1,Floe.Yi);
 N0 = length(Floe);
 floenew = [];
 KeepF = ones(length(Floe),1);
-for ii = 1:length(Floe)
+for ii = 1+Nb:length(Floe)
     if ~isempty(Floe(ii).interactions)
         inter = Floe(ii).interactions(:,1);
 %         inter = inter(inter<=N0);
