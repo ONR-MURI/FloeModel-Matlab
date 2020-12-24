@@ -2,6 +2,10 @@ function [eularian_data] = calc_eulerian_data(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIO
 %% Function to take information of all floes and average them over a corase grained area
 id = 'MATLAB:polyshape:boolOperationFailed';
 warning('off',id)
+id2 ='MATLAB:polyshape:repairedBySimplify';
+warning('off',id2)
+id3 ='MATLAB:polyshape:boundary3Points';
+warning('off',id3)
 
 %Identify only the live floes
 live = cat(1,Floe.alive);
@@ -193,6 +197,8 @@ end
 % plot([Floe.poly])
 
 warning('on',id)
+warning('on',id2)
+warning('on',id3)
 Floe=rmfield(Floe,{'poly'});
 
 end

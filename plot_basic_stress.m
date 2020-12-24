@@ -1,6 +1,10 @@
 function [fig] =plot_basic_stress(fig, Time,Floe,ocean,c2_boundary_poly,Nb)
 %This function creates plots of the floe state showing the stress and and
 %thickness of the floes
+id ='MATLAB:polyshape:repairedBySimplify';
+warning('off',id)
+id3 ='MATLAB:polyshape:boundary3Points';
+warning('off',id3)
 Lx= max(c2_boundary_poly.Vertices(:,1)); %c2 must be symmetric around x=0 for channel boundary conditions.
 Ly= max(c2_boundary_poly.Vertices(:,2)); 
 live = cat(1,Floe.alive);
@@ -57,4 +61,7 @@ set(gca,'Ydir','normal');
 % set(gca,'ytick',[])
 
 drawnow
+
+warning('on',id)
+warning('on',id3)
 end

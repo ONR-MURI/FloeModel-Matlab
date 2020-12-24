@@ -14,13 +14,19 @@ WELDING = false;
 
 CORNERS = false;
 
-COLLISION = false;
+COLLISION = true;
 
-ifPlot = true; %Plot floe figures or not?
+AVERAGE = false;
+
+ifPlot = false; %Plot floe figures or not?
+
+ifPlotStress = false;
+
+ifPlotStressStrain = false;
 
 %% Initialize model vars
 
-dt=300; %Time step in sec
+dt=20; %Time step in sec
 % h0 = 0.1; %thickness of ice that gets packed in
 
 %Define ocean currents
@@ -28,7 +34,7 @@ nDTpack = 100;
 [ocean, HFo, h0]=initialize_ocean(dt,nDTpack);
 
 %Define 10m winds
-winds=[2 0];
+winds=[10 0];
 
 %Define boundaries
 c2_boundary=initialize_boundaries();
@@ -41,8 +47,8 @@ min_floe_size = 4*Lx*Ly/25000;
 height.mean = 2;
 height.delta = 0;
 target_concentration = 1;
-[Floe, Nb] = initial_concentration(c2_boundary,target_concentration,height,2000,min_floe_size);
-Floe = Floe(1:200);
+[Floe, Nb] = initial_concentration(c2_boundary,target_concentration,height,200,min_floe_size);
+% Floe = Floe(1:200);
 %load Floe0; Nb = 0;
 if isfield(Floe,'poly')
     Floe=rmfield(Floe,{'poly'});
@@ -57,7 +63,7 @@ dhdt = 1;
 
 nDTOut=50; %Output frequency (in number of time steps)
 
-nSnapshots=60; %Total number of model snapshots to save
+nSnapshots=90; %Total number of model snapshots to save
 
 nDT=nDTOut*nSnapshots; %Total number of time steps
 
@@ -82,6 +88,9 @@ Xc = (xc(1:end-1)+xc(2:end))/2; Yc = -(yc(1:end-1)+yc(2:end))/2;
 
 %initialize dissolved ice at zero
 dissolvedNEW=zeros(Ny,Nx);
+
+%Initiailize Eulearian Data
+[eularian_data] = calc_eulerian_stress(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIODIC);
 Vd = zeros(Ny,Nx,2);
 Vdnew=zeros(Ny, Nx);
 SigXX = zeros(Ny, Nx); SigYX = zeros(Ny, Nx);
@@ -124,13 +133,15 @@ while im_num<nSnapshots
         disp(['number of collisions: ' num2str(numCollisions)]);
         disp(' ');
         tic
-        [eularian_data] = calc_eulerian_stress(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIODIC);
-        SigXX = SigXX+squeeze(eularian_data.stressxx); SigYX = SigYX+squeeze(eularian_data.stressyx);
-        SigXY = SigXY+squeeze(eularian_data.stressxy); SigYY = SigYY+squeeze(eularian_data.stressyy);
-        Eux = Eux+squeeze(eularian_data.strainux); Evx = Evx+squeeze(eularian_data.strainvx);
-        Euy = Euy+squeeze(eularian_data.strainuy); Evy = Evy+squeeze(eularian_data.strainvy);
-        U = U+squeeze(eularian_data.u);V = V+squeeze(eularian_data.v);
-        Sig = Sig+squeeze(eularian_data.stress);
+        if AVERAGE
+            [eularian_data] = calc_eulerian_stress(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIODIC);
+            SigXX = SigXX+squeeze(eularian_data.stressxx); SigYX = SigYX+squeeze(eularian_data.stressyx);
+            SigXY = SigXY+squeeze(eularian_data.stressxy); SigYY = SigYY+squeeze(eularian_data.stressyy);
+            Eux = Eux+squeeze(eularian_data.strainux); Evx = Evx+squeeze(eularian_data.strainvx);
+            Euy = Euy+squeeze(eularian_data.strainuy); Evy = Evy+squeeze(eularian_data.strainvy);
+            U = U+squeeze(eularian_data.u);V = V+squeeze(eularian_data.v);
+            Sig = Sig+squeeze(eularian_data.stress);
+        end
     end
 
     if mod(i_step,nDTOut)==0  %plot the state after a number of timesteps
@@ -171,6 +182,14 @@ while im_num<nSnapshots
         if ifPlot
             [fig] =plot_basic_stress(fig, Time,Floe,ocean,c2_boundary_poly,Nb);
             saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
+        end
+        
+        if ifPlotStress
+            [fig] =plot_basic(fig, Time,Floe,ocean,c2_boundary_poly,Nb);
+            saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
+        end
+        
+        if ifPlotStressStrain
             fig2 = figure(fig2);
             SigXX = SigXX/fix(nDTOut/10); SigYX = SigYX/fix(nDTOut/10);
             SigXY = SigXY/fix(nDTOut/10); SigYY = SigYY/fix(nDTOut/10);
@@ -217,7 +236,14 @@ while im_num<nSnapshots
     [Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds, c2_boundary, dt, HFo,min_floe_size, Nx,Ny,Nb, dissolvedNEW,COLLISION, PERIODIC, RIDGING);
     
     if FRACTURES && im_num>5 && mod(i_step,10)==0
-        [Floe] = FracLeads(Floe,Ny,Nx,Nb,c2_boundary,eularian_data);
+        overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
+        keep=rand(length(Floe),1)>overlapArea;
+        keep(1:Nb) = ones(Nb,1);
+        fracturedFloes=fracture_leads(Floe(~keep),Nx,Ny,c2_boundary,eularian_data);
+        if ~isempty(fracturedFloes)
+            Floe=[Floe(keep) fracturedFloes];
+        end
+%         [Floe] = FracLeads(Floe,Ny,Nx,Nb,c2_boundary,eularian_data);
 %         [Floe] = FracIso(Floe,Ny,Nx,Nb,c2_boundary,SigO);
     end
     

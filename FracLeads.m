@@ -2,6 +2,11 @@ function [Floe] = FracLeads(Floe,Ny,Nx,Nb,c2_boundary,eularian_data)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 %Create coarse grids
+id ='MATLAB:polyshape:repairedBySimplify';
+warning('off',id)
+id3 ='MATLAB:polyshape:boundary3Points';
+warning('off',id3)
+
 x = min(c2_boundary(1,:)):(max(c2_boundary(1,:))-min(c2_boundary(1,:)))/Nx:max(c2_boundary(1,:));
 y = min(c2_boundary(2,:)):(max(c2_boundary(2,:))-min(c2_boundary(2,:)))/Ny:max(c2_boundary(2,:));
 Lx = (x(2)-x(1))/2; Ly = (y(2)-y(1))/2;
@@ -26,12 +31,12 @@ for ii = 1:Nx
         if abs(SigXX(jj,ii))>0
             alive = live(live == 1 & Binx == ii & Biny == jj);
             floenew = Floe(live == 1 & Binx == ii & Biny == jj);
-            [~,V] = eig([SigXX(jj,ii) SigYX(jj,ii);SigXY(jj,ii) SigYY(jj,ii)]);
+            [V,~] = eig([SigXX(jj,ii) SigYX(jj,ii);SigXY(jj,ii) SigYY(jj,ii)]);
             r = randi([1 2],1,1);
             m = vecnorm(V(1,r)/V(2,r));
-            if m>0 && m<Inf
-                xx = 1; xx(1) =[1 2];
-            end
+%             if m>0 && m<Inf
+%                 xx = 1; xx(1) =[1 2];
+%             end
             if isinf(m)
                 m = Ly;
             end
@@ -92,6 +97,9 @@ Floe = [Floe(logical(live)) fracturedFloes];
 for kk =1:length(Floe)
     polyF(kk) = polyshape(Floe(kk).c_alpha'+[Floe(kk).Xi Floe(kk).Yi]);
 end
+
+warning('on',id)
+warning('on',id3)
 
 end
 
