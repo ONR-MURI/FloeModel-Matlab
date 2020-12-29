@@ -75,10 +75,10 @@ elseif length(R) > 1
         floenew.area = area(poly1new);
         floenew.mass = floe.mass*area(R(ii))/Atot;
         floenew.h = floenew.mass/(rho_ice*floenew.area);
-        floenew.inertia_moment = PolygonMoments(poly1new.Vertices,floenew.h);
         floenew.c_alpha = [(floenew.poly.Vertices-[Xi Yi])' [floenew.poly.Vertices(1,1)-Xi; floenew.poly.Vertices(1,2)-Yi]];
         floenew.angles = polyangles(poly1new.Vertices(:,1),poly1new.Vertices(:,2));
         floenew.c0 = floenew.c_alpha;
+        floenew.inertia_moment = PolygonMoments(floenew.c0',FloeNEW.h);
         floenew.rmax = sqrt(max(sum((poly1new.Vertices' - [Xi;Yi]).^2,1)));
         floenew.X = floenew.rmax*(2*rand(1000,1) - 1);
         floenew.Y = floenew.rmax*(2*rand(1000,1) - 1);

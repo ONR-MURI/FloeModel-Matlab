@@ -4,7 +4,7 @@ close all; clear all;
 
 RIDGING=false; 
 
-FRACTURES=false;
+FRACTURES=true;
 
 PERIODIC=false;
 
@@ -12,13 +12,13 @@ PACKING = false;
 
 WELDING = false;
 
-CORNERS = false;
+CORNERS = true;
 
 COLLISION = true;
 
 AVERAGE = false;
 
-ifPlot = false; %Plot floe figures or not?
+ifPlot = true; %Plot floe figures or not?
 
 ifPlotStress = false;
 
@@ -78,6 +78,8 @@ end
 
 target_concentration=1;
 tStart = tic; 
+doInt.flag = true;
+doInt.step = 10;
 
 % specify coarse grid size
 LxO= 2*max(ocean.Xo);LyO= 2*max(ocean.Yo);
@@ -102,7 +104,7 @@ Sig = zeros(Ny, Nx);
 
 %% Calc interactions and plot initial state
 Floe=Floe(logical(cat(1,Floe.alive)));
-[Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt,HFo,min_floe_size,Nx,Ny,Nb, dissolvedNEW,COLLISION, PERIODIC, RIDGING); % find interaction points
+[Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt,HFo,min_floe_size,Nx,Ny,Nb, dissolvedNEW,doInt,COLLISION, PERIODIC, RIDGING); % find interaction points
 A=cat(1,Floe.area);
 Amax = max(A);
 
@@ -142,6 +144,9 @@ while im_num<nSnapshots
             U = U+squeeze(eularian_data.u);V = V+squeeze(eularian_data.v);
             Sig = Sig+squeeze(eularian_data.stress);
         end
+        doInt.flag=true;
+    else
+        doInt.flag=false;
     end
 
     if mod(i_step,nDTOut)==0  %plot the state after a number of timesteps
@@ -180,12 +185,12 @@ while im_num<nSnapshots
 
         [eularian_data] = calc_eulerian_data(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIODIC);
         if ifPlot
-            [fig] =plot_basic_stress(fig, Time,Floe,ocean,c2_boundary_poly,Nb);
+            [fig] =plot_basic(fig, Time,Floe,ocean,c2_boundary_poly,Nb);
             saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
         end
         
         if ifPlotStress
-            [fig] =plot_basic(fig, Time,Floe,ocean,c2_boundary_poly,Nb);
+            [fig] =plot_basic_stress(fig, Time,Floe,ocean,c2_boundary_poly,Nb);
             saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
         end
         
@@ -233,9 +238,9 @@ while im_num<nSnapshots
     end
     
     %Calculate forces and torques and intergrate forward
-    [Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds, c2_boundary, dt, HFo,min_floe_size, Nx,Ny,Nb, dissolvedNEW,COLLISION, PERIODIC, RIDGING);
+    [Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds, c2_boundary, dt, HFo,min_floe_size, Nx,Ny,Nb, dissolvedNEW,doInt,COLLISION, PERIODIC, RIDGING);
     
-    if FRACTURES && im_num>5 && mod(i_step,10)==0
+    if FRACTURES && im_num>3 && mod(i_step,10)==0
         overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
         keep=rand(length(Floe),1)>overlapArea;
         keep(1:Nb) = ones(Nb,1);

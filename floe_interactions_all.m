@@ -1,4 +1,4 @@
-function [Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt, HFo, min_floe_size, Nx,Ny,Nb, dissolvedNEW,COLLISION, PERIODIC, RIDGING)
+function [Floe,dissolvedNEW] = floe_interactions_all(Floe, ocean, winds,c2_boundary, dt, HFo, min_floe_size, Nx,Ny,Nb, dissolvedNEW,doInt,COLLISION, PERIODIC, RIDGING)
 
 id ='MATLAB:polyshape:repairedBySimplify';
 warning('off',id)
@@ -112,7 +112,6 @@ for i=1:N  %do interactions with boundary in a separate parfor loop
         end
         
     end
-    
 end
 
 weld = zeros(length(Floe),1);
@@ -222,6 +221,14 @@ for i=1:N %this has to be done sequentially
             if indx(j)<=N && indx(j)>i
                 Floe(indx(j)).interactions=[Floe(indx(j)).interactions; i -a(j,2:3) a(j,4:5) 0 a(j,7)];   % 0 is torque here that is to be calculated below
                 Floe(indx(j)).OverlapArea = Floe(indx(j)).OverlapArea + a(j,7);
+                m = size(Floe(indx(j)).potentialInteractions,2);
+                Floe(indx(j)).potentialInteractions(m+1).floeNum=i;
+                Floe(indx(j)).potentialInteractions(m+1).c=[Floe(i).c_alpha(1,:)+x(i); Floe(i).c_alpha(2,:)+y(i)];
+                Floe(indx(j)).potentialInteractions(m+1).Ui=Floe(i).Ui;
+                Floe(indx(j)).potentialInteractions(m+1).Vi=Floe(i).Vi;
+                Floe(indx(j)).potentialInteractions(m+1).Xi=x(i);
+                Floe(indx(j)).potentialInteractions(m+1).Yi=y(i);
+                Floe(indx(j)).potentialInteractions(m+1).ksi_ice = Floe(i).ksi_ice;
             end
             
         end
@@ -261,7 +268,7 @@ if PERIODIC
 end
 
 keep = ones(1,N0);
-parfor i=1+Nb:N0
+for i=1+Nb:N0
     
     if ~isempty(Floe(i).interactions)
         
@@ -293,11 +300,21 @@ parfor i=1+Nb:N0
     end
     
    %Do the timestepping now that forces and torques are known.
-    if Floe(i).alive,
-%         [tmp,frac,Fx,Fy]=calc_trajectory_Nares(dt,ocean, winds,Floe(i),HFo,c2_boundary); % calculate trajectory
-        [tmp,frac,Fx,Fy]=calc_trajectory(dt,ocean, winds,Floe(i),HFo); % calculate trajectory
-        if (isempty(tmp) || isnan(x(i)) ), kill(i)=i; elseif frac == 1, keep(i) = 0; else Floe(i)=tmp; Floe(i).Fx = Fx; Floe(i).Fy = Fy; end
+%    FxOA = 0; FxExt = 0;FyOA = 0; FyExt = 0;
+%     if Floe(i).alive && doInt.flag
+%         [tmp,frac,FxOA,FyOA]=calc_trajectory_OA(dt,ocean,winds,Floe(i),doInt);
+%         if (isempty(tmp) || isnan(x(i)) ), kill(i)=i; elseif frac == 1, keep(i) = 0; else Floe(i)=tmp; end
+%     end
+    
+        %         [tmp,frac,Fx,Fy]=calc_trajectory_Nares(dt,ocean, winds,Floe(i),HFo,c2_boundary); % calculate trajectory
+    if Floe(i).alive
+        [tmp, frac,Fx,Fy] =calc_trajectory(dt,ocean,winds,Floe(i),HFo);
+        if (isempty(tmp) || isnan(x(i)) ), kill(i)=i; elseif frac == 1, keep(i) = 0; else; Floe(i).Fx = Fx; Floe(i).Fy = Fy;Floe(i)=tmp; end
+%     if Floe(i).alive && ~isempty(Floe(i).interactions)
+%         [tmp,FxExt,FyExt]=calc_trajectory_int(dt,ocean,Floe(i),HFo); % calculate trajectory
+%         if (isempty(tmp) || isnan(x(i)) ), kill(i)=i; else Floe(i)=tmp; end
     end
+%     Floe(i).Fx = FxOA+FxExt; Floe(i).Fy = FyOA+FyExt;
         
 end
 
@@ -384,12 +401,12 @@ keep = logical(keep+notalive);
 % if ~isempty(fracturedFloes)
 %     Floe=[Floe(keep) fracturedFloes];
 % end
-% for ii = 1:length(Floe)
-%     if abs(Floe(ii).area/area(polyshape(Floe(ii).c_alpha'))-1)>1e-3
-%         xx = 1;
-%         xx(1) =[1 2];
-%     end
-% end
+for ii = 1:length(Floe)
+    if isempty(Floe(ii).potentialInteractions) && ~isempty(Floe(ii).interactions)
+        xx = 1;
+        xx(1) =[1 2];
+    end
+end
 
 
 warning('on',id)

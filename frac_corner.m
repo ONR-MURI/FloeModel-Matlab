@@ -83,9 +83,10 @@ for p=1:length(a)
     FloeNEW.area = area(FloeNEW.poly);
     FloeNEW.mass = Mtot*area(a(p))/Atot;
     FloeNEW.h = FloeNEW.mass/(rho_ice*FloeNEW.area);
-    FloeNEW.inertia_moment = PolygonMoments(FloeNEW.poly.Vertices,FloeNEW.h);
+    %FloeNEW.inertia_moment = PolygonMoments(FloeNEW.poly.Vertices,FloeNEW.h);
     FloeNEW.c_alpha = [(FloeNEW.poly.Vertices-[Xi Yi])' [FloeNEW.poly.Vertices(1,1)-Xi; FloeNEW.poly.Vertices(1,2)-Yi]];
     FloeNEW.c0 = FloeNEW.c_alpha;
+    FloeNEW.inertia_moment = PolygonMoments(FloeNEW.c0',FloeNEW.h);
     FloeNEW.angles = polyangles(FloeNEW.poly.Vertices(:,1),FloeNEW.poly.Vertices(:,2));
     FloeNEW.rmax = sqrt(max(sum((FloeNEW.poly.Vertices' - [Xi;Yi]).^2,1)));
     % n=(fix(FloeNEW.rmax/dX)+1); n=dX*(-n:n);

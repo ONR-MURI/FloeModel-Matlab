@@ -15,9 +15,9 @@ FloeNEW.poly = poly1;
 FloeNEW.area = area(FloeNEW.poly);
 FloeNEW.h = h;
 FloeNEW.mass = FloeNEW.area*h*rho_ice;
-FloeNEW.inertia_moment = PolygonMoments(polya.Vertices,h);
 FloeNEW.c_alpha = [(poly1.Vertices-[Xi Yi])' [poly1.Vertices(1,1)-Xi; poly1.Vertices(1,2)-Yi]];
 FloeNEW.c0 = FloeNEW.c_alpha;
+FloeNEW.inertia_moment = PolygonMoments(FloeNEW.c0',h);
 FloeNEW.angles = polyangles(polya.Vertices(:,1),polya.Vertices(:,2));
 FloeNEW.rmax = sqrt(max(sum((FloeNEW.poly.Vertices' - [Xi;Yi]).^2,1)));
 % n=(fix(FloeNEW.rmax/dX)+1); n=dX*(-n:n);
@@ -30,9 +30,13 @@ FloeNEW.Stress = [0 0; 0 0];
 FloeNEW.strain = [0 0; 0 0];
 FloeNEW.Fx = 0; FloeNEW.Fy = 0;
 
-FloeNEW.X = FloeNEW.rmax*(2*rand(1000,1) - 1);
-FloeNEW.Y = FloeNEW.rmax*(2*rand(1000,1) - 1);
-FloeNEW.A = inpolygon(FloeNEW.X,FloeNEW.Y,FloeNEW.c_alpha(1,:),FloeNEW.c_alpha(2,:));
+err = 1;
+while err > 0.1
+    FloeNEW.X = FloeNEW.rmax*(2*rand(1000,1) - 1);
+    FloeNEW.Y = FloeNEW.rmax*(2*rand(1000,1) - 1);
+    FloeNEW.A = inpolygon(FloeNEW.X,FloeNEW.Y,FloeNEW.c_alpha(1,:),FloeNEW.c_alpha(2,:));
+    err = (sum(FloeNEW.A)/1000*4*FloeNEW.rmax^2-FloeNEW.area)/FloeNEW.area;
+end
 % [in] = inpolygon(FloeNEW.X(:)+Xi, FloeNEW.Y(:)+Yi,FloeNEW.poly.Vertices(:,1),FloeNEW.poly.Vertices(:,2));
 % FloeNEW.A=reshape(in,length(FloeNEW.X),length(FloeNEW.X));
 
