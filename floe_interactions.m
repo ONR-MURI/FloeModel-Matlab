@@ -10,6 +10,8 @@ c1=[floe1.c_alpha(1,:)+floe1.Xi; floe1.c_alpha(2,:)+floe1.Yi];
 c2=floe2.c;
 poly1 = polyshape(c1');
 polyA = area(poly1);
+poly2 = polyshape(c2');
+polyI = intersect(poly1,poly2);
 % poly2 = polyshape(c2');
 % polyB = polyshape(c2_boundary');
 % if area(intersect(polyB,poly2))/area(polyB)<0.95
@@ -21,8 +23,7 @@ polyA = area(poly1);
 %     end
 % end
 if  ( max(c1(1,:))<max(c2_boundary(1,:)) && min(c1(1,:))>min(c2_boundary(1,:)) && max(c1(2,:))<max(c2_boundary(2,:)) && min(c1(2,:))>min(c2_boundary(2,:)) || PERIODIC) 
-    poly2 = polyshape(c2');
-    polyI = intersect(poly1,poly2);
+    
     if area(polyI)/area(poly1) > 0.6
         overlap = Inf;
 %         xx = 1;
@@ -140,6 +141,11 @@ else
                 
                 force_dir=f_dir/sqrt(f_dir'*f_dir); %always push the flow away from contact point!
                 
+                poly1new = translate(poly1,force_dir');
+                polyInew = intersect(poly1new,poly2);
+                if area(polyInew)/area(polyI)-1 > 0
+                    force_dir = -force_dir;
+                end
                 
                 force=force_dir*(dl*dist_eff)*Force_factor; %proportional to the overlap area
                 
@@ -158,7 +164,8 @@ else
                 end
                 
                 force_1(k,:)= force'+force_t;
-                overlap(k) = dl*dist_eff;
+%                 xx = 1; xx(1) =[1 2];
+                overlap(k) = area(polyI);
                 
             end
             

@@ -98,6 +98,7 @@ for p=1:length(a)
     FloeNEW.strain=floe.strain;
     FloeNEW.Stress = [0 0; 0 0];
     FloeNEW.Fx = 0; FloeNEW.Fy = 0;
+    FloeNEW.FxOA = 0; FloeNEW.FyOA = 0; FloeNEW.torqueOA = 0;
     
     FloeNEW.X = FloeNEW.rmax*(2*rand(1000,1) - 1);
     FloeNEW.Y = FloeNEW.rmax*(2*rand(1000,1) - 1);

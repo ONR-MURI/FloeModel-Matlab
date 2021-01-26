@@ -1,4 +1,4 @@
-function [Sigma] = Calc_Stress(eularian_data,dt, c2_boundary)
+function [DivSig1, DivSig2, DivSigX, DivSigY] = Calc_Stress(eularian_data,dt, c2_boundary)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 %% find current terms
@@ -115,7 +115,5 @@ DivSig2 = rho_ice*dV-Fy*rho_ice;
 DivSigX = diff(SigXXxshift,1,2)/delx + diff(SigYXyshift,1,1)/dely;
 DivSigY = diff(SigXYxshift,1,2)/delx + diff(SigYYyshift,1,1)/dely;
 
-xx = 1;
-xx(1) = [1 2];
 end
 

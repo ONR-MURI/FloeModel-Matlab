@@ -114,6 +114,7 @@ for kk=1:length(Floe)
             FloeNEW.strain = floe.strain;
             FloeNEW.Stress = [0 0; 0 0];
             FloeNEW.Fx = 0; FloeNEW.Fy = 0;
+            FloeNEW.FxOA = 0; FloeNEW.FyOA = 0; FloeNEW.torqueOA = 0;
             
             err = 1;
             while err > 0.1

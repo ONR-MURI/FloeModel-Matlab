@@ -116,8 +116,8 @@ end
 
 weld = zeros(length(Floe),1);
 kill = zeros(1,N0);
-
-parfor i=1:N  %now the interactions could be calculated in a parfor loop!
+% xx = 1; xx(1) =[1 2];
+for i=1:N  %now the interactions could be calculated in a parfor loop!
         
     %c1=[Floe(i).c_alpha(1,:)+x(i); Floe(i).c_alpha(2,:)+y(i)];
     
@@ -135,6 +135,9 @@ parfor i=1:N  %now the interactions could be calculated in a parfor loop!
             %if ~worked, disp(['contact points issue for (' num2str(i) ',' num2str(floeNum) ')' ]); end
             
             if sum(abs(force_j))~=0
+                if sum(overlap)>1e3
+                    xx = 1; xx(1) =[1 2];
+                end
                 Floe(i).interactions=[Floe(i).interactions ; floeNum*ones(size(force_j,1),1) force_j P_j zeros(size(force_j,1),1) overlap'];
                 Floe(i).OverlapArea = sum(overlap)+Floe(i).OverlapArea;
             elseif isinf(overlap)
@@ -308,8 +311,9 @@ for i=1+Nb:N0
     
         %         [tmp,frac,Fx,Fy]=calc_trajectory_Nares(dt,ocean, winds,Floe(i),HFo,c2_boundary); % calculate trajectory
     if Floe(i).alive
-        [tmp, frac,Fx,Fy] =calc_trajectory(dt,ocean,winds,Floe(i),HFo);
-        if (isempty(tmp) || isnan(x(i)) ), kill(i)=i; elseif frac == 1, keep(i) = 0; else; Floe(i).Fx = Fx; Floe(i).Fy = Fy;Floe(i)=tmp; end
+        [tmp, frac,Fx,Fy] =calc_trajectory(dt,ocean,winds,Floe(i),HFo,doInt);
+%         [tmp,frac,Fx,Fy]=calc_trajectory_Nares(dt,ocean, winds,Floe(i),HFo,doInt,c2_boundary);
+        if (isempty(tmp) || isnan(x(i)) ), kill(i)=i; elseif frac == 1, keep(i) = 0; else; Floe(i)=tmp; Floe(i).Fx = Fx; Floe(i).Fy = Fy; end
 %     if Floe(i).alive && ~isempty(Floe(i).interactions)
 %         [tmp,FxExt,FyExt]=calc_trajectory_int(dt,ocean,Floe(i),HFo); % calculate trajectory
 %         if (isempty(tmp) || isnan(x(i)) ), kill(i)=i; else Floe(i)=tmp; end
@@ -322,42 +326,45 @@ end
 floenew = [];
 if RIDGING
     %Create a function to control probability that ridging will occur
+    h = cat(1,Floe.h);
     overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
     keepR=rand(length(Floe),1)>10*overlapArea;
 %     keep=rand(length(Floe),1)<0.5;
     for i=1+Nb:N0
 
-        if Floe(i).alive && ~keepR(i)
+        if Floe(i).alive && ~keepR(i) && h(i)<5
             c2 = 0;
-            if ~isempty(Floe(i).potentialInteractions)
+            if ~isempty(Floe(i).potentialInteractions) 
                 c = cat(1,Floe(i).potentialInteractions.floeNum);
                 if isinf(max(c))
                     c2 = 1;
                 end
                 c = c(c<Inf);
                 c = c(c>Nb);
+                c = c(c>i);
                 for ii = 1:length(c)
-                    [Floe1, Floe2] = ridging(Floe(i),Floe(c(ii)),c2_boundary_poly,PERIODIC,min_floe_size);
-
-                    if length(Floe1) > 1
-                        Floe(i) = Floe1(1);
-                        floenew = [floenew Floe1(2:end)];
-                    else
-                        Floe(i) = Floe1;
-                        if Floe1.alive == 0
-                            kill(i) = i;
+                    if Floe(c(ii)).h < 5
+                        [Floe1, Floe2] = ridging(Floe(i),Floe(c(ii)),c2_boundary_poly,PERIODIC,min_floe_size);
+                        
+                        if length(Floe1) > 1
+                            Floe(i) = Floe1(1);
+                            floenew = [floenew Floe1(2:end)];
+                        else
+                            Floe(i) = Floe1;
+                            if Floe1.alive == 0
+                                kill(i) = i;
+                            end
+                        end
+                        if length(Floe2) > 1
+                            Floe(c(ii)) = Floe2(1);
+                            floenew = [floenew Floe2(2:end)];
+                        else
+                            Floe(c(ii)) = Floe2;
+                            if Floe2.alive == 0 && c(ii) <= N0
+                                kill(c(ii)) = c(ii);
+                            end
                         end
                     end
-                    if length(Floe2) > 1
-                        Floe(c(ii)) = Floe2(1);
-                        floenew = [floenew Floe2(2:end)];
-                    else
-                        Floe(c(ii)) = Floe2;
-                        if Floe2.alive == 0 && c(ii) <= N0
-                            kill(c(ii)) = c(ii);
-                        end
-                    end
-                    
                 end
                 if c2 == 1
                     [Floe1, ~] = ridging(Floe(i),FloeB,c2_boundary_poly,PERIODIC,min_floe_size);

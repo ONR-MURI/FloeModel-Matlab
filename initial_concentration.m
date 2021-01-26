@@ -30,6 +30,7 @@ for jj = 1:Ny
     for ii = 1:Nx
         if c(jj,ii)>0
             boundary = polyshape([x(ii) x(ii) x(ii+1) x(ii+1)], [y(jj) y(jj+1) y(jj+1) y(jj)]);
+            boundary = intersect(boundary,c2_boundary_poly);
             N = ceil(NumFloes*area(boundary)/area(c2_boundary_poly)/c(jj,ii));
 %             poly = intersect(bound,boundary); %Use these when having
 %             boundaries
@@ -37,6 +38,8 @@ for jj = 1:Ny
 %             boundaries
             X = 0.95*dx/2*(2*rand(N,1)-1)+(x(ii)+x(ii+1))/2;
             Y = 0.95*dy/2*(2*rand(N,1)-1)+(y(jj)+y(jj+1))/2;
+            in = inpolygon(X,Y,boundary.Vertices(:,1),boundary.Vertices(:,2));
+            X = X(in); Y = Y(in);
             [~, b,~,~,~] = polybnd_voronoi([X Y],boundary.Vertices);
 %             [~, b,~,~,~] = polybnd_voronoi([X Y],boundary.Vertices); %%Use these when having
 %             boundaries

@@ -31,7 +31,8 @@ floenew.dYi_p = (floe1.dYi_p*floe1.mass + sum(cat(1,floe2.dYi_p).*mass))/(floene
 floenew.dksi_ice_p = (floe1.dksi_ice_p*floe1.inertia_moment + sum(cat(1,floe2.dksi_ice_p).*cat(1,floe2.inertia_moment)))/(floenew.inertia_moment);
 floenew.Fx = (floe1.Fx*floe1.mass + sum(cat(1,floe2.Fx).*mass))/(floenew.mass);
 floenew.Fy = (floe1.Fy*floe1.mass + sum(cat(1,floe2.Fy).*mass))/(floenew.mass);
-
+floenew.FxOA = [];%0;
+floenew.FyOA = [];%0;
 floenew.Stress = floe1.Stress*floe1.mass;
 for ii = 1:length(floe2)
     floenew.Stress = floenew.Stress+floe2(ii).Stress*floe2(ii).mass;

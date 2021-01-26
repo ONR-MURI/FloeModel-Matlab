@@ -4,38 +4,38 @@ close all; clear all;
 
 RIDGING=false; 
 
-FRACTURES=true;
+FRACTURES=false;
 
-PERIODIC=true;
+PERIODIC=false;
 
 PACKING = false;
 
 WELDING = false;
 
-CORNERS = true;
+CORNERS = false;
 
 COLLISION = true;
 
-AVERAGE = true;
+AVERAGE = false;
 
 ifPlot = true; %Plot floe figures or not?
 
 ifPlotStress = false;
 
-ifPlotStressStrain = true;
+ifPlotStressStrain = false;
 
 %% Initialize model vars
 
-dt=20; %Time step in sec
+dt=10; %Time step in sec
 % h0 = 0.1; %thickness of ice that gets packed in
 
 %Define ocean currents
 nDTpack = 100;
 % [ocean, HFo, h0]=initialize_ocean(dt,nDTpack);
-[ocean, HFo, h0]=initialize_ocean_Nares(dt,nDTpack);
+[ocean, HFo, h0]=initialize_ocean_inertial(dt,nDTpack);
 
 %Define 10m winds
-winds=[0 -10];
+winds=[0 0];
 
 %Define boundaries
 c2_boundary=initialize_boundaries();
@@ -47,9 +47,9 @@ min_floe_size = 4*Lx*Ly/20000;%4*Lx*Ly/25000;
 %Floe=initialize_Floe('FloeShapes.mat');
 height.mean = 2;
 height.delta = 0;
-target_concentration = [1;1;0];
-[Floe, Nb] = initial_concentration_Nares(c2_boundary,target_concentration,height,50,min_floe_size);
-%[Floe, Nb] = initial_concentration(c2_boundary,target_concentration,height,250,min_floe_size);
+target_concentration = 1;%[1;1;0];
+% [Floe, Nb] = initial_concentration_Nares(c2_boundary,target_concentration,height,50,min_floe_size);
+[Floe, Nb] = initial_concentration(c2_boundary,target_concentration,height,250,min_floe_size);
 % Floe = Floe(1:200);
 %load Floe0; Nb = 0;
 if isfield(Floe,'poly')
@@ -85,7 +85,7 @@ doInt.step = 10;
 
 % specify coarse grid size
 LxO= 2*max(ocean.Xo);LyO= 2*max(ocean.Yo);
-Nx=5; Ny=fix(Nx*LyO/LxO);
+Nx=3; Ny=fix(Nx*LyO/LxO);
 xc = min(c2_boundary(1,:)):(max(c2_boundary(1,:))-min(c2_boundary(1,:)))/Nx:max(c2_boundary(1,:));
 yc = min(c2_boundary(2,:)):(max(c2_boundary(2,:))-min(c2_boundary(2,:)))/Ny:max(c2_boundary(2,:));
 Xc = (xc(1:end-1)+xc(2:end))/2; Yc = -(yc(1:end-1)+yc(2:end))/2;
@@ -132,6 +132,9 @@ end
 tic;
 while im_num<nSnapshots
 
+%     ocean.Uocn=ocean.U*cos(ocean.fCoriolis*Time)*ones(size(ocean.Vocn));  
+%     ocean.Vocn=-ocean.U*sin(ocean.fCoriolis*Time)*ones(size(ocean.Uocn));
+    
     if mod(i_step,10)==0
         disp(' ');
         toc
@@ -143,6 +146,33 @@ while im_num<nSnapshots
         disp(' ');
         tic
         doInt.flag=true;
+%         T = (0.05*cos(im_num/dt)+1i*0.05*sin(im_num/dt))/1000;
+%         Zhat = (-ocean.r +1i*(ocean.fCoriolis+ocean.Sig))./(ocean.Sig.^2-ocean.fCoriolis.^2-ocean.r^2-2*1i*ocean.r*ocean.Sig)*T/ocean.H;
+%         ocean.U = real(ifft(Zhat)); ocean.V = imag(ifft(Zhat));
+%         ocean.Uocn = ocean.U*ones(size(ocean.Uocn));
+%         ocean.Vocn = ocean.V*ones(size(ocean.Vocn));
+        Amp = 0.5;
+        fs = 44100;         % sampling frequency, Hz
+        T = 60;             % signal duration, s
+        N = round(fs*T);    % number of samples
+        % noise generation
+        x = rednoise(1, N); % red noise, PSD falls off by 10 dB/dec
+        % calculate the noise PSD
+        winlen = 2*fs;
+        window = hann(winlen, 'periodic');
+        noverlap = winlen/2;
+        nfft = winlen;
+        [Pxx, f] = pwelch(x, window, noverlap, nfft, fs, 'onesided');
+        Sig = f/1e5;
+        Pxx = Pxx(Sig>1e-4)/1e5; Pxx = Pxx(1:100); Sig = Sig(1:100);
+        T = (Pxx+1i*Pxx)/1000;
+        Zhat = (-ocean.r +1i*(ocean.fCoriolis+Sig))./(Sig.^2-ocean.fCoriolis.^2-ocean.r^2-2*1i*ocean.r*Sig).*T/ocean.H;
+        [~, I2] = max(Zhat);
+%         U = real(ifft(Zhat(I2))); V = imag(ifft(Zhat(I2)));
+%         nu = fix(log10(abs(U)))+1; nv = fix(log10(abs(V)))+1; n = min([nu nv]);
+        %Zhat = (-ocean.r +1i*(ocean.fCoriolis+ocean.Sig))./(ocean.Sig.^2-ocean.fCoriolis.^2-ocean.r^2-2*1i*ocean.r*ocean.Sig)*T/ocean.H;
+%         ocean.U = U/(10^n); ocean.V = V/(10^n);
+        ocean.Uocn = Amp*cos(Sig(I2)*Time)*ones(size(ocean.Uocn)); ocean.Vocn = Amp*sin(Sig(I2)*Time)*ones(size(ocean.Uocn));
     else
         doInt.flag=false;
     end
@@ -200,8 +230,8 @@ while im_num<nSnapshots
         [eularian_data] = calc_eulerian_stress(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIODIC);
 %         [eularian_data] = calc_eulerian_data(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIODIC);
         if ifPlot
-            %[fig] =plot_basic(fig, Time,Floe,ocean,c2_boundary_poly,Nb);
-            [fig] =plot_Nares(fig, Time,Floe,ocean,c2_boundary_poly,Nb);
+            [fig] =plot_basic(fig, Time,Floe,ocean,c2_boundary_poly,Nb);
+%             [fig] =plot_Nares(fig, Time,Floe,ocean,c2_boundary_poly,Nb);
             saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
         end
         
