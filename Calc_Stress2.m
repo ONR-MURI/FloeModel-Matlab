@@ -1,17 +1,17 @@
-function [DivSig1, DivSig2, DivSigX, DivSigY] = Calc_Stress(eularian_data,dt, c2_boundary)
+function [DivSig1, DivSig2, DivSigX, DivSigY] = Calc_Stress2(U,V,dU,dV,Fx,Fy,SigXX,SigYX,SigXY,SigYY, c2_boundary)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 %% find current terms
-U = squeeze(eularian_data.u);
-V = squeeze(eularian_data.v);
-dU = squeeze(eularian_data.du);
-dV = squeeze(eularian_data.dv);
-Fx = squeeze(eularian_data.force_x);
-Fy = squeeze(eularian_data.force_y);
-SigXX = squeeze(eularian_data.stressxx);
-SigYX = squeeze(eularian_data.stressyx);
-SigXY = squeeze(eularian_data.stressxy);
-SigYY = squeeze(eularian_data.stressyy);
+% U = squeeze(eularian_data.u);
+% V = squeeze(eularian_data.v);
+% dU = squeeze(eularian_data.du);
+% dV = squeeze(eularian_data.dv);
+% Fx = squeeze(eularian_data.force_x);
+% Fy = squeeze(eularian_data.force_y);
+% SigXX = squeeze(eularian_data.stressxx);
+% SigYX = squeeze(eularian_data.stressyx);
+% SigXY = squeeze(eularian_data.stressxy);
+% SigYY = squeeze(eularian_data.stressyy);
 
 %Add ghost cells for current time step
 [Ny,Nx] = size(Fx);
@@ -62,7 +62,7 @@ Sigyy(:,Nx) = Sigyy(:,Nx-1);
 x = min(c2_boundary(1,:)):(max(c2_boundary(1,:))-min(c2_boundary(1,:)))/(Nx-2):max(c2_boundary(1,:));
 y = min(c2_boundary(2,:)):(max(c2_boundary(2,:))-min(c2_boundary(2,:)))/(Ny-2):max(c2_boundary(2,:));
 delx = abs(x(2)-x(1));
-dely = abs(y(2)-y(1));
+dely = -abs(y(2)-y(1));
 
 %% Shift points for calculating Stress Terms
 Uxshift = u(2:Ny-1,2:Nx);
