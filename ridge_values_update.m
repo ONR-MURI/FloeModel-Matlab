@@ -54,14 +54,15 @@ for kk = 1:length(R)
             end
         end
     end
-    [in] = inpolygon(FloeLess.X(:)+Xi, FloeLess.Y(:)+Yi,FloeLess.poly.Vertices(:,1),FloeLess.poly.Vertices(:,2));
-    FloeLess.A=reshape(in,length(FloeLess.X),length(FloeLess.X));
 
     FloeLess.inertia_moment = PolygonMoments(FloeLess.c_alpha',FloeLess.h);
     FloeLess.rmax = max(sqrt(FloeLess.c_alpha(1,:).^2+FloeLess.c_alpha(2,:).^2));
     FloeLess.Fx = Floe2.Fx;
     FloeLess.Fy = Floe2.Fy;
     FloeLess.Stress = Floe2.Stress;
+    FloeLess.X = FloeLess.rmax*(2*rand(1000,1) - 1);
+    FloeLess.Y = FloeLess.rmax*(2*rand(1000,1) - 1);
+    FloeLess.A = inpolygon(FloeLess.X,FloeLess.Y,FloeLess.c_alpha(1,:),FloeLess.c_alpha(2,:));
     FloeNEW = [FloeNEW FloeLess];
 end
 

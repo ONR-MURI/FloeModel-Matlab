@@ -6,6 +6,7 @@ id2 ='MATLAB:polyshape:repairedBySimplify';
 warning('off',id2)
 
 N0=length(Floe);
+kill = zeros(N0,1);
 Lx= max(c2_boundary(1,:));
 Ly= max(c2_boundary(2,:));%c2 must be symmetric around x=0 for channel boundary conditions.
 
@@ -98,6 +99,7 @@ end
 
 %function to determine the probablity that ice gets created
 ramp = @(dhdt) hvsd(dhdt)*dhdt;
+SimpMin = @(A) 3*log10(A);
 
 %% Loop through all regions creating sea ice in each if probability criteria is met
 
@@ -127,13 +129,15 @@ for j = 1:Nx*Ny
             polyu = [];
         else
             polyu = union([Floe(in).poly]);
+            polyu = intersect(polyu,box);
         end
         R = regions(polyu);
-        c = sum(A)/area(box);
+        FloeArea = sum(area(R));
+        c = FloeArea/area(box);
         
         %if concentration is below target then create new sea ice
         if c<0.99*target
-            atarget = (target*area(box)-sum(A));
+            atarget = (target*area(box)-FloeArea);
             floe.poly = box;
             
             if isempty(polyu)
@@ -149,7 +153,10 @@ for j = 1:Nx*Ny
             clear areas
             [Xi,Yi] = centroid(box);
             floe.Xi = Xi; floe.Yi = Yi;
-            N = 3;
+            N = ceil(atarget/min_floe_size);
+            if N < 3
+                N = 3;
+            end
             
             X = Xi+floe.rmax*(2*rand(N,1)-1);
             Y = Yi+floe.rmax*(2*rand(N,1)-1);
@@ -157,7 +164,9 @@ for j = 1:Nx*Ny
             [~, b,~,~,~] = polybnd_voronoi([X Y],boundingbox);
             
             for kk = 1:length(b)
-                subfloes(kk) = polyshape(b{kk});
+                if ~isnan(b{kk})
+                    subfloes(kk) = polyshape(b{kk});
+                end
             end
             
             new = intersect(Op,subfloes);
@@ -172,6 +181,8 @@ for j = 1:Nx*Ny
             N = length(areas(areas>min_floe_size));%only keep floes above a certain area
             count = 1;
             
+%             xx = 1; xx(1) =[1 2];
+            
             %Add in new floes until we reach target concentration
             while anew < atarget
                 
@@ -184,9 +195,24 @@ for j = 1:Nx*Ny
                         height.mean = hO.mean(ko);
                     end
                     floe2 = initialize_floe_values(subfloes(I),height);
+%                     if length(floe2new.poly.Vertices) > SimpMin(floe2new.area)
+%                         floeS = FloeSimplify(floe2new,true);
+%                         AreaSimp = cat(1,floeS.area);
+%                         [~,Imax] = max(AreaSimp);
+%                         floe2 = floeS(Imax);
+% %                         floe2 = [];
+% %                         if length(floeS) >1
+% %                             floe2 = floeS(1);
+% %                             xx = 1; xx(1) =[1 2];
+% %                         else
+% %                             floe2 = floeS;
+% %                         end
+%                     else
+%                         floe2 = floe2new;
+%                     end
                     Vd(jj,ii,1) = Vd(jj,ii,1)-floe2.h*floe2.area*rho_ice;
-                    [k,~] = dsearchn([Xocn(:),Yocn(:)],[floe2.Xi,floe2.Yi]);
-                    floe2.Ui = Uocn(k); floe2.Vi = Vocn(k);
+%                     [k,~] = dsearchn([Xocn(:),Yocn(:)],[floe2.Xi,floe2.Yi]);
+%                     floe2.Ui = Uocn(k); floe2.Vi = Vocn(k);
                     
                     if floe2.poly.NumHoles > 0
                         floe2holes = floe2;
@@ -204,21 +230,29 @@ for j = 1:Nx*Ny
                             polyin2 = abs(area(floe2holes.poly,kk+1))./A2;
                             polyin2(isinf(polyin2)) = 0;
                             in = unique([k2(polyin>0.99); k2(polyin2>0.99)]);
-                            FloeIn = [];
+                            test1 = initialize_floe_values(rmholes(floe2.poly),height);
                             for k = 1:length(in)
                                 if Floe(in(k)).alive == 1
-                                    FloeIn = [FloeIn Floe(in(k))];
-                                    Floe(in(k)).alive = 0;
+                                    V2 = area(intersect(test1.poly,Floe(in(k)).poly))*Floe(in(k)).h;
+                                    [test1, test2] = ridge_values_update(test1,Floe(in(k)), V2);
+                                    polyu = subtract(polyu,union(test1.poly));
+%                                     test = FuseFloes(floe2,FloeIn);
+                                    if isempty(test2)
+                                        Floe(in(k)).alive = 0;
+                                        kill(in(k)) = 1;
+                                    elseif length(test2)>1
+                                        Floe(in(k)) = test2(1);
+                                        floenew = [floenew test2(2:end)];
+                                    else
+                                        Floe(in(k)) = test2;
+                                    end
+                                    if length(test1) > 1
+                                        floe2 = test1(1);
+                                        floenew =[floenew test1(2:end)];
+                                    else
+                                        floe2 = test1;
+                                    end
                                 end
-                                polyu = subtract(polyu,Floe(in(k)).poly);
-                            end
-                            if ~isempty(FloeIn)
-                                test = FuseFloes(floe2,FloeIn);
-                                if isempty(test)
-                                    xx = 1;
-                                    xx(1) = [1 2];
-                                end
-                                floe2 = test;
                             end
                         end
                         if isnan(floe2.ksi_ice)
@@ -256,6 +290,7 @@ for j = 1:Nx*Ny
                             for kk = 1:length(in)
                                 floe2 = FuseFloes(floe2,Floe(in(kk)));
                                 Floe(in(kk)).alive = 0;
+                                kill = 1;
                                 polyu = subtract(polyu,Floe(in(kk)).poly);
                             end
                         end
@@ -279,23 +314,24 @@ for j = 1:Nx*Ny
     
 end
 Floe=Floe(1:N0);
+Floe(logical(kill))=[];
 alive = cat(1,Floe.alive);
 Floe(~logical(alive)) = [];
 
-%Simplify any new floes that are to complicated
-SimpMin = @(A) 3*log10(A);
-for ii = 1:length(floenew)
-    floe = floenew(ii);
-    if length(floenew(ii).poly.Vertices) > SimpMin(floenew(ii).area)
-        Floe1 = FloeSimplify(floenew(ii));
-        if length(Floe1) >1
-            floenew(ii) = Floe1(1);
-            floenew = [floenew Floe1(2:end)];
-        else
-            floenew(ii) = Floe1;
-        end
-    end
-end
+% %Simplify any new floes that are to complicated
+% SimpMin = @(A) 3*log10(A);
+% for ii = 1:length(floenew)
+%     floe = floenew(ii);
+%     if length(floenew(ii).poly.Vertices) > SimpMin(floenew(ii).area)
+%         Floe1 = FloeSimplify(floenew(ii));
+%         if length(Floe1) >1
+%             floenew(ii) = Floe1(1);
+%             floenew = [floenew Floe1(2:end)];
+%         else
+%             floenew(ii) = Floe1;
+%         end
+%     end
+% end
 
 % [eularian_data] = calc_eulerian_data(Floe,10,10,0,c2_boundary,PERIODIC);
 % if max(max(eularian_data.c))-1 > 0.01

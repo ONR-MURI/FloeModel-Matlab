@@ -30,6 +30,7 @@ Polygon.Ixx=1/12*sum(wi.*(  (y(1:N)+y(2:N+1)).^2 - y(1:N).*y(2:N+1)));
 Polygon.Iyy=1/12*sum(wi.*(  (x(1:N)+x(2:N+1)).^2 - x(1:N).*x(2:N+1)));
 Polygon.Ixy=1/24*sum(wi.*( (x(1:N)+x(2:N+1)).*(y(1:N)+y(2:N+1))  + x(1:N).*y(1:N) + x(2:N+1).*y(2:N+1) ));
 Izz=abs(Polygon.Ixx+Polygon.Iyy)*h*rho_ice;
+% Izz=abs(Polygon.Ixx+Polygon.Iyy)*rho_ice;
 % coordinates of the area centroid:
 % Polygon.ACx=Polygon.MAy/Polygon.Area;
 % Polygon.ACy=Polygon.MAx/Polygon.Area;

@@ -1,28 +1,29 @@
+function [K,T] = SubzeroET()
 close all; clear all;
 
 %% Set Flags
 
 RIDGING=false; 
 
-FRACTURES=true;
+FRACTURES=false;
 
-PERIODIC=false;
+PERIODIC=true;
 
 PACKING = false;
 
 WELDING = false;
 
-CORNERS = true;
+CORNERS = false;
 
 COLLISION = true;
 
-AVERAGE = true;
+AVERAGE = false;
 
 RAFTING = false;
 
-KEEP_MIN = false;
+KEEP_MIN = true;
 
-ifPlot = true; %Plot floe figures or not?
+ifPlot = false; %Plot floe figures or not?
 
 ifPlotStress = false;
 
@@ -39,36 +40,46 @@ height.delta = 0;
 nDTpack = 500;
 rho_ice=920;
 % [ocean, HFo, h0]=initialize_ocean(dt,nDTpack);
-%[ocean, HFo, h0]=initialize_ocean(dt,nDTpack);
-[ocean, HFo, h0]=initialize_ocean_Nares(dt,nDTpack);
+[ocean, HFo, h0]=initialize_ocean(dt,nDTpack);
 
 %Define 10m winds
-winds=[0 -10];
+winds=[0 0];
 
 %Define boundaries
-c2_boundary=initialize_boundaries();
+%c2_boundary=initialize_boundaries();
 % Lx=3.5e4; Ly=3.5e4; f=2*pi/(24*3600);
 Lx=1e5; Ly=1e5; f=2*pi/(24*3600);
 % Lx=6.5e4; Ly=1.5e4; f=2*pi/(24*3600);
-% x=[-1 -1 1 1 -1]*Lx; 
-% y=[-1 1 1 -1 -1]*Ly;
-% c2_boundary = [x; y];
-Ly = max(c2_boundary(2,:));Lx = max(c2_boundary(1,:));
+x=[-1 -1 1 1 -1]*Lx; 
+y=[-1 1 1 -1 -1]*Ly;
+c2_boundary = [x; y];
+%Ly = max(c2_boundary(2,:));Lx = max(c2_boundary(1,:));
+c2_boundary_poly = polyshape(c2_boundary');
+c2_border = polyshape(2*[-Lx -Lx Lx Lx; -Ly Ly Ly -Ly]'); c2_border = subtract(c2_border, c2_boundary_poly);
+floebound = initialize_floe_values(c2_border, height);
 uright = 0; uleft = 0;
 min_floe_size = 4*Lx*Ly/20000;%4*Lx*Ly/25000;
 
 %Initialize Floe state
 %Floe=initialize_Floe('FloeShapes.mat');
-% target_concentration = ones(1,1);
-target_concentration = [1;1;0];
-[Floe, Nb] = initial_concentration_Nares(c2_boundary,target_concentration,height,50,min_floe_size);
-c2_boundary_poly = polyshape(c2_boundary');
-c2_border = polyshape(2*[-Lx -Lx Lx Lx; -Ly Ly Ly -Ly]'); c2_border = subtract(c2_border, c2_boundary_poly);
-floebound = initialize_floe_values(c2_border, height);
+target_concentration = ones(1,1);
 %[Floe, Nb] = initial_concentration(c2_boundary,target_concentration,height,500,min_floe_size);
-%[Floe, Nb] = initial_concentration(c2_boundary,target_concentration,height,50,min_floe_size);
-% load Floe0; Nb = 0;
+%[Floe, Nb] = initial_concentration(c2_boundary,target_concentration,height,500,min_floe_size);
 % Floe = Floe(1:200);
+load Floe0; Nb = 0;
+load En;
+% dt = tmod*dt;
+% dt = tmod;
+Floe(1) = FloeEn(En); Floe(2) = FloeEn(En+1);
+poly1 = polyshape(Floe(1).c0'); poly2 = polyshape(Floe(2).c0');
+poly1 = rotate(poly1,r1mod); poly2 = rotate(poly2,r2mod); 
+Floe(1) = initialize_floe_values(poly1, height);
+Floe(2) = initialize_floe_values(poly2, height);
+% Floe(1).Xi = abs(min(Floe(1).rmax))+10; Floe(2).Xi = -abs(max(Floe(2).rmax))-10;
+Floe(1).Xi = abs(min(Floe(1).c0(1,:)))+100; Floe(2).Xi = -abs(max(Floe(2).c0(1,:)))-100;
+% Floe(1).Yi = -1500; Floe(2).Yi = 1000;
+Floe(1).Ui = -0.1; Floe(2).Ui = 0.1;
+p0new = -0.1*Floe(1).mass+0.1*Floe(2).mass;
 if isfield(Floe,'poly')
     Floe=rmfield(Floe,{'poly'});
 end
@@ -79,20 +90,22 @@ load Modulus
 collide = 0;
 % Modulus = 1.5e3*(mean(sqrt(cat(1,Floe.area)))+max(sqrt(cat(1,Floe.area))));
 % save('modulus.mat','Modulus');
+K0new = 0.5*Floe(1).mass*Floe(1).Ui^2+0.5*Floe(2).mass*Floe(2).Ui^2;
 %load('PackedFloesFullDomain.mat','Floe');
 %Floe= create_packed_domain();
 load F_dir
 clear fdir
 fdir.dir =[0;0];fdir.loc =[0 0];
 % f_hist_t =[0;0];
-save('F_dir.mat','fdir')
+force_dir =[ 0;0];
+save('F_dir.mat','force_dir')
 frac = 0;
 
 %%
 
 dhdt = 1;
 
-nDTOut=50; %Output frequency (in number of time steps)
+nDTOut=10; %Output frequency (in number of time steps)
 
 nSnapshots=20; %Total number of model snapshots to save
 
@@ -100,14 +113,14 @@ nDT=nDTOut*nSnapshots; %Total number of time steps
 
 nSimp = 50;
 
-nPar = 6; %Number of workers for parfor
-poolobj = gcp('nocreate'); % If no pool, do not create new one.
-if isempty(poolobj)
-    parpool(nPar);
-else
-    delete(poolobj);
-    parpool(nPar);
-end
+% nPar = 6; %Number of workers for parfor
+% poolobj = gcp('nocreate'); % If no pool, do not create new one.
+% if isempty(poolobj)
+%     parpool(nPar);
+% else
+%     delete(poolobj);
+%     parpool(nPar);
+% end
 
 target_concentration=1;
 tStart = tic; 
@@ -164,9 +177,16 @@ for ii =1:length(Floe)
     poly(ii) = polyshape(Floe(ii).c_alpha'+[Floe(ii).Xi Floe(ii).Yi]);
 end
 %% Solving for floe trajectories
-tic; 
-while Time<60000
-
+tic; stop = 0; Tstop = 1e9;
+while collide<0.5 || area(intersect(poly(1),poly(2)))>0 || Time < Tstop
+% while i_step < 365
+% while Time<60000
+    if collide>0.5 && area(intersect(poly(1),poly(2)))==0
+        if stop < 0.5
+            Tstop = Time + 1500;
+            stop = 1;
+        end
+    end
 % while im_num<nSnapshots || area(intersect(poly(1),poly(2)))>0
 
     if mod(i_step,10)==0
@@ -220,10 +240,10 @@ while Time<60000
 %         [eularian_data] = calc_eulerian_data(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIODIC);
         if ifPlot
             [fig] =plot_basic(fig, Time,Floe,ocean,c2_boundary_poly,Nb);
-%            img =  getframe(gcf);
-%            savepng(img.cdata,['./figs/' num2str(im_num,'%03.f') '.jpg']);
+%             img =  getframe(gcf);
+%             savepng(img.cdata,['./figs/' num2str(im_num,'%03.f') '.jpg']);
 %             [fig] =plot_Nares(fig, Time,Floe,ocean,c2_boundary_poly,Nb);
-%              saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
+%             saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
         end
         
 
@@ -327,16 +347,20 @@ while Time<60000
     end
     FloeOld2 = FloeOld; FloeOld = Floe;
     %Calculate forces and torques and intergrate forward
-    tic
     [Floe,dissolvedNEW] = floe_interactions_all(Floe, floebound, uright, 0, ocean, winds, c2_boundary, dt, HFo,min_floe_size, Nx,Ny,Nb, dissolvedNEW,doInt,COLLISION, PERIODIC, RIDGING, RAFTING);
-    toc
     for ii =1:length(Floe)
         poly(ii) = polyshape(Floe(ii).c_alpha'+[Floe(ii).Xi Floe(ii).Yi]);
     end
     if abs(Floe(1).Fx)>0
         collide = 1;
     end
-
+    K(i_step+1) = 0.5*Floe(1).mass*Floe(1).Ui^2+0.5*Floe(2).mass*Floe(2).Ui^2+0.5*Floe(1).mass*Floe(1).Vi^2+0.5*Floe(2).mass*Floe(2).Vi^2+0.5*Floe(1).inertia_moment*Floe(1).ksi_ice^2+0.5*Floe(2).inertia_moment*Floe(2).ksi_ice^2;
+    T(i_step+1) = Time;U1(i_step+1) = Floe(1).Ui;V1(i_step+1) = Floe(1).Vi;
+    U2(i_step+1) = Floe(2).Ui;V2(i_step+1) = Floe(2).Vi;
+    Pu(i_step+1) = Floe(1).mass*Floe(1).Ui+Floe(2).mass*Floe(2).Ui; Pv(i_step+1) = Floe(1).mass*Floe(1).Vi+Floe(2).mass*Floe(2).Vi; 
+    L(i_step+1,:) = cross([Floe(1).Xi, Floe(1).Yi,0],[Floe(1).mass*Floe(1).Ui, Floe(1).mass*Floe(1).Vi,0])+cross([Floe(2).Xi, Floe(2).Yi,0],[Floe(2).mass*Floe(2).Ui, Floe(2).mass*Floe(2).Vi,0])+Floe(1).inertia_moment*Floe(1).ksi_ice+Floe(2).inertia_moment*Floe(2).ksi_ice;
+    Omeg1(i_step+1) = Floe(1).ksi_ice; Omeg2(i_step+1) = Floe(2).ksi_ice;
+    ext_force(i_step+1,:) = Floe(1).collision_force;    torque(i_step+1) = Floe(1).collision_torque;
 
 %     if Time == 24620
 %         xx = 1; xx(1) =[1 2];
@@ -359,8 +383,8 @@ while Time<60000
         DivSigY = DivSigY+DSigY; DivSig2 = DivSig2+DSig2;
     end
     
-    if WELDING && mod(i_step,11)==0
-	weldrate = 1;%Set rate at which floes will meld
+    if WELDING && mod(i_step,25)==0
+	weldrate = 100;%Set rate at which floes will meld
 	A=cat(1,Floe.area);
         if max(A) > Amax
            Amax = max(A);
@@ -369,7 +393,7 @@ while Time<60000
         Floe = Weld_Floes(Floe,Nb,weldrate,Amax);
     end
 
-    if FRACTURES && i_step>25 && mod(i_step,10)==0
+    if FRACTURES && frac < 0.5%i_step>1000 && mod(i_step,10)==0
 %         [Floe] = FracMohr(Floe,Nb,min_floe_size);
 %         clear Stress, clear A;
 %         for ii = 1:length(Floe)
@@ -388,13 +412,14 @@ while Time<60000
 %         keep=rand(length(Floe),1)>Stress'/max(Stress(TF));
 % %         keep=rand(length(Floe),1)<1.05-Stress'/max(Stress);
         overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
-%        keep=rand(length(Floe),1)>0.001;%2*overlapArea;
-        keep=rand(length(Floe),1)>2*overlapArea;
+        %keep=rand(length(Floe),1)>0.001;%2*overlapArea;
+        keep=rand(length(Floe),1)>100*overlapArea;
         keep(1:Nb) = ones(Nb,1);
         fracturedFloes=fracture_floe(Floe(~keep),5);
 % %         fracturedFloes=fracture_leads(Floe(~keep),Nx,Ny,c2_boundary,eularian_data);
         if ~isempty(fracturedFloes)
             Floe=[Floe(keep) fracturedFloes];
+            frac = 1;
         end
 % %         for ii = 1+Nb:length(Floe)
 % %             h1 = Floe(ii).mass/(Floe(ii).area*rho_ice);
@@ -407,24 +432,14 @@ while Time<60000
 %         %         [Floe] = FracIso(Floe,Ny,Nx,Nb,c2_boundary,SigO);
     end
     
-    if CORNERS && mod(i_step,50)==0
+    if CORNERS && mod(i_step,3)==0
         clear Stress, clear A;
         for ii = 1:length(Floe)
             Stress(ii) = max(abs(eig(Floe(ii).Stress)));
 %             A(ii) = Floe(ii).area;
         end
         [B,TF] = rmoutliers(Stress);
-        if max(Stress) == 0
-            keep = ones(length(Floe),1);
-        elseif max(Stress(~TF))==0
-            grind = rand(length(Floe),1)<2*Stress'/max(Stress);
-            keep = ~grind;
-        elseif max(Stress(~TF))<max(Stress(TF))
-            keep=rand(length(Floe),1)<2*Stress'/max(Stress(~TF));
-        else
-            grind = rand(length(Floe),1)<2*Stress'/max(Stress);
-            keep = ~grind;
-        end
+        keep=rand(length(Floe),1)>2*Stress'/max(Stress(TF));
 %         n = 6:0.5:ceil(max(log10(A)));
 %         BinEdges = 10.^n;
 %         for ii = 1:length(n)-1
@@ -496,9 +511,17 @@ while Time<60000
 %     floebound = initialize_floe_values(c2_border, height);
 
 end
-
+KFnew = 0.5*Floe(1).mass*Floe(1).Ui^2+0.5*Floe(2).mass*Floe(2).Ui^2+0.5*Floe(1).mass*Floe(1).Vi^2+0.5*Floe(2).mass*Floe(2).Vi^2+0.5*Floe(1).inertia_moment*Floe(1).ksi_ice^2+0.5*Floe(2).inertia_moment*Floe(2).ksi_ice^2;
+load Energy5; 
 % xx = 1; xx(1) =[1 2];
-
+if (K(end)-K(1))/K(1) < -1
+    xx = 1; xx(1)=[1 2];
+end
+U1(En) = Floe(1).Ui; U2(En) = Floe(2).Ui; V1(En) = Floe(1).Vi; V2(En) = Floe(2).Vi;
+omeg1(En) = Floe(1).ksi_ice; omeg2(En) = Floe(2).ksi_ice;
+K0(En) = K0new; KF(En) = KFnew; punew = Floe(1).mass*Floe(1).Ui+Floe(2).mass*Floe(2).Ui; pvnew = Floe(1).mass*Floe(1).Vi+Floe(2).mass*Floe(2).Vi;
+p0(En) = p0new; pu(En) = punew; pv(En) = pvnew; 
+save('Energy5.mat','K0','KF','U1','U2','V1','V2','omeg1','omeg2','pu','pv','p0');
 % clear Modulus
 tEnd = toc(tStart)
 %%
