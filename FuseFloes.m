@@ -31,12 +31,14 @@ floenew.dYi_p = (floe1.dYi_p*floe1.mass + sum(cat(1,floe2.dYi_p).*mass))/(floene
 floenew.dksi_ice_p = (floe1.dksi_ice_p*floe1.inertia_moment + sum(cat(1,floe2.dksi_ice_p).*cat(1,floe2.inertia_moment)))/(floenew.inertia_moment);
 floenew.Fx = (floe1.Fx*floe1.mass + sum(cat(1,floe2.Fx).*mass))/(floenew.mass);
 floenew.Fy = (floe1.Fy*floe1.mass + sum(cat(1,floe2.Fy).*mass))/(floenew.mass);
-
+floenew.FxOA = [];%0;
+floenew.FyOA = [];%0;
 floenew.Stress = floe1.Stress*floe1.mass;
 for ii = 1:length(floe2)
     floenew.Stress = floenew.Stress+floe2(ii).Stress*floe2(ii).mass;
 end
 floenew.Stress = floenew.Stress/floenew.mass;
+floenew.MaxShear = (floe1.MaxShear*floe1.mass + sum(cat(1,floe2.MaxShear).*mass))/(floenew.mass);
 
 if isinf(floenew.ksi_ice) || isnan(floenew.ksi_ice)
     xx = 1;
@@ -50,7 +52,7 @@ for ii = 1:length(floenew)
     end
 end
 
-% h = [floe1.h floe2.h];
+h = [floe1.h floe2.h];
 % if floenew.h/max(h)-1 > 0.1
 %     xx = 1;
 %     xx(1) =[1 2];

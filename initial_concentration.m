@@ -22,6 +22,12 @@ dy = y(2)-y(1);
 % bound = subtract(bound, B2);
 %Floe = [Floe1 Floe2];
 
+nx=40; ny=4;%fix(Nx*LyO/LxO);
+xc = min(c2_boundary(1,:)):(max(c2_boundary(1,:))-min(c2_boundary(1,:)))/nx:max(c2_boundary(1,:));
+yc = min(c2_boundary(2,:)):(max(c2_boundary(2,:))-min(c2_boundary(2,:)))/ny:max(c2_boundary(2,:));
+Xc = (xc(1:end-1)+xc(2:end))/2; Yc = -(yc(1:end-1)+yc(2:end))/2;
+[xx,yy] = meshgrid(Xc,Yc); X = xx(:); Y = yy(:);%[yc(1) yc(2) yc(2) yc(1)];
+
 Nb = 0;
 Floe = [];
 
@@ -30,6 +36,7 @@ for jj = 1:Ny
     for ii = 1:Nx
         if c(jj,ii)>0
             boundary = polyshape([x(ii) x(ii) x(ii+1) x(ii+1)], [y(jj) y(jj+1) y(jj+1) y(jj)]);
+            boundary = intersect(boundary,c2_boundary_poly);
             N = ceil(NumFloes*area(boundary)/area(c2_boundary_poly)/c(jj,ii));
 %             poly = intersect(bound,boundary); %Use these when having
 %             boundaries
@@ -37,10 +44,17 @@ for jj = 1:Ny
 %             boundaries
             X = 0.95*dx/2*(2*rand(N,1)-1)+(x(ii)+x(ii+1))/2;
             Y = 0.95*dy/2*(2*rand(N,1)-1)+(y(jj)+y(jj+1))/2;
-            [~, b,~,~,~] = polybnd_voronoi([X Y],boundary.Vertices);
+            in = inpolygon(X,Y,boundary.Vertices(:,1),boundary.Vertices(:,2));
+            X = X(in); Y = Y(in);
+%             for i = 1:2%nx
+%                 X = [(-1)^i*dx/2 (-1)^i*dx/2 0 0];%xx(:,i:i+1); X = X(:);
+%                 Y = [-dy/2 dy/2 dy/2 -dy/2];%Y = yy(:,i:i+1); Y = Y(:);
+%                 b{i} = [X',Y'];
+%             end
+           [~, b,~,~,~] = polybnd_voronoi([X Y],boundary.Vertices);
 %             [~, b,~,~,~] = polybnd_voronoi([X Y],boundary.Vertices); %%Use these when having
 %             boundaries
-            Nf = randperm(length(b));
+            Nf = 1:length(b);%randperm(length(b));
             Atot = 0;
             count = 1;
             while Atot/area(boundary)<=c(jj,ii)
@@ -48,11 +62,11 @@ for jj = 1:Ny
                     poly = polyshape(b{Nf(count)});
                     floenew = initialize_floe_values(poly,height);
                     Floe = [Floe floenew];
-                    count = count+1;
                     Atot = Atot+area(poly);
-                    if count > length(Nf)
-                        Atot = area(boundary)+1;
-                    end
+                end
+                count = count+1;
+                if count > length(Nf)
+                    Atot = area(boundary)+1;
                 end
             end
         end
