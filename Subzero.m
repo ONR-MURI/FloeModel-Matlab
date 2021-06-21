@@ -24,7 +24,7 @@ h0 = 0.1; %thickness of ice that gets packed in
 nDTpack = 50;
 
 %Define 10m winds
-winds=[10 10];
+winds=[0 0];
 
 %Define boundaries
 c2_boundary=initialize_boundaries();
@@ -55,7 +55,7 @@ nSnapshots=1000; %Total number of model snapshots to save
 
 nDT=nDTOut*nSnapshots; %Total number of time steps
 
-nPar = 4; %Number of workerks for parfor
+nPar = 6; %Number of workerks for parfor
 parpool(nPar)
 
 target_concentration=1;
@@ -147,6 +147,8 @@ while im_num<nSnapshots
         save(['./Floes/Floe' num2str(im_num,'%07.f') '.mat'],'Floe');
         
         im_num=im_num+1;  %image number for saving data and coarse vars;
+        
+        ocean.Uocn = -ocean.Uocn; ocean.Vocn = -ocean.Vocn;
     end
 
     if PACKING && h0 > 0

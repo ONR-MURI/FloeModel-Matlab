@@ -118,6 +118,11 @@ for p=1:length(a)
     FloeNEW.collision_torque = 0;
     FloeNEW.OverlapArea = 0;
     
+    if FloeNEW.h/floe.h-1 > 0.01
+        xx = 1;
+        xx(1) = [1 2];
+    end
+    
     Floes = [Floes FloeNEW];
     clear FloeNEW
 end

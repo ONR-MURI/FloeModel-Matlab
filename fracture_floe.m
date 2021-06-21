@@ -67,6 +67,10 @@ for kk=1:length(Floe)
             FloeNEW.Fy = floe.Fy*area(a(p))/floe.area;
             
             Floes = [Floes FloeNEW];
+            if FloeNEW.h/floe.h-1 > 0.01
+                xx = 1;
+                xx(1) = [1 2];
+            end
             clear FloeNEW
         end
         

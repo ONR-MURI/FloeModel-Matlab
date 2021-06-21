@@ -181,6 +181,10 @@ else
             
             A_rot=[cos(floe.alpha_i) -sin(floe.alpha_i); sin(floe.alpha_i) cos(floe.alpha_i)]; %rotation matrix
             floe.c_alpha=A_rot*floe.c0; %rotate floe contour
+            
+            
+            Fx = mean(Fx(floe_mask))/floe_mass;
+            Fy = mean(Fy(floe_mask))/floe_mass;
         else
             fracture = 1; % if large stress then designate floe to fracture releasing energy
         end
@@ -192,8 +196,7 @@ if isnan(floe.Ui) || isnan(floe.ksi_ice) || isnan(floe.Vi) || isinf(floe.ksi_ice
     xx(1) = [1 2];
 end
 
-Fx = mean(Fx(floe_mask))/floe_mass;
-Fy = mean(Fy(floe_mask))/floe_mass;
+
 end
 
 

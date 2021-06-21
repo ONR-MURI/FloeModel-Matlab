@@ -110,7 +110,6 @@ for i=1:N  %do interactions with boundary in a separate parfor loop
     
 end
 
-weld = zeros(length(Floe),1);
 kill = zeros(1,N0);
 parfor i=1:N  %now the interactions could be calculated in a parfor loop!
         

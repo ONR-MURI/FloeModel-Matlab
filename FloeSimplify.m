@@ -113,20 +113,21 @@ if sum(cat(1,floes.mass))/floe.mass-1 > 1e-3
     xx(1) = [1 2];
 end
 h = cat(1,floes.h);
-if max(h)/floe.h-1 > 0.01
+if max(h)/floe.h-1 > 0.02
     xx = 1;
     xx(1) = [1 2];
 end
+
 % for ii = 1:length(floes)
 %     if isempty(floes(ii).SubFloes.inertia)
 %         xx=1;
 %         xx(1) = [1 2];
 %     end
 % end
-if abs(floe.area/sum(cat(1,floes.area))-1)>0.05
-    xx = 1;
-    xx(1) =[1 2];
-end
+% if abs(floe.area/sum(cat(1,floes.area))-1)>0.05
+%     xx = 1;
+%     xx(1) =[1 2];
+% end
 for ii = 1:length(floes)
     if abs(floes(ii).area/area(polyshape(floes(ii).c_alpha'))-1)>1e-3
         xx = 1;
