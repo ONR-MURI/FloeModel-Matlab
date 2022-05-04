@@ -3,15 +3,15 @@ close all; clear all;
 paths
 %% Set Flags
 
-RIDGING=true; 
+RIDGING=false; 
 
-FRACTURES=true;
+FRACTURES=false;
 
-PERIODIC=true;
+PERIODIC=false;
 
-PACKING = true;
+PACKING = false;
 
-WELDING = true;
+WELDING = false;
 
 CORNERS = true;
 
@@ -19,7 +19,7 @@ COLLISION = true;
 
 AVERAGE = false;
 
-RAFTING = true;
+RAFTING = false;
 
 KEEP_MIN = true;
 
@@ -112,7 +112,7 @@ Xc = (xc(1:end-1)+xc(2:end))/2; Yc = -(yc(1:end-1)+yc(2:end))/2;
 dissolvedNEW=zeros(Ny,Nx);
 
 %Initiailize Eulearian Data
-[eularian_data] = calc_eulerian_stress2(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIODIC);
+[eulerian_data] = calc_eulerian_data(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIODIC);
 Vd = zeros(Ny,Nx,2);
 Vdnew=zeros(Ny, Nx);
 SigXX = zeros(Ny, Nx); SigYX = zeros(Ny, Nx);
@@ -135,7 +135,7 @@ Amax = max(A);
 
 %% Initialize time and other stuff to zero
 if isempty(dir('figs')); disp('Creating folder: figs'); mkdir('figs'); end
-if isempty(dir('FloesS2')); disp('Creating folder: FloesS2'); mkdir('FloesS2'); end
+if isempty(dir('Floes')); disp('Creating folder: Floes'); mkdir('Floes'); end
 
 if ~exist('Time','var')
     Time=0;
@@ -221,7 +221,7 @@ while im_num<nSnapshots
     if mod(i_step,nDTOut)==0  %plot the state after a number of timesteps
         
 
-        [eularian_data] = calc_eulerian_stress2(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIODIC);
+        [eulerian_data] = calc_eulerian_data(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIODIC);
         if ifPlot
             [fig] =plot_basic(fig, Time,Floe,ocean,c2_boundary_poly,Nb,PERIODIC);
 %              saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
@@ -241,16 +241,16 @@ while im_num<nSnapshots
             Sig = Sig/fix(nDTOut); 
             mass = mass/fix(nDTOut);
         else
-            SigXXa = squeeze(eularian_data.stressxx); SigYXa = squeeze(eularian_data.stressyx);
-            SigXYa = squeeze(eularian_data.stressxy); SigYYa = squeeze(eularian_data.stressyy);
+            SigXXa = squeeze(eulerian_data.stressxx); SigYXa = squeeze(eulerian_data.stressyx);
+            SigXYa = squeeze(eulerian_data.stressxy); SigYYa = squeeze(eulerian_data.stressyy);
             DivSigXa = DSigX; DivSig1a = DSig1;
             DivSigYa = DSigY; DivSig2a = DSig2;
-            Eux = squeeze(eularian_data.strainux); Evx = squeeze(eularian_data.strainvx);
-            Euy = squeeze(eularian_data.strainuy); Evy = squeeze(eularian_data.strainvy);
-            U = U+squeeze(eularian_data.u);V = V+squeeze(eularian_data.v);
-            dU = dU+squeeze(eularian_data.du);dV = dV+squeeze(eularian_data.dv);
-            Fx = Fx+squeeze(eularian_data.force_x);Fy = Fy+squeeze(eularian_data.force_x);
-            Sig = Sig+squeeze(eularian_data.stress);
+            Eux = squeeze(eulerian_data.strainux); Evx = squeeze(eulerian_data.strainvx);
+            Euy = squeeze(eulerian_data.strainuy); Evy = squeeze(eulerian_data.strainvy);
+            U = U+squeeze(eulerian_data.u);V = V+squeeze(eulerian_data.v);
+            dU = dU+squeeze(eulerian_data.du);dV = dV+squeeze(eulerian_data.dv);
+            Fx = Fx+squeeze(eulerian_data.force_x);Fy = Fy+squeeze(eulerian_data.force_x);
+            Sig = Sig+squeeze(eulerian_data.stress);
         end
         
                 
@@ -294,7 +294,7 @@ while im_num<nSnapshots
     
     
     if mod(i_step,nDTOut)==0
-        save(['./FloesS2/Floe' num2str(im_num,'%07.f') '.mat'],'Floe','eularian_data','SigXXa','SigXYa', 'SigYYa','DivSigXa','DivSigYa','DivSig1a','DivSig2a','U','dU','Fx','mass');
+        save(['./Floes/Floe' num2str(im_num,'%07.f') '.mat'],'Floe','eulerian_data','SigXXa','SigXYa', 'SigYYa','DivSigXa','DivSigYa','DivSig1a','DivSig2a','U','dU','Fx','mass');
         SigXX = zeros(Ny, Nx); SigYX = zeros(Ny, Nx);
         SigXY = zeros(Ny, Nx); SigYY = zeros(Ny, Nx);
         DivSigX = zeros(Ny, Nx); DivSig1 = zeros(Ny, Nx);
@@ -317,17 +317,17 @@ while im_num<nSnapshots
 
     
     if AVERAGE
-        [eularian_data] = calc_eulerian_stress2(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIODIC);
-        SigXX = SigXX+squeeze(eularian_data.stressxx); SigYX = SigYX+squeeze(eularian_data.stressyx);
-        SigXY = SigXY+squeeze(eularian_data.stressxy); SigYY = SigYY+squeeze(eularian_data.stressyy);
-        Eux = Eux+squeeze(eularian_data.strainux); Evx = Evx+squeeze(eularian_data.strainvx);
-        Euy = Euy+squeeze(eularian_data.strainuy); Evy = Evy+squeeze(eularian_data.strainvy);
-        U = U+squeeze(eularian_data.u);V = V+squeeze(eularian_data.v);
-        dU = dU+squeeze(eularian_data.du);dV = dV+squeeze(eularian_data.dv); 
-        Fx = Fx+squeeze(eularian_data.force_x);Fy = Fy+squeeze(eularian_data.force_y);
-        Sig = Sig+squeeze(eularian_data.stress);
-        mass = mass+squeeze(eularian_data.Mtot);
-        [DSig1, DSig2, DSigX, DSigY] = Calc_Stress(eularian_data,dt, c2_boundary);
+        [eulerian_data] = calc_eulerian_data(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIODIC);
+        SigXX = SigXX+squeeze(eulerian_data.stressxx); SigYX = SigYX+squeeze(eulerian_data.stressyx);
+        SigXY = SigXY+squeeze(eulerian_data.stressxy); SigYY = SigYY+squeeze(eulerian_data.stressyy);
+        Eux = Eux+squeeze(eulerian_data.strainux); Evx = Evx+squeeze(eulerian_data.strainvx);
+        Euy = Euy+squeeze(eulerian_data.strainuy); Evy = Evy+squeeze(eulerian_data.strainvy);
+        U = U+squeeze(eulerian_data.u);V = V+squeeze(eulerian_data.v);
+        dU = dU+squeeze(eulerian_data.du);dV = dV+squeeze(eulerian_data.dv); 
+        Fx = Fx+squeeze(eulerian_data.force_x);Fy = Fy+squeeze(eulerian_data.force_y);
+        Sig = Sig+squeeze(eulerian_data.stress);
+        mass = mass+squeeze(eulerian_data.Mtot);
+        [DSig1, DSig2, DSigX, DSigY] = Calc_Stress(eulerian_data,dt, c2_boundary);
         DivSigX = DivSigX+DSigX; DivSig1 = DivSig1+DSig1;
         DivSigY = DivSigY+DSigY; DivSig2 = DivSig2+DSig2;
     end
