@@ -1,4 +1,4 @@
-function [Floe1,Floe2] = rafting(Floe1,Floe2,c2_boundary_poly,PERIODIC,min_floe_size)
+function [Floe1,Floe2] = raft(Floe1,Floe2,c2_boundary_poly,PERIODIC,min_floe_size)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 poly1 = simplify(polyshape(Floe1.c_alpha'+[Floe1.Xi Floe1.Yi]));
