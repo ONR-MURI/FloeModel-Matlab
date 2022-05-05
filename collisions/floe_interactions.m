@@ -17,7 +17,7 @@ elseif r1>1e5 || r2>1e5
     Force_factor=Modulus*h1/r1;
 end
 nu = 0.3;
-G = Modulus/(2*(1+nu)); mu = 0.75;
+G = Modulus/(2*(1+nu)); mu = 0.2;%0.75;
 gam = 0;
 c1=[floe1.c_alpha(1,:)+floe1.Xi; floe1.c_alpha(2,:)+floe1.Yi];
 if isfield(floe2,'c')
@@ -170,7 +170,8 @@ else
         force_t = -dot(dir_t,v_t)*dl*G*vecnorm(v_t)*dir_t*dt;
 
         if vecnorm(force_t)>mu*vecnorm(force)
-            force_t = -dot(dir_t,v_t)*mu*vecnorm(force)*dir_t;
+            force_t = -mu*vecnorm(force)*dir_t;
+%            force_t = -dot(dir_t,v_t)*mu*vecnorm(force)*dir_t;
         end
         gam(k) = vecnorm(force)/vecnorm(force_t);
         
