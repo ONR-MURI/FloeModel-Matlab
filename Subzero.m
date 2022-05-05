@@ -21,9 +21,9 @@ AVERAGE = false;
 
 RAFTING = false;
 
-KEEP_MIN = true;
+KEEP_MIN = false;
 
-ifPlot = false; %Plot floe figures or not?
+ifPlot = true; %Plot floe figures or not?
 
 ifPlotStress = false;
 
@@ -56,7 +56,7 @@ uright = 0; uleft = 0;
 min_floe_size = 4*Lx*Ly/10000;
 
 %Initialize Floe state
-target_concentration = 0.75;
+target_concentration = 1;
 [Floe, Nb] = initial_concentration(c2_boundary,target_concentration,height,10,min_floe_size);
 if Nb >0
     polyboundary = union([Floe(1:Nb).poly]);
@@ -223,7 +223,7 @@ while im_num<nSnapshots
 
         [eulerian_data] = calc_eulerian_data(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIODIC);
         if ifPlot
-            [fig] =plot_basic(fig, Time,Floe,ocean,c2_boundary_poly,Nb,PERIODIC);
+            [fig] = plot_basic(fig, Time,Floe,ocean,c2_boundary_poly,Nb,PERIODIC);
 %              saveas(fig,['./figs/' num2str(im_num,'%03.f') '.jpg'],'jpg');
         end
         
