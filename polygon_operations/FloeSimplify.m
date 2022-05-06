@@ -39,7 +39,7 @@ SimpMin = @(A) log10(A)^3.5;
 %Create new simplified polyshape
 floenew = floe;
 floenew.poly = polyshape(floenew.c_alpha'+[floenew.Xi floenew.Yi]);
-[vertx,verty] = reducem(floe.c0(1,:)',floe.c0(2,:)',1000);
+[vertx,verty] = reduceVerts(floe.c0(1,:)',floe.c0(2,:)',1000);
 pnew = polyshape(vertx, verty);
 if ~isempty(polyboundary)
     pnew = subtract(pnew,polyboundary); 
