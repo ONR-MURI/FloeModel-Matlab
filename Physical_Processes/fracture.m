@@ -1,9 +1,11 @@
 function [Floe,Princ] = fracture(Floe,Nb,min_floe_size,concentration)
-%UNTITLED Summary of this function goes here
+%basic isotropic fracture mechanism is implemented based on the stress experienced by 
+%floes and fractures a floe into a defined number of smaller pieces when the 
+%principal stress values satisfy the specified fracture criteria
 
 A = cat(1,Floe.area);
 
-%   Use Hibler's Ellipse
+%   elliptical yield curve that was used in Hibler viscous-plastic rheology
 Pstar = 2.25e5; C = 20;
 h = mean(cat(1,Floe.h));
 P = Pstar*h*exp(-C*(1-concentration));
@@ -24,6 +26,7 @@ MohrX = [Sig1; Sig11; Sig22];
 MohrY = [Sig2; Sig22; Sig11];
 Mohr = polyshape(-MohrX,-MohrY);
 
+%Calculate Principal Stresses
 for ii = 1:length(Floe)
     Stress = eig(Floe(ii).Stress);
     Princ(ii,1) = max(Stress);
@@ -31,13 +34,16 @@ for ii = 1:length(Floe)
     Princ(ii,3) = Floe(ii).area;
 end
 Princ1 = Princ(:,1); Princ2 = Princ(:,2);
-[in,~] = inpolygon(Princ1,Princ2,Mohr.Vertices(:,1), Mohr.Vertices(:,2));
 
+%Determine if stresses are inside or outside allowable regions
+[in,~] = inpolygon(Princ1,Princ2,Mohr.Vertices(:,1), Mohr.Vertices(:,2));
 keep = zeros(length(Floe),1);
 keep(in) = 1;
 keep(A<min_floe_size)=1;
 keep(1:Nb) = ones(Nb,1);
 keep = logical(keep);
+
+%Fracture those floes
 for ii = 1:length(Floe)
     FracFloes(ii).floenew = [];
 end

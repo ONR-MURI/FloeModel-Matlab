@@ -10,6 +10,8 @@ Floes=[]; rho_ice = 920;
 [~,~,Nz] = size(Floe0(1).StressH);
 
 for kk=1:length(Floe)
+    
+    %Slight permanent deformation to floe upon fracture
     floe = Floe(kk);
     a = floe.interactions;
     XInew = [];

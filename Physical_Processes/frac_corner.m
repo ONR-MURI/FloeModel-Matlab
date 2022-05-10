@@ -1,10 +1,7 @@
 function [Floes] = frac_corner(floe,grind,poly)
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
+%Break off a corner of a floe
 id ='MATLAB:polyshape:repairedBySimplify';
 warning('off',id)
-% id3 ='MATLAB:polyshape:boundary3Points';
-% warning('off',id3)
 
 
 rho_ice = 920;
@@ -17,9 +14,14 @@ if length(angs) < length(angles(grind)) && grind(1)==1 && grind(end) == 1
     grind(end) = 0;
 end
 alph = min(angles);
+
+%Break off corners that were determined that needed breaking
 for jj = 1:length(grind)
     if grind(jj)
         ii = jj;
+        
+        %Figure out where along the side to break off and create new
+        %polyshapes
         if ii>1 && ii<length(poly.Vertices)
             X = poly.Vertices(ii-1:ii+1,1); Y = poly.Vertices(ii-1:ii+1,2);
         elseif ii == 1
@@ -83,6 +85,8 @@ for jj = 1:length(grind)
         Mtot = floe.mass*Atot/area(polyshape(floe.c_alpha'));
         a = poly2;
         
+        
+        %Initialize the values for the new floes
         for p=1:length(a)
             FloeNEW.poly = rmholes(a(p));
             [Xi,Yi] = centroid(FloeNEW.poly);

@@ -1,39 +1,97 @@
-function [Floe] = corners(Floe,Nb)
-%UNTITLED4 Summary of this function goes here
-%   Detailed explanation goes here
+function [Floe] = corners(Floe,Nb,Floe0,c2_boundary)
+%Observations of older floe fields show a tendency to form rounder shapes through 
+%repeated interactions with other floes. The corner grinding mechanism uses the 
+%contact overlap areas to determine whether a floe could have its corner fractured
 id ='MATLAB:polyshape:repairedBySimplify';
 warning('off',id)
 id3 ='MATLAB:polyshape:boundary3Points';
 warning('off',id3)
 
-x=cat(1,Floe.Xi);
-y=cat(1,Floe.Yi);
-N0 = length(Floe);
+Lx= max(c2_boundary(1,:));
+Ly= max(c2_boundary(2,:));
+
+%Create ghost floes
+ghostFloeX=[];
+ghostFloeY=[];
+
+x=cat(1,Floe0.Xi);
+y=cat(1,Floe0.Yi);
+alive=cat(1,Floe0.alive);
+
+for i=1:length(Floe0)
+    poly = polyshape(Floe0(i).c_alpha'+[x(i) y(i)]);
+    if alive(i) && (max(abs(poly.Vertices(:,1)))>Lx)
+        
+        ghostFloeX=[ghostFloeX  Floe0(i)];
+        ghostFloeX(end).Xi=Floe0(i).Xi-2*Lx*sign(x(i));
+        
+    end   
+    
+end
+
+Floe0=[Floe0 ghostFloeX];
+
+x=cat(1,Floe0.Xi);
+y=cat(1,Floe0.Yi);
+alive=cat(1,Floe0.alive);
+
+for i=1:length(Floe0)
+    poly = polyshape(Floe0(i).c_alpha'+[x(i) y(i)]);
+    if alive(i) && (max(abs(poly.Vertices(:,2)))>Ly)
+        
+        ghostFloeY=[ghostFloeY  Floe0(i)];
+        ghostFloeY(end).Yi=Floe0(i).Yi-2*Ly*sign(y(i));
+        
+    end
+    
+end
+
+Floe0=[Floe0 ghostFloeY];
+    
+
+N0 = length(Floe0);
 floenew = [];
 KeepF = ones(length(Floe),1);
 for ii = 1+Nb:length(Floe)
     if ~isempty(Floe(ii).interactions)
+        %Identify which vertices are interacting with other floes to see if
+        %it is eligible to be fractured off
         inter = Floe(ii).interactions(:,1);
         Xi = Floe(ii).interactions(inter<=N0,4);
         Yi = Floe(ii).interactions(inter<=N0,5);
-        d = sqrt((Xi-Floe(ii).Xi).^2-(Yi-Floe(ii).Yi).^2);
         
         poly = polyshape(Floe(ii).c_alpha');
         polytrue = polyshape(Floe(ii).c_alpha'+[Floe(ii).Xi, Floe(ii).Yi]);
-        if poly.NumRegions == 1 && poly.NumHoles == 0
+        if poly.NumRegions == 1 && poly.NumHoles == 0 
             if norm(poly.Vertices(1,:)-poly.Vertices(end,:)) == 0
                 poly.Vertices(end,:) = [];
             end
             angles = polyangles(poly.Vertices(:,1),poly.Vertices(:,2));
-            Anorm = 180;%180-360/length(angles);
+            Anorm = 180-360/length(angles);%180;%
             break1=(rand(length(angles),1)>angles/Anorm);
             da = zeros(length(angles),1);
             [break2,~] = dsearchn(polytrue.Vertices,[Xi Yi]);
+            in = zeros(length(polytrue.Vertices),1);
+            bnd = max(isinf(inter));
+            inter2 = inter(~isinf(inter));
+            inter2(inter2>N0) = [];
+            for jj = 1:length(inter2)
+                c0 = Floe0(inter2(jj)).c_alpha'+[Floe0(inter2(jj)).Xi Floe0(inter2(jj)).Yi];
+                [inn,~] = inpolygon(polytrue.Vertices(:,1),polytrue.Vertices(:,2),c0(:,1),c0(:,2));
+                in = in+inn;
+            end
+            if bnd
+                [inn,~] = inpolygon(polytrue.Vertices(:,1),polytrue.Vertices(:,2),c2_boundary(1,:)',c2_boundary(2,:)');
+                in = in+~inn;
+            end
+            da(in>0) = 1;    
             da(break2) = 1;
             
+            %Identify which corners to break
             grind = logical(break1 + da==2);
             
-            if sum(grind)>0
+            %fracture off those corners
+            if sum(grind)>1
                 KeepF(ii) = 0;
                 fracturedFloes = frac_corner(Floe(ii),grind,poly);
                 floenew=[floenew fracturedFloes];

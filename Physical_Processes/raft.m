@@ -1,6 +1,6 @@
 function [Floe1,Floe2] = raft(Floe1,Floe2,c2_boundary_poly,PERIODIC,min_floe_size)
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+%Rafting process which allows sea ice can transfer mass from one floe to another
+
 poly1 = simplify(polyshape(Floe1.c_alpha'+[Floe1.Xi Floe1.Yi]));
 poly2 = simplify(polyshape(Floe2.c_alpha'+[Floe2.Xi Floe2.Yi]));
 Floe1.poly = poly1; Floe2.poly = poly2;

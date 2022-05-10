@@ -1,4 +1,4 @@
-function [Floe] = weld(Floe,Nb,dhdt,c2_boundary,maxWeld,Nx,Ny)
+function [Floe] = weld(Floe,Nb,Fweld,c2_boundary,maxWeld,Nx,Ny)
 %%This function takes in two floe field and based upon a specified
 %%probability function welds interacting floes together
 
@@ -52,6 +52,7 @@ if sum(Bino)>0
     FloeOut = Floe(Bino);
 end
 
+%Idenfity potential floes to weld with
 parfor ii = 1:length(FloeBin)
     FloeBin(ii).floenew = [];
     Xi=cat(1,FloeBin(ii).Floe.Xi);
@@ -91,20 +92,22 @@ for kk = 1:length(FloeBin)
     Floe = FloeBin(kk).Floe;
     for i = 1:length(Floe)
         if Floe(i).alive && ~isempty(Floe(i).potentialInteractions) && Floe(i).area <maxWeld
+            %Identify potential floes to weld with
             c = unique(cat(1,Floe(i).potentialInteractions.floeNum));
             c = c(c<length(Floe));
             c = c(c>i);
             A = cat(1,Floe(i).potentialInteractions.area);
             if ~isempty(c)
+                %Find overlapping area between floes
                 OverlapA = area(intersect(Floe(i).poly,[Floe(c).poly]));
-                OverlapA(A>maxWeld) = 0;
+                OverlapA(A>maxWeld) = 0; %Weld floes can only take up a certain part of computational domain so exclude any that exceed this threshold
                 if max(OverlapA)>0
                     live = 0;
+                    %Find if any floes meet criteria to weld together
                     p = rand(1,length(OverlapA));
-                    weldp = dhdt*OverlapA/Floe(i).area;
-                    weld = max(weldp(weldp>p));
-                    %If probability is met then weld them together
-                    if ~isempty(weld)%p <dhdt*OverlapA/Floe(i).area %ramp((1-frac)^5*dhdt)
+                    weldp = Fweld*OverlapA/Floe(i).area;
+                    weld = max(weldp(weldp>p)); 
+                    if ~isempty(weld)
                         [~,k]=min(abs(weldp-weld));
                         j = c(k);
                         live = Floe(j).alive;
@@ -113,12 +116,15 @@ for kk = 1:length(FloeBin)
                     end
                     if live && ~isempty(j)
                         if area(union(Floe(i).poly,Floe(j).poly)) < Atotal/5 && area(union(Floe(i).poly,Floe(j).poly)) > 2e4                            
-                            floe = Fuse_Floes(Floe(i),Floe(j));
+                            floe = Fuse_Floes(Floe(i),Floe(j)); %If probability is met then weld them together
                             if length(floe)>1
                                 FloeBin(kk).floenew =[FloeBin(kk).floenew floe(2:length(floe))];
                                 floe = floe(1);
                             end
                             
+                            %Set one of the two floes to be removed from
+                            %the simulation. Also see if this welding
+                            %together needs to subsume any other floes.
                             FloeNums1 = cat(1,Floe(i).potentialInteractions.floeNum);
                             FloeNums1(FloeNums1 == j) = [];
                             FloeNums2 = cat(1,Floe(j).potentialInteractions.floeNum);
@@ -163,6 +169,7 @@ for kk = 1:length(FloeBin)
     end
     FloeBin(kk).Floe = Floe;
 end
+%Remove floes designated to be booted from the simulation
 Floe = Fbound;
 floenew = [];
 for ii = 1:length(FloeBin)

@@ -1,4 +1,4 @@
-function [Floe,Vd] = create_new_ice(Floe,c2_boundary,dhdt,Vd,target,ocean, height, min_floe_size, PERIODIC,Nx,Ny,Nb)
+function [Floe,Vd] = create_new_ice(Floe,c2_boundary,dhdt,Vd,target, height, min_floe_size, PERIODIC,Nx,Ny,Nb)
 %% This function takes in the existing floe state and creates new thin floes in the open space to match the input target concentration
 id = 'MATLAB:polyshape:tinyBoundaryDropped';
 warning('off',id);
@@ -80,7 +80,7 @@ r_max = sqrt((dx/2)^2+(dy/2)^2);
 rmax = cat(1,Floe.rmax);
 potentialInteractions = zeros(Ny,Nx,length(Floe));
 
-
+%Identfy which floes are potentially within the subgrids
 for kk = 1:length(Floe)
     Floe(kk).poly = polyshape(Floe(kk).c_alpha'+[Floe(kk).Xi Floe(kk).Yi]);
     pint = sqrt((xx-xf(kk)).^2+(yy-yf(kk)).^2)-(rmax(kk)+r_max);
@@ -98,7 +98,7 @@ for j = 1:Nx*Ny
     kill(j).floes = [];
     floe2(j).floe = [];
 end
-parfor j = 1:Nx*Ny
+parfor j = 1:Nx*Ny && dhdt > 0
 
     count = 1;
     
@@ -162,11 +162,13 @@ parfor j = 1:Nx*Ny
                 if subfloes(iii).NumHoles > 0
                     hnew.mean = area(subfloes(iii))*height.mean/area(polyFull(jjj));
                     hnew.delta = height.delta;
-                    floe2(j).floe = initialize_floe_values(polyFull(jjj),hnew);
+                    floe2(j).floe = initialize_floe_values(polyFull(jjj),hnew); %create new floe
                 else
-                    floe2(j).floe = initialize_floe_values(polyFull(jjj),height);
+                    floe2(j).floe = initialize_floe_values(polyFull(jjj),height); %create new floe
                 end
                 
+                %floes can not have holes in them so find which floes from
+                %simulation are in those holes and weld together
                 if subfloes(iii).NumHoles > 0
                     poly2 = rmholes(floe2(j).floe.poly);
                     live = cat(1,Floe.alive);
@@ -185,6 +187,8 @@ parfor j = 1:Nx*Ny
                             end
                         end
                         in(in<Nb+1) = [];
+                        %if it is a boundary floe that is causing hole then
+                        %split floe through the middle of that boundary
                         if ~isempty(boundaryFloe)
                             subnew = [];
                             for kk = 1:length(boundaryFloe)
@@ -249,6 +253,9 @@ parfor j = 1:Nx*Ny
     end
     
 end
+
+%Remove any floes that were determined to need to be removed from
+%simulation
 Floe=Floe(1:N0);
 killFloes = [];
 floenew = [];
