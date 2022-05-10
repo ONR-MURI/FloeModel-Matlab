@@ -6,6 +6,7 @@ warning('off',id2)
 id3 ='MATLAB:polyshape:boundary3Points';
 warning('off',id3)
 
+% Calculate equivalent spring constants and shear modulus
 h1 = floe1.h; h2 = floe2.h;
 r1 = sqrt(floe1.area); r2 = sqrt(floe2.area);
 Force_factor=Modulus*(h1*h2)/(h1*r2+h2*r1); overlap = 0;
@@ -19,6 +20,8 @@ end
 nu = 0.3;
 G = Modulus/(2*(1+nu)); mu = 0.2;%0.75;
 gam = 0;
+
+%Check if floes are actually overlapping
 c1=[floe1.c_alpha(1,:)+floe1.Xi; floe1.c_alpha(2,:)+floe1.Yi];
 if isfield(floe2,'c')
     c2=floe2.c;
@@ -47,7 +50,7 @@ else
     end
 end
 
-
+%If floes are overlapping to much set to merge into one floe
 if  (max(c1(1,:))<max(c2_boundary(1,:)) && min(c1(1,:))>min(c2_boundary(1,:)) && max(c1(2,:))<max(c2_boundary(2,:)) && min(c1(2,:))>min(c2_boundary(2,:))|| floe2.area<0.95*area(polyshape(c2_boundary')) || PERIODIC) 
     if sum(Ar)/floe1.area > 0.55
         overlap = Inf;
@@ -63,6 +66,7 @@ if norm(c2(:,1)-c2(:,end))> 1
     c2(:,length(c2)+1) = c2(:,1);
 end
 
+% Calculate interaction forces
 P=InterX(c1,c2);
 if isempty(P) || size(P,2)<2 || isinf(overlap) || isempty(Xi)
     force_1=[0 0];
@@ -70,6 +74,7 @@ if isempty(P) || size(P,2)<2 || isinf(overlap) || isempty(Xi)
     pcontact=[0 0];    
 else
     
+    %Find number of overlapping regions
     N1 = length(c1)-1; N2 = length(c2)-1;
     Amin =  min([N1,N2])*100/1.75;
     if abs(length(Ar)-length(Xi)) > 0
@@ -86,6 +91,7 @@ else
         
     for k=1:N_contact
         
+        %Identify contact points
         X = Xi{k}; Y = Yi{k};
         poly = polyshape(X,Y);
         [cx, cy] = centroid(poly);
@@ -93,6 +99,7 @@ else
         p = [X(verts(dist<1),:) Y(verts(dist<1),:)];
         [m,~] = size(p);
         
+        %Caclulate normal forces
         if Ar(k) == 0
             force_dir = [0; 0];
             pcontact(k,:) = [0, 0];
@@ -129,6 +136,7 @@ else
             pcontact(k,:) = [cx, cy];
         end
 
+        %Find direction of force
         [mf,nf] = size(force_dir);
         if dl < 0.1
             force_dir = [0; 0];
@@ -158,7 +166,7 @@ else
         
         force=force_dir*Ar(k)*Force_factor; %proportional to the overlap area
         
-        
+        % Calculate tangential forces
         v1 = ([floe1.Ui floe1.Vi]+ floe1.ksi_ice*(pcenter(k,:)-[floe1.Xi floe1.Yi]));
         v2 = ([floe2.Ui floe2.Vi]+ floe2.ksi_ice*(pcenter(k,:)-[floe2.Xi floe2.Yi]));
         v_t = (v1-v2);
