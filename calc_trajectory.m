@@ -1,9 +1,11 @@
-function [floe, fracture,FxOA,FyOA] =calc_trajectory(dt,ocean,winds,floe,HFo, doInt,c2_boundary,ubound,ucell,floenum)
-floe0 = floe;
+function [floe,FxOA,FyOA] =calc_trajectory(dt,ocean,winds,floe,HFo, doInt)
 
 ext_force=floe.collision_force;
 ext_torque=floe.collision_torque;
 HFo = mean(HFo(:));
+
+%Calcualte the current stress from floe interactions at this time step and
+%average with existing
 if ~isempty(floe.interactions)
     a=floe.interactions;
     r=[floe.Xi floe.Yi];
@@ -19,10 +21,10 @@ if ~isempty(floe.interactions)
 end
 
 if length(ext_force) == 1
-    xx = 1; xx(1) =[1 2];
     ext_force = [0 0];
 end
 
+%Bound values from being to large or small
 if floe.h > 10
     floe.h = 10;
 elseif floe.mass<100
@@ -35,26 +37,16 @@ while max((abs(ext_force))) > floe.mass/(5*dt)
     if ~isempty(floe.interactions); a = a/10; end
 end
 
-if  floe.rmax+abs(floe.Xi)>max(c2_boundary(1,:))
-    force_stick = 0;
-    ustick = sign(floe.Xi)*ubound;
-else
-    force_stick = 0;
-end
-
 Xo=ocean.Xo;
 Yo=ocean.Yo;
 Uocn=ocean.Uocn;
 Vocn=ocean.Vocn;
 dXo=Xo(2)-Xo(1);
-fracture = 0;
 
 Xi=floe.Xi;
 Yi=floe.Yi;
-Fx = 0; Fy = 0;
 
 % ice-ocean parameters
-
 rho_ice=920; % kg/m3
 rho0=1027;   % ocean density
 Cd=3e-3;
@@ -71,6 +63,8 @@ floe_area=floe.area;
 floe_mass=floe.mass; % total mass
 h = floe.h;
 floe_inertia_moment=floe.inertia_moment; % moment of inertia
+
+%% update values based upon thermodynamic growth
 dh = HFo*dt./h;
 floe_mass = (h-dh)./h.*floe_mass; floe.mass = floe_mass;
 floe_inertia_moment = (h-dh)./h.*floe_inertia_moment;
@@ -78,19 +72,17 @@ floe.inertia_moment = floe_inertia_moment;
 floe.h = h-dh;
 R_floe=sqrt(2)*floe.rmax;
 
-        if isnan(floe.Ui) || isnan(floe.ksi_ice) || isnan(floe.Vi) || isinf(floe.ksi_ice)
-            xx =1 ;
-            xx(1) = [1 2];
-        end
+%% atmospheric winds
+Uwinds=winds.u; 
+Vwinds=winds.v; 
 
-%%
-Uwinds=winds.u; % atmospheric winds
-Vwinds=winds.v; % constant here
 
-if isnan(floe.Xi), disp('Ice floe sacked: out of ocean grid bounds!'); save('FloeFtraj.mat','floe');xx = 1; xx(1) = [1 2]; floe=[];
+%% Update trajectory
+if isnan(floe.Xi), disp('Ice floe sacked: out of ocean grid bounds!'); floe=[];
 else
     
-
+    % Only need to update interactions with ocean on a shorter time scale
+    % so check to see if these needs done here
     if doInt.flag || isempty(floe.FxOA) || floe.h < 0.1
         x = floe.X;
         y = floe.Y;
@@ -117,6 +109,7 @@ else
         disp('Ice floe sacked: out of ocean grid bounds!'); floe=[];        
     elseif floe.alive == 1
         
+        %Calculate forces from ocean/atmospheric stresses
         if doInt.flag  || isempty(floe.FxOA) || floe.h < 0.1
             Xg = xr(1,:)+Xi; Yg = xr(2,:)+Yi;
             
@@ -170,15 +163,14 @@ else
         %the previos time steps d = 1.5*dt*(d/dt)-0.5*dt*(d/dt)_previous
         
         % updating the ice floe coordinates with velocities
-        ustick = ucell; %ucell = 0; 
-        dx =dt*ustick+ 1.5*dt*floe.Ui -0.5*dt*floe.dXi_p; dy = 1.5*dt*floe.Vi -0.5*dt*floe.dYi_p;
+        dx =1.5*dt*floe.Ui -0.5*dt*floe.dXi_p; dy = 1.5*dt*floe.Vi -0.5*dt*floe.dYi_p;
         floe.Xi=floe.Xi+dx;  floe.dXi_p=floe.Ui;
         floe.Yi=floe.Yi+dy;  floe.dYi_p=floe.Vi;
         floe.alpha_i=floe.alpha_i+1.5*dt*floe.ksi_ice-0.5*dt*floe.dalpha_i_p; floe.dalpha_i_p=floe.ksi_ice;
         
             
         % updating the ice floe velocities with mean forces and torques
-        dUi_dt=(floe.FxOA*floe_area+ext_force(1)+force_stick)/floe_mass;
+        dUi_dt=(floe.FxOA*floe_area+ext_force(1))/floe_mass;
         dVi_dt=(floe.FyOA*floe_area+ext_force(2))/floe_mass;
         frac = []; frac1 = [];frac2 = [];
         if abs(dt*dUi_dt) > 0.5*floe.h && abs(dt*dVi_dt) > 0.5*floe.h
@@ -186,19 +178,19 @@ else
             frac1 = dUi_dt/(floe.FxOA*floe_area+ext_force(1))/floe_mass;
             frac2 = dVi_dt/(floe.FyOA*floe_area+ext_force(2))/floe_mass;
             frac = min([frac1, frac2]);
-            dUi_dt=(floe.FxOA*floe_area+ext_force(1)+force_stick)/floe_mass;
+            dUi_dt=(floe.FxOA*floe_area+ext_force(1))/floe_mass;
             dVi_dt=(floe.FyOA*floe_area+ext_force(2))/floe_mass;
             dUi_dt = frac*dUi_dt; dVi_dt = frac*dVi_dt; 
         elseif abs(dt*dUi_dt) > 0.5*floe.h && abs(dt*dVi_dt) < 0.5*floe.h
             dUi_dt = sign(dUi_dt)*0.5*floe.h/dt;   
             frac = dUi_dt/(floe.FxOA*floe_area+ext_force(1))/floe_mass;
-            dUi_dt=(floe.FxOA*floe_area+ext_force(1)+force_stick)/floe_mass;
+            dUi_dt=(floe.FxOA*floe_area+ext_force(1))/floe_mass;
             dVi_dt=(floe.FyOA*floe_area+ext_force(2))/floe_mass;
             dUi_dt = frac*dUi_dt; dVi_dt = frac*dVi_dt; 
         elseif abs(dt*dUi_dt) < 0.5*floe.h && abs(dt*dVi_dt) > 0.5*floe.h
             dVi_dt = sign(dVi_dt)*0.5*floe.h/dt;
             frac = dVi_dt/(floe.FyOA*floe_area+ext_force(2))/floe_mass;
-            dUi_dt=(floe.FxOA*floe_area+ext_force(1)+force_stick)/floe_mass;
+            dUi_dt=(floe.FxOA*floe_area+ext_force(1))/floe_mass;
             dVi_dt=(floe.FyOA*floe_area+ext_force(2))/floe_mass;
             dUi_dt = frac*dUi_dt; dVi_dt = frac*dVi_dt; 
         end

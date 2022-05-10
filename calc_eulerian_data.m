@@ -1,4 +1,4 @@
-function [eulerian_data] = calc_eulerian_data(Floe,Nx,Ny,Nb,c2_boundary,dt,PERIODIC)
+function [eulerian_data] = calc_eulerian_data(Floe,Nx,Ny,Nb,c2_boundary,PERIODIC)
 %% Function to take information of all floes and average them over a corase grained area
 id = 'MATLAB:polyshape:boolOperationFailed';
 warning('off',id)
@@ -6,21 +6,6 @@ warning('off',id)
 %Identify only the live floes
 live = cat(1,Floe.alive);
 Floe(live==0)=[];
-N0 = length(Floe);
-for ii = 1:N0
-    Stress(ii) = max(abs(eig(Floe(ii).Stress)));
-    if isempty(Floe(ii).Fx)
-        Floe(ii).Fx = 0;
-        Floe(ii).Fy = 0;
-    end
-end
-[~,TF] = rmoutliers(Stress);
-for ii = 1:N0
-    if TF(ii)
-        Floe(TF(ii)).alive = 0;
-    end
-end
-clear Stress
 
 %Create ghost floes for periodic floe states
 Lx= max(c2_boundary(1,:));
@@ -42,7 +27,6 @@ if PERIODIC
             ghostFloeX(end).Xi=Floe(i).Xi-2*Lx*sign(x(i));
             
         end
-        
         
     end
     
@@ -67,7 +51,18 @@ if PERIODIC
     
 end
 
-Floe(1:Nb) = [];
+%Remove any boundary floes so they do not count towards floe averages
+if Nb > 0
+    boundaries = poly(1);
+    if Nb>1
+        for ii = 2:Nb
+            boundaries = union(boundaries,poly(ii));
+        end
+    end
+else
+    boundaries = [];
+end
+Floe(1:Nb) = []; 
 
 %Create coarse grid and coarse floe variables
 x = min(c2_boundary(1,:)):(max(c2_boundary(1,:))-min(c2_boundary(1,:)))/Nx:max(c2_boundary(1,:));
@@ -82,7 +77,6 @@ dx = abs(x(2)-x(1));
 
 dy = abs(y(2)-y(1));
 r_max = sqrt((dx/2)^2+(dy/2)^2);
-Area = dx*dy;
 eulerian_data.u = zeros(Ny,Nx);
 eulerian_data.v = zeros(Ny,Nx);
 eulerian_data.du = zeros(Ny,Nx);
@@ -132,6 +126,7 @@ for ii = 1:length(Floe)
     poly(ii) = polyshape(Floe(ii).c_alpha'+[Floe(ii).Xi Floe(ii).Yi]);
 end
 
+%Find potential interactions
 potentialInteractions = zeros(Ny,Nx,length(Floe));
 for ii = 1:length(Floe)
     pint = sqrt((xx-xf(ii)).^2+(yy-yf(ii)).^2)-(rmax(ii)+r_max);
@@ -139,19 +134,6 @@ for ii = 1:length(Floe)
     pint(pint<0) = 1;
     potentialInteractions(:,:,ii) = pint;
 end
-
-Nb = 0;
-if Nb > 0
-    boundaries = poly(1);
-    if Nb>1
-        for ii = 2:Nb
-            boundaries = union(boundaries,poly(ii));
-        end
-    end
-else
-    boundaries = [];
-end
-Floe(1:Nb) = []; 
 
 
 %% Loop to find coarse averages
@@ -162,6 +144,7 @@ for ii = 1:Nx
         Mtot = sum(cat(1,Floe(live == 1).mass));
         if Mtot>0 
             
+            %create the box and identify and subtract off any boundaries
             bound = [x(ii) x(ii) x(ii+1) x(ii+1) x(ii);y(jj) y(jj+1) y(jj+1) y(jj) y(jj)];
             box = polyshape(bound(1,:), bound(2,:));
             if ~isempty(boundaries)
@@ -169,7 +152,7 @@ for ii = 1:Nx
             end
             
             %Find all floes from the potentially interacting ones that have
-            %a piece in this area
+            %a piece in this area. Values weighted by mass in cell
             FloeNums = 1:length(Floe);
             FloeNums(live==0) = [];
             overlap = intersect(box,poly(FloeNums));

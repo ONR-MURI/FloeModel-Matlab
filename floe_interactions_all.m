@@ -1,23 +1,18 @@
-function [Floe,dissolvedNEW] = floe_interactions_all(Floe, floebound, ubound, ucell, ocean, winds,c2_boundary, dt, HFo, min_floe_size, Nx,Ny,Nb, dissolvedNEW,doInt,COLLISION, PERIODIC, RIDGING, RAFTING)
+function [Floe,dissolvedNEW] = floe_interactions_all(Floe, floebound, ocean, winds,c2_boundary, dt, HFo, min_floe_size, Nx,Ny,Nb, dissolvedNEW,doInt,COLLISION, PERIODIC, RIDGING, RAFTING)
 
 id ='MATLAB:polyshape:repairedBySimplify';
 warning('off',id)
 id3 ='MATLAB:polyshape:boundary3Points';
 warning('off',id3)
-rho_ice=920;
 global Modulus
-
-save('FloeFail.mat','Floe');
-
-Floe0 = Floe;
 
 Lx= max(c2_boundary(1,:));
 Ly= max(c2_boundary(2,:));
-height.mean = 1; height.delta = 0;
 c2_boundary_poly = polyshape(c2_boundary');
 live = cat(1,Floe.alive);
 Floe(live==0)=[];
 
+%% Find ghost floes if periodicity is being used
 N0=length(Floe);
 if PERIODIC
     
@@ -32,7 +27,6 @@ if PERIODIC
     
     for i=1:length(Floe)
         poly = polyshape(Floe(i).c_alpha'+[x(i) y(i)]);
-        %   if alive(i) && (x(i)>Lx-rmax(i)) || (x(i)<-Lx+rmax(i))
         if alive(i) && (max(abs(poly.Vertices(:,1)))>Lx)
             
             ghostFloeX=[ghostFloeX  Floe(i)];
@@ -53,7 +47,6 @@ if PERIODIC
     
     for i=1:length(Floe)
         poly = polyshape(Floe(i).c_alpha'+[x(i) y(i)]);
-        %   if alive(i) && (x(i)>Lx-rmax(i)) || (x(i)<-Lx+rmax(i))
         if alive(i) && (max(abs(poly.Vertices(:,2)))>Ly)
             
             ghostFloeY=[ghostFloeY  Floe(i)];
@@ -69,6 +62,7 @@ if PERIODIC
     
 end
 
+%% Find potential interactions for calculating floe interactions
 %Find length of new Floe variable including the ghost floes
 N=length(Floe);
 x=cat(1,Floe.Xi);
@@ -111,6 +105,8 @@ for i=1+Nb:N  %do interactions with boundary in a separate parfor loop
         
     end
 end
+
+%% Calculate floe-floe interaction forces
 kill = zeros(1,N0); transfer = kill;
 %for i=1+Nb:N  %now the interactions could be calculated in a parfor loop!
 parfor i=1+Nb:N  %now the interactions could be calculated in a parfor loop!
@@ -171,7 +167,7 @@ if isfield(Floe,'poly')
     Floe=rmfield(Floe,{'poly'});
 end
 
-%Fill the lower part of the interacton matrix (floe_i,floe_j) for floes with j<i
+%% Fill the lower part of the interacton matrix (floe_i,floe_j) for floes with j<i
 for i=1:N %this has to be done sequentially
       
     if ~isempty(Floe(i).interactions)
@@ -202,7 +198,7 @@ for i=1:N %this has to be done sequentially
 end
 
 
-% calculate all torques from forces
+%% calculate all torques from forces
 if PERIODIC
     
 %     for i=N0+1:N %do this in parfor
@@ -233,9 +229,7 @@ if PERIODIC
     end
 end
 
-
-keep = ones(1,N0);
-% for i=1+Nb:N0
+%% Calculate updates to floe trajectories
 parfor i=1+Nb:N0
     
     if ~isempty(Floe(i).interactions)
@@ -268,15 +262,14 @@ parfor i=1+Nb:N0
     
    %Do the timestepping now that forces and torques are known.
     if Floe(i).alive
-        [tmp, frac,Fx,Fy] =calc_trajectory(dt,ocean,winds,Floe(i),HFo,doInt,c2_boundary, ubound,ucell,i);
-        if (isempty(tmp) || isnan(x(i)) ), kill(i)=i; elseif frac == 1, keep(i) = 0; else; Floe(i)=tmp; Floe(i).Fx = Fx; Floe(i).Fy = Fy; end
+        [tmp,Fx,Fy] =calc_trajectory(dt,ocean,winds,Floe(i),HFo,doInt);
+        if (isempty(tmp) || isnan(x(i)) ), kill(i)=i; else; Floe(i)=tmp; Floe(i).Fx = Fx; Floe(i).Fy = Fy; end
     end
 
 end
 
 
-%%  Ridging and Rafting
-
+%%  Ridging 
 floenew = [];
 Ridged = zeros(1,length(Floe));
 if RIDGING && doInt.flag
@@ -365,14 +358,13 @@ if RIDGING && doInt.flag
     end
 end
 
-
+%% Rafting
 Rafted = zeros(1,length(Floe));
 if RAFTING && doInt.flag
     %Create a function to control probability that ridging will occur
     h = cat(1,Floe.h);
     overlapArea=cat(1,Floe.OverlapArea)./cat(1,Floe.area);
-    keepR=rand(length(Floe),1)>0.5*overlapArea;%overlapArea>0;%
-%     keep=rand(length(Floe),1)<0.5;
+    keepR=rand(length(Floe),1)>0.5*overlapArea;
     for ii=1+Nb:N0
         
         if Floe(ii).alive && ~isempty(Floe(ii).interactions)
@@ -456,9 +448,8 @@ if RAFTING && doInt.flag
     end
 end
 
+%% Remove any floes that were created for computations or lost from interactions
 Floe=Floe(1:N0); % ditch the ghost floes.
-
-killO = kill; transferO = transfer; FloeO = Floe;
 
 if ~isempty(kill(kill>0)) 
     kill(kill>N0)=0;
