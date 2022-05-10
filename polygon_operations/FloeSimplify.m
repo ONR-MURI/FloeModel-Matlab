@@ -11,6 +11,7 @@ warning('off',id3)
 floes = [];
 rho_ice = 920;
 
+%Identify potential interactions
 x=cat(1,Floe0.Xi);
 y=cat(1,Floe0.Yi);
 rmax=cat(1,Floe0.rmax);
@@ -32,9 +33,6 @@ for j=1:length(Floe0)
     end
 end
 
-
-%Set function to define the tolerance for Douglas-Peuker algorithm
-SimpMin = @(A) log10(A)^3.5;
 
 %Create new simplified polyshape
 floenew = floe;
@@ -67,6 +65,8 @@ else
   Atot = sum(area(R));
 end
 
+%Check if simplification removed any holes and now needs to weld with smaller
+%floes
 for jj = 1:length(R)
     for ii = 1:length(floe.potentialInteractions)
         if ~isinf(floe.potentialInteractions(ii).floeNum) & ~isempty(R)
