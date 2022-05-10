@@ -32,10 +32,12 @@ ocean.ky = ky;
 ocean.Uocn=Uocn;
 ocean.Vocn=Vocn;
 
+%Calculate heat flux and how much ice would grow between creation of new
+%floes
 Tice = -20; Tocean = 3*ones(size(Xocn));
 heat_flux = 7.4*10^(-4)*(Tice-Tocean)/(72); %cm^2/s
 heat_flux = heat_flux/100^2; %m^2/s
 h0 = real(sqrt(-2*dt*heat_flux*nDTOut));
-h0 = mean(h0(:));
+h0 = mean(h0(:)); %Thickness of newly created sea ic
 
 end
