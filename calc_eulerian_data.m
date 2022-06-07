@@ -53,12 +53,16 @@ end
 
 %Remove any boundary floes so they do not count towards floe averages
 if Nb > 0
+    for ii =1:length(Floe)
+        poly(ii) = polyshape(Floe(ii).c_alpha'+[Floe(ii).Xi Floe(ii).Yi]);
+    end
     boundaries = poly(1);
     if Nb>1
         for ii = 2:Nb
             boundaries = union(boundaries,poly(ii));
         end
     end
+    clear poly
 else
     boundaries = [];
 end
@@ -173,7 +177,7 @@ for ii = 1:Nx
                 eulerian_data.du(jj,ii) = sum(dU(FloeNums).*mass(FloeNums).*Aover./A2)./Mtot;
                 eulerian_data.dv(jj,ii) = sum(dV(FloeNums).*mass(FloeNums).*Aover./A2)./Mtot;
                 eulerian_data.force_x(jj,ii) = sum(ForceX(FloeNums).*Aover./A2);
-                eulerian_data.force_y(jj,ii) = sum(ForceY(FloeNums).*mass(FloeNums).*Aover./A2)./Mtot;
+                eulerian_data.force_y(jj,ii) = sum(ForceY(FloeNums).*Aover./A2);
                 eulerian_data.stressxx(jj,ii) = sum(squeeze(Stress(1,1,(FloeNums))).*mass(FloeNums).*Aover./A2)./Mtot;
                 eulerian_data.stressyx(jj,ii) = sum(squeeze(Stress(1,2,(FloeNums))).*mass(FloeNums).*Aover./A2)./Mtot;
                 eulerian_data.stressxy(jj,ii) = sum(squeeze(Stress(2,1,(FloeNums))).*mass(FloeNums).*Aover./A2)./Mtot;
