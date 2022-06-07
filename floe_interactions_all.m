@@ -147,6 +147,9 @@ parfor i=1+Nb:N  %now the interactions could be calculated in a parfor loop!
                 if abs(P_j(ii,2)) == Ly
                     force_b(ii,1) = 0;
                 end
+                if abs(P_j(ii,1)) == Lx
+                    force_b(ii,2) = 0;
+                end
             end
             Floe(i).interactions=[Floe(i).interactions ; Inf*ones(size(force_b,1),1) force_b P_j zeros(size(force_b,1),1) overlap'];
             Floe(i).OverlapArea = sum(overlap)+Floe(i).OverlapArea;
