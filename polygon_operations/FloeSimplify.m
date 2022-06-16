@@ -40,7 +40,9 @@ floenew.poly = polyshape(floenew.c_alpha'+[floenew.Xi floenew.Yi]);
 [verts] = reducepoly(floe.c0');
 pnew = polyshape(verts);
 if ~isempty(polyboundary)
+    pnew = translate(pnew,[floenew.Xi floenew.Yi]);
     pnew = subtract(pnew,polyboundary); 
+    pnew = translate(pnew,-[floenew.Xi floenew.Yi]);
 end
 Atot = sum(area(pnew));
 if isinf(Atot)
