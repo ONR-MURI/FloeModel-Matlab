@@ -167,8 +167,8 @@ else
         force=force_dir*Ar(k)*Force_factor; %proportional to the overlap area
         
         % Calculate tangential forces
-        v1 = ([floe1.Ui floe1.Vi]+ floe1.ksi_ice*(pcenter(k,:)-[floe1.Xi floe1.Yi]));
-        v2 = ([floe2.Ui floe2.Vi]+ floe2.ksi_ice*(pcenter(k,:)-[floe2.Xi floe2.Yi]));
+        v1 = ([floe1.Ui floe1.Vi]+ floe1.ksi_ice*(pcontact(k,:)-[floe1.Xi floe1.Yi]));
+        v2 = ([floe2.Ui floe2.Vi]+ floe2.ksi_ice*(pcontact(k,:)-[floe2.Xi floe2.Yi]));
         v_t = (v1-v2);
         if max(abs(v_t)) == 0
             dir_t =[0 0];
