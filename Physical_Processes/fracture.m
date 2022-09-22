@@ -14,7 +14,8 @@ a = P*sqrt(2)/2 ; b = a/2 ;
 x = a*cos(t) ;
 y = b*sin(t) ;
 Mohr = polyshape(x,y);
-Mohr = translate(Mohr, [100, 100]);
+Mohr = rotate(Mohr,45);
+Mohr = translate(Mohr,[-P/2, -P/2]);
 
 %Use Mohr's Cone
 q = 5.2; SigC = 250e3;
