@@ -7,6 +7,23 @@ warning('off',id)
 live = cat(1,Floe.alive);
 Floe(live==0)=[];
 
+%Remove any boundary floes so they do not count towards floe averages
+if Nb > 0
+    for ii =1:length(Floe)
+        poly(ii) = polyshape(Floe(ii).c_alpha'+[Floe(ii).Xi Floe(ii).Yi]);
+    end
+    boundaries = poly(1);
+    if Nb>1
+        for ii = 2:Nb
+            boundaries = union(boundaries,poly(ii));
+        end
+    end
+    clear poly
+else
+    boundaries = [];
+end
+Floe(1:Nb) = []; 
+
 %Create ghost floes for periodic floe states
 Lx= max(c2_boundary(1,:));
 Ly= max(c2_boundary(2,:));%c2 must be symmetric around x=0 for channel boundary conditions.
@@ -51,23 +68,6 @@ if PERIODIC
     
 end
 
-%Remove any boundary floes so they do not count towards floe averages
-if Nb > 0
-    for ii =1:length(Floe)
-        poly(ii) = polyshape(Floe(ii).c_alpha'+[Floe(ii).Xi Floe(ii).Yi]);
-    end
-    boundaries = poly(1);
-    if Nb>1
-        for ii = 2:Nb
-            boundaries = union(boundaries,poly(ii));
-        end
-    end
-    clear poly
-else
-    boundaries = [];
-end
-Floe(1:Nb) = []; 
-
 %Create coarse grid and coarse floe variables
 x = min(c2_boundary(1,:)):(max(c2_boundary(1,:))-min(c2_boundary(1,:)))/Nx:max(c2_boundary(1,:));
 y = min(c2_boundary(2,:)):(max(c2_boundary(2,:))-min(c2_boundary(2,:)))/Ny:max(c2_boundary(2,:));
@@ -76,7 +76,6 @@ y = fliplr(y);
 xf = cat(1,Floe.Xi);
 yf = cat(1,Floe.Yi);
 rmax = cat(1,Floe.rmax);
-y = fliplr(y);
 dx = abs(x(2)-x(1));
 
 dy = abs(y(2)-y(1));
@@ -158,7 +157,7 @@ for ii = 1:Nx
             %Find all floes from the potentially interacting ones that have
             %a piece in this area. Values weighted by mass in cell
             FloeNums = 1:length(Floe);
-            FloeNums(live==0) = [];
+            FloeNums(~live) = [];
             overlap = intersect(box,poly(FloeNums));
             Aover = area(overlap)';
             FloeNums(Aover==0)=[];
